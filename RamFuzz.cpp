@@ -1,4 +1,6 @@
 #include <iostream>
+#include <string>
+#include <unordered_map>
 
 // Declares clang::SyntaxOnlyAction.
 #include "clang/Frontend/FrontendActions.h"
@@ -18,6 +20,8 @@ using namespace llvm;
 
 using std::cout;
 using std::endl;
+using std::string;
+using std::unordered_map;
 
 auto ClassMatcher =
     cxxRecordDecl(isExpansionInMainFile(),
@@ -33,6 +37,7 @@ class ClassPrinter : public MatchFinder::MatchCallback {
 public:
   void run(const MatchFinder::MatchResult &Result) override {
     if (const auto *C = Result.Nodes.getNodeAs<CXXRecordDecl>("class")) {
+      unordered_map<string, unsigned> namecount;
       cout << "namespace ramfuzz {\n";
       cout << "class RF__" << C->getNameAsString() << " {\n";
       cout << "  " << C->getQualifiedNameAsString() << "& obj;\n";
@@ -40,7 +45,8 @@ public:
       for (auto M : C->methods()) {
         if (skip(M))
           continue;
-        cout << "  void " << M->getNameAsString() << "() {\n";
+        const string name = M->getNameAsString();
+        cout << "  void " << name << namecount[name]++ << "() {\n";
         cout << "  }\n";
       }
       cout << "};\n";
