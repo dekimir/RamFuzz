@@ -25,19 +25,26 @@ auto ClassMatcher =
                   hasDescendant(cxxMethodDecl(isPublic())))
         .bind("class");
 
+namespace {
+bool skip(CXXMethodDecl *m) { return isa<CXXDestructorDecl>(m); }
+} // anonymous namespace
+
 class ClassPrinter : public MatchFinder::MatchCallback {
 public:
   void run(const MatchFinder::MatchResult &Result) override {
     if (const auto *C = Result.Nodes.getNodeAs<CXXRecordDecl>("class")) {
-      cout << "namespace ramfuzz {" << endl;
-      cout << "class RF__" << C->getNameAsString() << " {" << endl;
-      cout << "  " << C->getQualifiedNameAsString() << "& obj;" << endl;
-      cout << " public:" << endl;
+      cout << "namespace ramfuzz {\n";
+      cout << "class RF__" << C->getNameAsString() << " {\n";
+      cout << "  " << C->getQualifiedNameAsString() << "& obj;\n";
+      cout << " public:\n";
       for (auto M : C->methods()) {
-        cout << "  void " << M->getNameAsString() << "()" << endl;
+        if (skip(M))
+          continue;
+        cout << "  void " << M->getNameAsString() << "() {\n";
+        cout << "  }\n";
       }
-      cout << "};" << endl;
-      cout << "} // namespace ramfuzz" << endl;
+      cout << "};\n";
+      cout << "} // namespace ramfuzz\n";
     }
   }
 };
