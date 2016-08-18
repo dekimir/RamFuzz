@@ -8,7 +8,6 @@
 #include "clang/Tooling/Tooling.h"
 // Declares llvm::cl::extrahelp.
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/raw_os_ostream.h"
 
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
@@ -19,7 +18,7 @@ using namespace clang;
 using namespace llvm;
 
 using std::cout;
-using std::endl;
+using std::ostream;
 using std::string;
 using std::unordered_map;
 
@@ -35,24 +34,29 @@ bool skip(CXXMethodDecl *m) { return isa<CXXDestructorDecl>(m); }
 
 class ClassPrinter : public MatchFinder::MatchCallback {
 public:
+  ClassPrinter(ostream& out = cout) : out(out) {}
+
   void run(const MatchFinder::MatchResult &Result) override {
     if (const auto *C = Result.Nodes.getNodeAs<CXXRecordDecl>("class")) {
       unordered_map<string, unsigned> namecount;
-      cout << "namespace ramfuzz {\n";
-      cout << "class RF__" << C->getNameAsString() << " {\n";
-      cout << "  " << C->getQualifiedNameAsString() << "& obj;\n";
-      cout << " public:\n";
+      out << "namespace ramfuzz {\n";
+      out << "class RF__" << C->getNameAsString() << " {\n";
+      out << "  " << C->getQualifiedNameAsString() << "& obj;\n";
+      out << " public:\n";
       for (auto M : C->methods()) {
         if (skip(M))
           continue;
         const string name = M->getNameAsString();
-        cout << "  void " << name << namecount[name]++ << "() {\n";
-        cout << "  }\n";
+        out << "  void " << name << namecount[name]++ << "() {\n";
+        out << "  }\n";
       }
-      cout << "};\n";
-      cout << "} // namespace ramfuzz\n";
+      out << "};\n";
+      out << "} // namespace ramfuzz\n";
     }
   }
+
+private:
+  ostream& out;
 };
 
 // Apply a custom category to all command-line options so that they are the
