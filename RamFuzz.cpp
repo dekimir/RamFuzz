@@ -34,7 +34,7 @@ bool skip(CXXMethodDecl *m) { return isa<CXXDestructorDecl>(m); }
 
 class ClassPrinter : public MatchFinder::MatchCallback {
 public:
-  ClassPrinter(ostream& out = cout) : out(out) {}
+  ClassPrinter(ostream &out = cout) : out(out) {}
 
   void run(const MatchFinder::MatchResult &Result) override {
     if (const auto *C = Result.Nodes.getNodeAs<CXXRecordDecl>("class")) {
@@ -56,20 +56,23 @@ public:
   }
 
 private:
-  ostream& out;
+  ostream &out;
 };
 
 // Apply a custom category to all command-line options so that they are the
 // only ones displayed.
-static llvm::cl::OptionCategory MyToolCategory("my-tool options");
+static llvm::cl::OptionCategory MyToolCategory("ramfuzz options");
 
 // CommonOptionsParser declares HelpMessage with a description of the common
 // command-line options related to the compilation database and input files.
 // It's nice to have this help message in all tools.
 static cl::extrahelp CommonHelp(CommonOptionsParser::HelpMessage);
 
-// A help message for this specific tool can be added afterwards.
-static cl::extrahelp MoreHelp("\nMore help text...");
+static cl::extrahelp RamFuzzHelp(R"(
+Generates C++ source code that randomly invokes public code from the input
+files.  This is useful for unit tests that leverage fuzzing to exercise the code
+under test in unexpected ways.  Parameter fuzzing = ramfuzz.
+)");
 
 int main(int argc, const char **argv) {
   CommonOptionsParser OptionsParser(argc, argv, MyToolCategory);
