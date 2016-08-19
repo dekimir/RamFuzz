@@ -7,7 +7,5 @@ add_clang_unittest(RamFuzzTests
   )
 
 target_link_libraries(RamFuzzTests
-  clangASTMatchers
-  clangBasic
   clangTooling
   )
