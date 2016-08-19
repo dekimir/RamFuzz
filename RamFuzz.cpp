@@ -29,12 +29,14 @@ auto ClassMatcher =
         .bind("class");
 
 namespace {
-bool skip(CXXMethodDecl *m) { return isa<CXXDestructorDecl>(m); }
+bool skip(CXXMethodDecl *M) { return isa<CXXDestructorDecl>(M); }
 } // anonymous namespace
 
-class ClassPrinter : public MatchFinder::MatchCallback {
+class RamFuzz : public MatchFinder::MatchCallback {
 public:
-  ClassPrinter(ostream &out = cout) : out(out) {}
+  RamFuzz(ostream &out = cout) : out(out) { MF.addMatcher(ClassMatcher, this); }
+
+  MatchFinder &getMatchFinder() { return MF; }
 
   void run(const MatchFinder::MatchResult &Result) override {
     if (const auto *C = Result.Nodes.getNodeAs<CXXRecordDecl>("class")) {
@@ -57,6 +59,7 @@ public:
 
 private:
   ostream &out;
+  MatchFinder MF;
 };
 
 // Apply a custom category to all command-line options so that they are the
@@ -78,8 +81,5 @@ int main(int argc, const char **argv) {
   CommonOptionsParser OptionsParser(argc, argv, MyToolCategory);
   ClangTool Tool(OptionsParser.getCompilations(),
                  OptionsParser.getSourcePathList());
-  MatchFinder Finder;
-  ClassPrinter CP;
-  Finder.addMatcher(ClassMatcher, &CP);
-  return Tool.run(newFrontendActionFactory(&Finder).get());
+  return Tool.run(newFrontendActionFactory(&RamFuzz().getMatchFinder()).get());
 }
