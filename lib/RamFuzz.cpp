@@ -12,17 +12,25 @@ using std::ostream;
 using std::string;
 using std::unordered_map;
 
+namespace {
+
+bool skip(CXXMethodDecl *M) { return isa<CXXDestructorDecl>(M); }
+
 auto ClassMatcher =
     cxxRecordDecl(isExpansionInMainFile(),
                   unless(hasAncestor(namespaceDecl(isAnonymous()))),
                   hasDescendant(cxxMethodDecl(isPublic())))
         .bind("class");
 
-namespace {
-bool skip(CXXMethodDecl *M) { return isa<CXXDestructorDecl>(M); }
 } // anonymous namespace
 
-RamFuzz::RamFuzz(ostream &out) : out(out) { MF.addMatcher(ClassMatcher, this); }
+RamFuzz::RamFuzz(ostream &out) : out(out) {}
+
+MatchFinder RamFuzz::makeMatchFinder() {
+  MatchFinder MF;
+  MF.addMatcher(ClassMatcher, this);
+  return MF;
+}
 
 void RamFuzz::run(const MatchFinder::MatchResult &Result) {
   if (const auto *C = Result.Nodes.getNodeAs<CXXRecordDecl>("class")) {
