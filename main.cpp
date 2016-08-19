@@ -1,7 +1,7 @@
-#include "RamFuzz.hpp"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Tooling.h"
+#include "lib/RamFuzz.hpp"
 #include "llvm/Support/CommandLine.h"
 
 using clang::tooling::ClangTool;
