@@ -4,10 +4,6 @@
 
 namespace {
 
-using clang::ast_matchers::MatchFinder;
-using clang::tooling::newFrontendActionFactory;
-using std::ostringstream;
-
 TEST(Foo, One) { EXPECT_NE("fail", ramfuzz("class X {};")); }
 
 } // anonymous namespace
