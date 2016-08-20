@@ -4,6 +4,7 @@
 #include <string>
 #include <unordered_map>
 
+#include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Tooling/Tooling.h"
 
@@ -26,6 +27,22 @@ auto ClassMatcher =
                   unless(hasAncestor(namespaceDecl(isAnonymous()))),
                   hasDescendant(cxxMethodDecl(isPublic())))
         .bind("class");
+
+/// Generates ramfuzz code.
+class RamFuzz : public MatchFinder::MatchCallback {
+public:
+  RamFuzz(std::ostream &out = std::cout);
+
+  /// Creates a MatchFinder that will generate ramfuzz code when
+  /// applied to the AST of code under test.  It marries *this action
+  /// with a suitable AST matcher.
+  MatchFinder makeMatchFinder();
+
+  void run(const MatchFinder::MatchResult &Result) override;
+
+private:
+  std::ostream &out;
+};
 
 } // anonymous namespace
 
