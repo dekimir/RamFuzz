@@ -1,5 +1,6 @@
 #include "RamFuzz.hpp"
 
+#include <sstream>
 #include <string>
 #include <unordered_map>
 
@@ -8,7 +9,11 @@
 
 using namespace clang;
 using namespace ast_matchers;
+
+using clang::tooling::ClangTool;
+using clang::tooling::newFrontendActionFactory;
 using std::ostream;
+using std::ostringstream;
 using std::string;
 using std::unordered_map;
 
@@ -49,4 +54,19 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
     out << "};\n";
     out << "} // namespace ramfuzz\n";
   }
+}
+
+string ramfuzz(const string &code) {
+  ostringstream str;
+  RamFuzz RF(str);
+  MatchFinder MF = RF.makeMatchFinder();
+  bool success = clang::tooling::runToolOnCode(
+      newFrontendActionFactory(&MF)->create(), code);
+  return success ? str.str() : "fail";
+}
+
+int ramfuzz(ClangTool &tool, ostream &out) {
+  RamFuzz RF(out);
+  auto MF = RF.makeMatchFinder();
+  return tool.run(newFrontendActionFactory(&MF).get());
 }

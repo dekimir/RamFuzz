@@ -1,12 +1,10 @@
 #include "lib/RamFuzz.hpp"
-#include "clang/Frontend/FrontendActions.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Support/CommandLine.h"
 
 using clang::tooling::ClangTool;
 using clang::tooling::CommonOptionsParser;
-using clang::tooling::newFrontendActionFactory;
 using llvm::cl::OptionCategory;
 using llvm::cl::extrahelp;
 
@@ -29,7 +27,5 @@ int main(int argc, const char **argv) {
   CommonOptionsParser OptionsParser(argc, argv, MyToolCategory);
   ClangTool Tool(OptionsParser.getCompilations(),
                  OptionsParser.getSourcePathList());
-  RamFuzz RF;
-  auto MF = RF.makeMatchFinder();
-  return Tool.run(newFrontendActionFactory(&MF).get());
+  return ramfuzz(Tool);
 }
