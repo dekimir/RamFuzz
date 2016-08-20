@@ -1,5 +1,6 @@
 #include "RamFuzz.hpp"
 
+#include <memory>
 #include <sstream>
 #include <string>
 #include <unordered_map>
@@ -12,9 +13,11 @@ using namespace clang;
 using namespace ast_matchers;
 
 using clang::tooling::ClangTool;
+using clang::tooling::FrontendActionFactory;
 using clang::tooling::newFrontendActionFactory;
 using std::ostream;
 using std::ostringstream;
+using std::shared_ptr;
 using std::string;
 using std::unordered_map;
 
@@ -28,31 +31,35 @@ auto ClassMatcher =
                   hasDescendant(cxxMethodDecl(isPublic())))
         .bind("class");
 
-/// Generates ramfuzz code.
+/// Generates ramfuzz code into an ostream.  The user can feed a RamFuzz
+/// instance to a custom MatchFinder, or simply getActionFactory() and run it in
+/// a ClangTool.
 class RamFuzz : public MatchFinder::MatchCallback {
 public:
-  RamFuzz(std::ostream &out = std::cout);
+  RamFuzz(std::ostream &out = std::cout) : out(out) {
+    MF.addMatcher(ClassMatcher, this);
+    AF = newFrontendActionFactory(&MF);
+  }
 
-  /// Creates a MatchFinder that will generate ramfuzz code when
-  /// applied to the AST of code under test.  It marries *this action
-  /// with a suitable AST matcher.
-  MatchFinder makeMatchFinder();
-
+  /// Match callback.
   void run(const MatchFinder::MatchResult &Result) override;
 
+  FrontendActionFactory &getActionFactory() { return *AF; }
+
 private:
-  std::ostream &out;
+  /// Where to output the generated code.
+  ostream &out;
+
+  /// A FrontendActionFactory to run MF.  Owned by *this because it
+  /// requires live MF to remain valid.
+  shared_ptr<FrontendActionFactory> AF;
+
+  /// A MatchFinder to run *this on ClassMatcher.  Owned by *this
+  /// because it's only valid while *this is alive.
+  MatchFinder MF;
 };
 
 } // anonymous namespace
-
-RamFuzz::RamFuzz(ostream &out) : out(out) {}
-
-MatchFinder RamFuzz::makeMatchFinder() {
-  MatchFinder MF;
-  MF.addMatcher(ClassMatcher, this);
-  return MF;
-}
 
 void RamFuzz::run(const MatchFinder::MatchResult &Result) {
   if (const auto *C = Result.Nodes.getNodeAs<CXXRecordDecl>("class")) {
@@ -75,15 +82,11 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
 
 string ramfuzz(const string &code) {
   ostringstream str;
-  RamFuzz RF(str);
-  MatchFinder MF = RF.makeMatchFinder();
   bool success = clang::tooling::runToolOnCode(
-      newFrontendActionFactory(&MF)->create(), code);
+      RamFuzz(str).getActionFactory().create(), code);
   return success ? str.str() : "fail";
 }
 
 int ramfuzz(ClangTool &tool, ostream &out) {
-  RamFuzz RF(out);
-  auto MF = RF.makeMatchFinder();
-  return tool.run(newFrontendActionFactory(&MF).get());
+  return tool.run(&RamFuzz(out).getActionFactory());
 }
