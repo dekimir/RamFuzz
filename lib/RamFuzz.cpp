@@ -4,6 +4,7 @@
 #include <sstream>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
@@ -20,6 +21,7 @@ using std::ostringstream;
 using std::shared_ptr;
 using std::string;
 using std::unordered_map;
+using std::vector;
 
 namespace {
 
@@ -87,6 +89,8 @@ string ramfuzz(const string &code) {
   return success ? str.str() : "fail";
 }
 
-int ramfuzz(ClangTool &tool, ostream &out) {
+int ramfuzz(ClangTool &tool, const vector<string> &sources, ostream &out) {
+  for (const auto &f : sources)
+    out << "#include \"" << f << "\"\n";
   return tool.run(&RamFuzz(out).getActionFactory());
 }

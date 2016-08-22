@@ -25,7 +25,7 @@ under test in unexpected ways.  Parameter fuzzing = ramfuzz.
 
 int main(int argc, const char **argv) {
   CommonOptionsParser OptionsParser(argc, argv, MyToolCategory);
-  ClangTool Tool(OptionsParser.getCompilations(),
-                 OptionsParser.getSourcePathList());
-  return ramfuzz(Tool);
+  const auto &sources = OptionsParser.getSourcePathList();
+  ClangTool Tool(OptionsParser.getCompilations(), sources);
+  return ramfuzz(Tool, sources);
 }
