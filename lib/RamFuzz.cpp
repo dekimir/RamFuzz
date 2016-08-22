@@ -61,6 +61,23 @@ private:
   MatchFinder MF;
 };
 
+/// Valid identifier from a CXXMethodDecl name.
+string valident(const string &mname) {
+  static const unordered_map<char, char> table = {
+      {' ', '_'}, {'=', 'e'}, {'+', 'p'}, {'-', 'm'}, {'*', 's'},
+      {'/', 'd'}, {'%', 'c'}, {'&', 'a'}, {'|', 'f'}, {'^', 'r'},
+      {'<', 'l'}, {'>', 'g'}, {'~', 't'}, {'!', 'b'}, {'[', 'h'},
+      {']', 'i'}, {'(', 'j'}, {')', 'k'}, {'.', 'n'},
+  };
+  string transf = mname;
+  for (char &c : transf) {
+    auto found = table.find(c);
+    if (found != table.end())
+      c = found->second;
+  }
+  return transf;
+}
+
 } // anonymous namespace
 
 void RamFuzz::run(const MatchFinder::MatchResult &Result) {
@@ -73,7 +90,7 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
     for (auto M : C->methods()) {
       if (skip(M))
         continue;
-      const string name = M->getNameAsString();
+      const string name = valident(M->getNameAsString());
       out << "  void " << name << namecount[name]++ << "() {\n";
       out << "  }\n";
     }
