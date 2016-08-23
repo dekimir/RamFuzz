@@ -83,17 +83,21 @@ string valident(const string &mname) {
 void RamFuzz::run(const MatchFinder::MatchResult &Result) {
   if (const auto *C = Result.Nodes.getNodeAs<CXXRecordDecl>("class")) {
     unordered_map<string, unsigned> namecount;
+    unsigned mcount = 0;
     out << "namespace ramfuzz {\n";
-    out << "class RF__" << C->getNameAsString() << " {\n";
-    out << "  " << C->getQualifiedNameAsString() << "& obj;\n";
+    const string rfcls = string("RF__") + C->getNameAsString();
+    const string arglist = string("(") + C->getQualifiedNameAsString() + "&)";
+    out << "class " << rfcls << " {\n";
     out << " public:\n";
     for (auto M : C->methods()) {
       if (skip(M))
         continue;
       const string name = valident(M->getNameAsString());
-      out << "  void " << name << namecount[name]++ << "() {\n";
-      out << "  }\n";
+      out << "  void " << name << namecount[name]++ << arglist << ";\n";
+      mcount++;
     }
+    out << "  using mptr = void (" << rfcls << "::*)" << arglist << ";\n";
+    out << "  static mptr roulette[" << mcount << "];\n";
     out << "};\n";
     out << "} // namespace ramfuzz\n";
   }
