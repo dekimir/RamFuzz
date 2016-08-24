@@ -25,7 +25,10 @@ using std::vector;
 
 namespace {
 
-bool skip(CXXMethodDecl *M) { return isa<CXXDestructorDecl>(M); }
+bool skip(CXXMethodDecl *M) {
+  return isa<CXXDestructorDecl>(M) || M->getAccess() != AS_public ||
+         !M->isInstance();
+}
 
 auto ClassMatcher =
     cxxRecordDecl(isExpansionInMainFile(),
