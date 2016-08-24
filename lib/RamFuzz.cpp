@@ -88,19 +88,34 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
     unordered_map<string, unsigned> namecount;
     unsigned mcount = 0;
     out << "namespace ramfuzz {\n";
+    const string cls = C->getQualifiedNameAsString();
     const string rfcls = string("RF__") + C->getNameAsString();
     out << "class " << rfcls << " {\n";
+    out << " private:\n";
+    out << "  // Owns internally created objects. Must precede obj "
+           "declaration.\n";
+    out << "  std::unique_ptr<" << cls << "> pobj;\n";
     out << " public:\n";
-    out << "  " << C->getQualifiedNameAsString()
-        << "& obj; // Object under test.\n";
-    out << "  " << rfcls << "(" << C->getQualifiedNameAsString() << "& obj) \n";
+    out << "  " << cls << "& obj; // Object under test.\n";
+    out << "  " << rfcls << "(" << cls << "& obj) \n";
     out << "    : obj(obj) {} // Object already created by caller.\n";
+    bool ctrs = false;
     for (auto M : C->methods()) {
       if (skip(M))
         continue;
       const string name = valident(M->getNameAsString());
-      out << "  void " << name << namecount[name]++ << "();\n";
-      mcount++;
+      if (isa<CXXConstructorDecl>(M)) {
+        out << "  " << cls << "* ";
+        ctrs = true;
+      } else {
+        out << "  void ";
+        mcount++;
+      }
+      out << name << namecount[name]++ << "();\n";
+    }
+    if (ctrs) {
+      out << "  // Creates obj internally, using indicated constructor.\n";
+      out << "  " << rfcls << "(unsigned ctr);\n";
     }
     out << "  using mptr = void (" << rfcls << "::*)();\n";
     out << "  static mptr roulette[" << mcount << "];\n";
@@ -117,6 +132,7 @@ string ramfuzz(const string &code) {
 }
 
 int ramfuzz(ClangTool &tool, const vector<string> &sources, ostream &out) {
+  out << "#include <memory>\n";
   for (const auto &f : sources)
     out << "#include \"" << f << "\"\n";
   return tool.run(&RamFuzz(out).getActionFactory());
