@@ -41,7 +41,7 @@ auto ClassMatcher =
 /// a ClangTool.
 class RamFuzz : public MatchFinder::MatchCallback {
 public:
-  RamFuzz(std::ostream &outh) : outh(outh) {
+  RamFuzz(std::ostream &outh, std::ostream &outc) : outh(outh), outc(outc) {
     MF.addMatcher(ClassMatcher, this);
     AF = newFrontendActionFactory(&MF);
   }
@@ -54,6 +54,9 @@ public:
 private:
   /// Where to output generated declarations (typically a header file).
   ostream &outh;
+
+  /// Where to output generated code (typically a C++ source file).
+  ostream &outc;
 
   /// A FrontendActionFactory to run MF.  Owned by *this because it
   /// requires live MF to remain valid.
@@ -105,28 +108,40 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
       const string name = valident(M->getNameAsString());
       if (isa<CXXConstructorDecl>(M)) {
         outh << "  " << cls << "* ";
+        outc << cls << "* ";
         ctrs = true;
       } else {
         outh << "  void ";
+        outc << "void ";
         mcount++;
       }
-      outh << name << namecount[name]++ << "();\n";
+      outh << name << namecount[name] << "();\n";
+      outc << rfcls << "::" << name << namecount[name] << "() {\n";
+      if (isa<CXXConstructorDecl>(M))
+        outc << "  return 0;\n";
+      outc << "}\n";
+      namecount[name]++;
     }
+    outh << "  using mptr = void (" << rfcls << "::*)();\n";
+    outh << "  static mptr meth_roulette[" << mcount << "];\n";
     if (ctrs) {
       outh << "  // Creates obj internally, using indicated constructor.\n";
       outh << "  " << rfcls << "(unsigned ctr);\n";
+      outh << "  using cptr = " << cls << "* (" << rfcls << "::*)();\n";
+      outh << "  static cptr ctr_roulette[" << namecount[rfcls] << "];\n";
+
+      outc << rfcls << "::" << rfcls << "(unsigned ctr)\n";
+      outc << "  : pobj((this->*ctr_roulette[ctr])()), obj(*pobj) {}\n";
     }
-    outh << "  using mptr = void (" << rfcls << "::*)();\n";
-    outh << "  static mptr roulette[" << mcount << "];\n";
     outh << "};\n\n";
   }
 }
 
 string ramfuzz(const string &code) {
-  ostringstream str;
+  ostringstream strh, strc;
   bool success = clang::tooling::runToolOnCode(
-      RamFuzz(str).getActionFactory().create(), code);
-  return success ? str.str() : "fail";
+      RamFuzz(strh, strc).getActionFactory().create(), code);
+  return success ? strh.str() + strc.str() : "fail";
 }
 
 int ramfuzz(ClangTool &tool, const vector<string> &sources, ostream &outh,
@@ -135,7 +150,9 @@ int ramfuzz(ClangTool &tool, const vector<string> &sources, ostream &outh,
   for (const auto &f : sources)
     outh << "#include \"" << f << "\"\n";
   outh << "\nnamespace ramfuzz {\n\n";
-  const int runres = tool.run(&RamFuzz(outh).getActionFactory());
+  outc << "\nnamespace ramfuzz {\n\n";
+  const int runres = tool.run(&RamFuzz(outh, outc).getActionFactory());
+  outc << "} // namespace ramfuzz\n";
   outh << "} // namespace ramfuzz\n";
   return runres;
 }
