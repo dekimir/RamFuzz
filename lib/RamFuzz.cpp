@@ -87,7 +87,6 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
   if (const auto *C = Result.Nodes.getNodeAs<CXXRecordDecl>("class")) {
     unordered_map<string, unsigned> namecount;
     unsigned mcount = 0;
-    out << "namespace ramfuzz {\n";
     const string cls = C->getQualifiedNameAsString();
     const string rfcls = string("RF__") + C->getNameAsString();
     out << "class " << rfcls << " {\n";
@@ -119,8 +118,7 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
     }
     out << "  using mptr = void (" << rfcls << "::*)();\n";
     out << "  static mptr roulette[" << mcount << "];\n";
-    out << "};\n";
-    out << "} // namespace ramfuzz\n";
+    out << "};\n\n";
   }
 }
 
@@ -135,5 +133,8 @@ int ramfuzz(ClangTool &tool, const vector<string> &sources, ostream &out) {
   out << "#include <memory>\n";
   for (const auto &f : sources)
     out << "#include \"" << f << "\"\n";
-  return tool.run(&RamFuzz(out).getActionFactory());
+  out << "\nnamespace ramfuzz {\n\n";
+  const int runres = tool.run(&RamFuzz(out).getActionFactory());
+  out << "} // namespace ramfuzz\n";
+  return runres;
 }
