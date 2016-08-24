@@ -128,7 +128,8 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
       outh << "  // Creates obj internally, using indicated constructor.\n";
       outh << "  " << rfcls << "(unsigned ctr);\n";
       outh << "  using cptr = " << cls << "* (" << rfcls << "::*)();\n";
-      outh << "  static cptr ctr_roulette[" << namecount[rfcls] << "];\n";
+      outh << "  static cptr ctr_roulette[" << namecount[C->getNameAsString()]
+           << "];\n";
 
       outc << rfcls << "::" << rfcls << "(unsigned ctr)\n";
       outc << "  : pobj((this->*ctr_roulette[ctr])()), obj(*pobj) {}\n";
