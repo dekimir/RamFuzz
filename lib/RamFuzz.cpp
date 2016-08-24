@@ -129,7 +129,8 @@ string ramfuzz(const string &code) {
   return success ? str.str() : "fail";
 }
 
-int ramfuzz(ClangTool &tool, const vector<string> &sources, ostream &outh) {
+int ramfuzz(ClangTool &tool, const vector<string> &sources, ostream &outh,
+            ostream &outc) {
   outh << "#include <memory>\n";
   for (const auto &f : sources)
     outh << "#include \"" << f << "\"\n";

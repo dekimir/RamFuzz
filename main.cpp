@@ -32,9 +32,9 @@ int main(int argc, const char **argv) {
   CommonOptionsParser OptionsParser(argc, argv, MyToolCategory);
   const auto &sources = OptionsParser.getSourcePathList();
   ClangTool Tool(OptionsParser.getCompilations(), sources);
-  ofstream outh("fuzz.hpp");
+  ofstream outh("fuzz.hpp"), outc("fuzz.cpp");
   if (outh)
-    return ramfuzz(Tool, sources, outh);
+    return ramfuzz(Tool, sources, outh, outc);
   else {
     perror("Cannot open fuzz.hpp");
     return 1;
