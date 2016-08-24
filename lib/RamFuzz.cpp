@@ -133,6 +133,11 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
 
       outc << rfcls << "::" << rfcls << "(unsigned ctr)\n";
       outc << "  : pobj((this->*ctr_roulette[ctr])()), obj(*pobj) {}\n";
+      outc << rfcls << "::cptr " << rfcls << "::ctr_roulette[] = {\n  ";
+      for (unsigned i = 0; i < namecount[C->getNameAsString()]; ++i)
+        outc << (i ? ", " : "") << "&" << rfcls << "::" << C->getNameAsString()
+             << i;
+      outc << "\n};\n";
     }
     outh << "};\n\n";
   }
