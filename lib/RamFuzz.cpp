@@ -89,17 +89,20 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
     unsigned mcount = 0;
     out << "namespace ramfuzz {\n";
     const string rfcls = string("RF__") + C->getNameAsString();
-    const string arglist = string("(") + C->getQualifiedNameAsString() + "&)";
     out << "class " << rfcls << " {\n";
     out << " public:\n";
+    out << "  " << C->getQualifiedNameAsString()
+        << "& obj; // Object under test.\n";
+    out << "  " << rfcls << "(" << C->getQualifiedNameAsString() << "& obj) \n";
+    out << "    : obj(obj) {} // Object already created by caller.\n";
     for (auto M : C->methods()) {
       if (skip(M))
         continue;
       const string name = valident(M->getNameAsString());
-      out << "  void " << name << namecount[name]++ << arglist << ";\n";
+      out << "  void " << name << namecount[name]++ << "();\n";
       mcount++;
     }
-    out << "  using mptr = void (" << rfcls << "::*)" << arglist << ";\n";
+    out << "  using mptr = void (" << rfcls << "::*)();\n";
     out << "  static mptr roulette[" << mcount << "];\n";
     out << "};\n";
     out << "} // namespace ramfuzz\n";
