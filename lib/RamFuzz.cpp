@@ -41,7 +41,7 @@ auto ClassMatcher =
 /// a ClangTool.
 class RamFuzz : public MatchFinder::MatchCallback {
 public:
-  RamFuzz(std::ostream &out = std::cout) : out(out) {
+  RamFuzz(std::ostream &outh) : outh(outh) {
     MF.addMatcher(ClassMatcher, this);
     AF = newFrontendActionFactory(&MF);
   }
@@ -52,8 +52,8 @@ public:
   FrontendActionFactory &getActionFactory() { return *AF; }
 
 private:
-  /// Where to output the generated code.
-  ostream &out;
+  /// Where to output generated declarations (typically a header file).
+  ostream &outh;
 
   /// A FrontendActionFactory to run MF.  Owned by *this because it
   /// requires live MF to remain valid.
@@ -89,36 +89,36 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
     unsigned mcount = 0;
     const string cls = C->getQualifiedNameAsString();
     const string rfcls = string("RF__") + C->getNameAsString();
-    out << "class " << rfcls << " {\n";
-    out << " private:\n";
-    out << "  // Owns internally created objects. Must precede obj "
-           "declaration.\n";
-    out << "  std::unique_ptr<" << cls << "> pobj;\n";
-    out << " public:\n";
-    out << "  " << cls << "& obj; // Object under test.\n";
-    out << "  " << rfcls << "(" << cls << "& obj) \n";
-    out << "    : obj(obj) {} // Object already created by caller.\n";
+    outh << "class " << rfcls << " {\n";
+    outh << " private:\n";
+    outh << "  // Owns internally created objects. Must precede obj "
+            "declaration.\n";
+    outh << "  std::unique_ptr<" << cls << "> pobj;\n";
+    outh << " public:\n";
+    outh << "  " << cls << "& obj; // Object under test.\n";
+    outh << "  " << rfcls << "(" << cls << "& obj) \n";
+    outh << "    : obj(obj) {} // Object already created by caller.\n";
     bool ctrs = false;
     for (auto M : C->methods()) {
       if (skip(M))
         continue;
       const string name = valident(M->getNameAsString());
       if (isa<CXXConstructorDecl>(M)) {
-        out << "  " << cls << "* ";
+        outh << "  " << cls << "* ";
         ctrs = true;
       } else {
-        out << "  void ";
+        outh << "  void ";
         mcount++;
       }
-      out << name << namecount[name]++ << "();\n";
+      outh << name << namecount[name]++ << "();\n";
     }
     if (ctrs) {
-      out << "  // Creates obj internally, using indicated constructor.\n";
-      out << "  " << rfcls << "(unsigned ctr);\n";
+      outh << "  // Creates obj internally, using indicated constructor.\n";
+      outh << "  " << rfcls << "(unsigned ctr);\n";
     }
-    out << "  using mptr = void (" << rfcls << "::*)();\n";
-    out << "  static mptr roulette[" << mcount << "];\n";
-    out << "};\n\n";
+    outh << "  using mptr = void (" << rfcls << "::*)();\n";
+    outh << "  static mptr roulette[" << mcount << "];\n";
+    outh << "};\n\n";
   }
 }
 
@@ -129,12 +129,12 @@ string ramfuzz(const string &code) {
   return success ? str.str() : "fail";
 }
 
-int ramfuzz(ClangTool &tool, const vector<string> &sources, ostream &out) {
-  out << "#include <memory>\n";
+int ramfuzz(ClangTool &tool, const vector<string> &sources, ostream &outh) {
+  outh << "#include <memory>\n";
   for (const auto &f : sources)
-    out << "#include \"" << f << "\"\n";
-  out << "\nnamespace ramfuzz {\n\n";
-  const int runres = tool.run(&RamFuzz(out).getActionFactory());
-  out << "} // namespace ramfuzz\n";
+    outh << "#include \"" << f << "\"\n";
+  outh << "\nnamespace ramfuzz {\n\n";
+  const int runres = tool.run(&RamFuzz(outh).getActionFactory());
+  outh << "} // namespace ramfuzz\n";
   return runres;
 }

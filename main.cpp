@@ -1,3 +1,6 @@
+#include <cstdio>
+#include <fstream>
+
 #include "lib/RamFuzz.hpp"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Tooling.h"
@@ -7,6 +10,8 @@ using clang::tooling::ClangTool;
 using clang::tooling::CommonOptionsParser;
 using llvm::cl::OptionCategory;
 using llvm::cl::extrahelp;
+using std::ofstream;
+using std::perror;
 
 // Apply a custom category to all command-line options so that they are the
 // only ones displayed.
@@ -27,5 +32,11 @@ int main(int argc, const char **argv) {
   CommonOptionsParser OptionsParser(argc, argv, MyToolCategory);
   const auto &sources = OptionsParser.getSourcePathList();
   ClangTool Tool(OptionsParser.getCompilations(), sources);
-  return ramfuzz(Tool, sources);
+  ofstream outh("fuzz.hpp");
+  if (outh)
+    return ramfuzz(Tool, sources, outh);
+  else {
+    perror("Cannot open fuzz.hpp");
+    return 1;
+  }
 }
