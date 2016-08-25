@@ -51,6 +51,10 @@ public:
 
   FrontendActionFactory &getActionFactory() { return *AF; }
 
+  /// Prefix for RamFuzz class names. A RamFuzz class name is this prefix plus
+  /// the name of class under test.
+  static const string rfcls_prefix;
+
 private:
   /// Generates the declaration and definition of member ctr_roulette.
   void
@@ -59,6 +63,13 @@ private:
                    const string &rfcls,   ///< Name of RamFuzz class.
                    unsigned size          ///< Size of ctr_roulette.
                    );
+
+  /// Generates the declaration and definition of member meth_roulette.
+  void gen_meth_roulette(
+      const string &rfcls, ///< Name of RamFuzz class.
+      const unordered_map<string, unsigned>
+          &namecount ///< Method-name histogram of the class under test.
+      );
 
   /// Generates the declaration and definition of a RamFuzz class constructor
   /// from an int.  This constructor internally creates the object under test
@@ -100,15 +111,41 @@ string valident(const string &mname) {
 
 } // anonymous namespace
 
+const string RamFuzz::rfcls_prefix = "RF__";
+
 void RamFuzz::gen_ctr_roulette(const string &cls, const string &qualcls,
                                const string &rfcls, unsigned size) {
   outh << "  using cptr = " << qualcls << "* (" << rfcls << "::*)();\n";
-  outh << "  static cptr ctr_roulette[" << size << "];\n";
+  outh << "  static const cptr ctr_roulette[" << size << "];\n";
 
-  outc << rfcls << "::cptr " << rfcls << "::ctr_roulette[] = {\n  ";
+  outc << "const " << rfcls << "::cptr " << rfcls << "::ctr_roulette[] = {\n  ";
   for (unsigned i = 0; i < size; ++i)
     outc << (i ? ", " : "") << "&" << rfcls << "::" << cls << i;
   outc << "\n};\n";
+}
+
+void RamFuzz::gen_meth_roulette(
+    const string &rfcls, const unordered_map<string, unsigned> &namecount) {
+  const string cls = rfcls.substr(rfcls_prefix.size());
+  unsigned meth_roulette_size = 0;
+  outc << "const " << rfcls << "::mptr " << rfcls
+       << "::meth_roulette[] = {\n  ";
+  bool firstel = true;
+  for (const auto &nc : namecount) {
+    if (nc.first == cls)
+      continue; // Skip methods corresponding to constructors under test.
+    for (unsigned i = 0; i < nc.second; ++i) {
+      if (!firstel)
+        outc << ", ";
+      firstel = false;
+      outc << "&" << rfcls << "::" << nc.first << i;
+      meth_roulette_size++;
+    }
+  }
+  outc << "\n};\n";
+
+  outh << "  using mptr = void (" << rfcls << "::*)();\n";
+  outh << "  static const mptr meth_roulette[" << meth_roulette_size << "];\n";
 }
 
 void RamFuzz::gen_int_ctr(const string &rfcls) {
@@ -123,7 +160,7 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
     unordered_map<string, unsigned> namecount;
     unsigned mcount = 0;
     const string cls = C->getQualifiedNameAsString();
-    const string rfcls = string("RF__") + C->getNameAsString();
+    const string rfcls = rfcls_prefix + C->getNameAsString();
     outh << "class " << rfcls << " {\n";
     outh << " private:\n";
     outh << "  // Owns internally created objects. Must precede obj "
@@ -154,8 +191,7 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
       outc << "}\n";
       namecount[name]++;
     }
-    outh << "  using mptr = void (" << rfcls << "::*)();\n";
-    outh << "  static mptr meth_roulette[" << mcount << "];\n";
+    gen_meth_roulette(rfcls, namecount);
     if (ctrs) {
       gen_int_ctr(rfcls);
       gen_ctr_roulette(C->getNameAsString(), cls, rfcls,
