@@ -52,6 +52,14 @@ public:
   FrontendActionFactory &getActionFactory() { return *AF; }
 
 private:
+  /// Generates the declaration and definition of member ctr_roulette.
+  void
+  gen_ctr_roulette(const string &cls,     ///< Name of class under test.
+                   const string &qualcls, ///< Like cls but fully qualified.
+                   const string &rfcls,   ///< Name of RamFuzz class.
+                   unsigned size          ///< Size of ctr_roulette.
+                   );
+
   /// Where to output generated declarations (typically a header file).
   ostream &outh;
 
@@ -85,6 +93,17 @@ string valident(const string &mname) {
 }
 
 } // anonymous namespace
+
+void RamFuzz::gen_ctr_roulette(const string &cls, const string &qualcls,
+                               const string &rfcls, unsigned size) {
+  outh << "  using cptr = " << qualcls << "* (" << rfcls << "::*)();\n";
+  outh << "  static cptr ctr_roulette[" << size << "];\n";
+
+  outc << rfcls << "::cptr " << rfcls << "::ctr_roulette[] = {\n  ";
+  for (unsigned i = 0; i < size; ++i)
+    outc << (i ? ", " : "") << "&" << rfcls << "::" << cls << i;
+  outc << "\n};\n";
+}
 
 void RamFuzz::run(const MatchFinder::MatchResult &Result) {
   if (const auto *C = Result.Nodes.getNodeAs<CXXRecordDecl>("class")) {
@@ -127,17 +146,11 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
     if (ctrs) {
       outh << "  // Creates obj internally, using indicated constructor.\n";
       outh << "  " << rfcls << "(unsigned ctr);\n";
-      outh << "  using cptr = " << cls << "* (" << rfcls << "::*)();\n";
-      outh << "  static cptr ctr_roulette[" << namecount[C->getNameAsString()]
-           << "];\n";
 
       outc << rfcls << "::" << rfcls << "(unsigned ctr)\n";
       outc << "  : pobj((this->*ctr_roulette[ctr])()), obj(*pobj) {}\n";
-      outc << rfcls << "::cptr " << rfcls << "::ctr_roulette[] = {\n  ";
-      for (unsigned i = 0; i < namecount[C->getNameAsString()]; ++i)
-        outc << (i ? ", " : "") << "&" << rfcls << "::" << C->getNameAsString()
-             << i;
-      outc << "\n};\n";
+      gen_ctr_roulette(C->getNameAsString(), cls, rfcls,
+                       namecount[C->getNameAsString()]);
     }
     outh << "};\n\n";
   }
