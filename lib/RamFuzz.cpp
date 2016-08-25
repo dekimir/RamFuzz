@@ -60,6 +60,12 @@ private:
                    unsigned size          ///< Size of ctr_roulette.
                    );
 
+  /// Generates the declaration and definition of a RamFuzz class constructor
+  /// from an int.  This constructor internally creates the object under test
+  /// using a constructor indicated by the int.
+  void gen_int_ctr(const string &rfcls ///< Name of RamFuzz class.
+                   );
+
   /// Where to output generated declarations (typically a header file).
   ostream &outh;
 
@@ -105,6 +111,13 @@ void RamFuzz::gen_ctr_roulette(const string &cls, const string &qualcls,
   outc << "\n};\n";
 }
 
+void RamFuzz::gen_int_ctr(const string &rfcls) {
+  outh << "  // Creates obj internally, using indicated constructor.\n";
+  outh << "  " << rfcls << "(unsigned ctr);\n";
+  outc << rfcls << "::" << rfcls << "(unsigned ctr)\n";
+  outc << "  : pobj((this->*ctr_roulette[ctr])()), obj(*pobj) {}\n";
+}
+
 void RamFuzz::run(const MatchFinder::MatchResult &Result) {
   if (const auto *C = Result.Nodes.getNodeAs<CXXRecordDecl>("class")) {
     unordered_map<string, unsigned> namecount;
@@ -144,11 +157,7 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
     outh << "  using mptr = void (" << rfcls << "::*)();\n";
     outh << "  static mptr meth_roulette[" << mcount << "];\n";
     if (ctrs) {
-      outh << "  // Creates obj internally, using indicated constructor.\n";
-      outh << "  " << rfcls << "(unsigned ctr);\n";
-
-      outc << rfcls << "::" << rfcls << "(unsigned ctr)\n";
-      outc << "  : pobj((this->*ctr_roulette[ctr])()), obj(*pobj) {}\n";
+      gen_int_ctr(rfcls);
       gen_ctr_roulette(C->getNameAsString(), cls, rfcls,
                        namecount[C->getNameAsString()]);
     }
