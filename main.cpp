@@ -1,17 +1,21 @@
-#include <cstdio>
-#include <fstream>
+#include <iostream>
+#include <system_error>
 
 #include "lib/RamFuzz.hpp"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FileSystem.h"
 
 using clang::tooling::ClangTool;
 using clang::tooling::CommonOptionsParser;
 using llvm::cl::OptionCategory;
 using llvm::cl::extrahelp;
-using std::ofstream;
-using std::perror;
+using llvm::raw_fd_ostream;
+using llvm::sys::fs::OpenFlags;
+using std::cerr;
+using std::endl;
+using std::error_code;
 
 // Apply a custom category to all command-line options so that they are the
 // only ones displayed.
@@ -32,13 +36,15 @@ int main(int argc, const char **argv) {
   CommonOptionsParser OptionsParser(argc, argv, MyToolCategory);
   const auto &sources = OptionsParser.getSourcePathList();
   ClangTool Tool(OptionsParser.getCompilations(), sources);
-  ofstream outh("fuzz.hpp"), outc("fuzz.cpp");
-  if (!outh) {
-    perror("Cannot open fuzz.hpp");
+  error_code ec;
+  raw_fd_ostream outh("fuzz.hpp", ec, OpenFlags::F_Text);
+  if (ec) {
+    cerr << "Cannot open fuzz.hpp: " << ec.message() << endl;
     return 1;
   }
-  if (!outc) {
-    perror("Cannot open fuzz.cpp");
+  raw_fd_ostream outc("fuzz.cpp", ec, OpenFlags::F_Text);
+  if (ec) {
+    cerr << "Cannot open fuzz.cpp: " << ec.message() << endl;
     return 1;
   }
   outc << "#include \"fuzz.hpp\"\n";

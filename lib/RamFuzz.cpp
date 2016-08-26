@@ -16,7 +16,8 @@ using namespace ast_matchers;
 using clang::tooling::ClangTool;
 using clang::tooling::FrontendActionFactory;
 using clang::tooling::newFrontendActionFactory;
-using std::ostream;
+using llvm::raw_ostream;
+using llvm::raw_string_ostream;
 using std::ostringstream;
 using std::shared_ptr;
 using std::string;
@@ -41,7 +42,7 @@ auto ClassMatcher =
 /// a ClangTool.
 class RamFuzz : public MatchFinder::MatchCallback {
 public:
-  RamFuzz(std::ostream &outh, std::ostream &outc) : outh(outh), outc(outc) {
+  RamFuzz(raw_ostream &outh, raw_ostream &outc) : outh(outh), outc(outc) {
     MF.addMatcher(ClassMatcher, this);
     AF = newFrontendActionFactory(&MF);
   }
@@ -78,10 +79,10 @@ private:
                    );
 
   /// Where to output generated declarations (typically a header file).
-  ostream &outh;
+  raw_ostream &outh;
 
   /// Where to output generated code (typically a C++ source file).
-  ostream &outc;
+  raw_ostream &outc;
 
   /// A FrontendActionFactory to run MF.  Owned by *this because it
   /// requires live MF to remain valid.
@@ -202,14 +203,15 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
 }
 
 string ramfuzz(const string &code) {
-  ostringstream strh, strc;
+  string hpp, cpp;
+  raw_string_ostream ostrh(hpp), ostrc(cpp);
   bool success = clang::tooling::runToolOnCode(
-      RamFuzz(strh, strc).getActionFactory().create(), code);
-  return success ? strh.str() + strc.str() : "fail";
+      RamFuzz(ostrh, ostrc).getActionFactory().create(), code);
+  return success ? ostrh.str() + ostrc.str() : "fail";
 }
 
-int ramfuzz(ClangTool &tool, const vector<string> &sources, ostream &outh,
-            ostream &outc) {
+int ramfuzz(ClangTool &tool, const vector<string> &sources, raw_ostream &outh,
+            raw_ostream &outc) {
   outh << "#include <memory>\n";
   for (const auto &f : sources)
     outh << "#include \"" << f << "\"\n";
