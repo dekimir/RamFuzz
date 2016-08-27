@@ -42,9 +42,11 @@ auto ClassMatcher =
 /// a ClangTool.
 class RamFuzz : public MatchFinder::MatchCallback {
 public:
-  RamFuzz(raw_ostream &outh, raw_ostream &outc) : outh(outh), outc(outc) {
+  RamFuzz(raw_ostream &outh, raw_ostream &outc)
+      : outh(outh), outc(outc), prtpol((LangOptions())) {
     MF.addMatcher(ClassMatcher, this);
     AF = newFrontendActionFactory(&MF);
+    prtpol.Bool = 1;
   }
 
   /// Match callback.
@@ -91,6 +93,9 @@ private:
   /// A MatchFinder to run *this on ClassMatcher.  Owned by *this
   /// because it's only valid while *this is alive.
   MatchFinder MF;
+
+  /// Policy for printing to outh and outc.
+  PrintingPolicy prtpol;
 };
 
 /// Valid identifier from a CXXMethodDecl name.
@@ -159,7 +164,6 @@ void RamFuzz::gen_int_ctr(const string &rfcls) {
 void RamFuzz::run(const MatchFinder::MatchResult &Result) {
   if (const auto *C = Result.Nodes.getNodeAs<CXXRecordDecl>("class")) {
     unordered_map<string, unsigned> namecount;
-    unsigned mcount = 0;
     const string cls = C->getQualifiedNameAsString();
     const string rfcls = rfcls_prefix + C->getNameAsString();
     outh << "class " << rfcls << " {\n";
@@ -183,10 +187,17 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
       } else {
         outh << "  void ";
         outc << "void ";
-        mcount++;
       }
       outh << name << namecount[name] << "();\n";
       outc << rfcls << "::" << name << namecount[name] << "() {\n";
+      int ramcount = 0;
+      for (const auto &ram : M->parameters()) {
+        const auto ty = ram->getType();
+        if (!ty->isScalarType())
+          continue;
+        ty.print(outc << "  ", prtpol);
+        outc << " ram" << ramcount++ << ";\n";
+      }
       if (isa<CXXConstructorDecl>(M))
         outc << "  return 0;\n";
       outc << "}\n";
