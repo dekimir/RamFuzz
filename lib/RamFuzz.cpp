@@ -171,7 +171,7 @@ void RamFuzz::gen_method(const string &rfname, const CXXMethodDecl *M) {
   int ramcount = 0;
   for (const auto &ram : M->parameters()) {
     const auto ty = ram->getType();
-    if (!ty->isScalarType())
+    if (!ty->isScalarType() || ty->isPointerType())
       continue;
     ty.print(outc << "  ", prtpol);
     outc << " ram" << ramcount++ << ";\n";
