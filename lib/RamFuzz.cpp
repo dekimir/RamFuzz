@@ -19,6 +19,7 @@ using clang::tooling::newFrontendActionFactory;
 using llvm::raw_ostream;
 using llvm::raw_string_ostream;
 using std::ostringstream;
+using std::to_string;
 using std::shared_ptr;
 using std::string;
 using std::unordered_map;
@@ -79,6 +80,10 @@ private:
   /// using a constructor indicated by the int.
   void gen_int_ctr(const string &rfcls ///< Name of RamFuzz class.
                    );
+
+  /// Generates the definition of a RamFuzz method named rfname, corresponding
+  /// to the method under test M.
+  void gen_method(const string &rfname, const CXXMethodDecl *M);
 
   /// Where to output generated declarations (typically a header file).
   raw_ostream &outh;
@@ -161,6 +166,21 @@ void RamFuzz::gen_int_ctr(const string &rfcls) {
   outc << "  : pobj((this->*ctr_roulette[ctr])()), obj(*pobj) {}\n";
 }
 
+void RamFuzz::gen_method(const string &rfname, const CXXMethodDecl *M) {
+  outc << rfname << "() {\n";
+  int ramcount = 0;
+  for (const auto &ram : M->parameters()) {
+    const auto ty = ram->getType();
+    if (!ty->isScalarType())
+      continue;
+    ty.print(outc << "  ", prtpol);
+    outc << " ram" << ramcount++ << ";\n";
+  }
+  if (isa<CXXConstructorDecl>(M))
+    outc << "  return 0;\n";
+  outc << "}\n";
+}
+
 void RamFuzz::run(const MatchFinder::MatchResult &Result) {
   if (const auto *C = Result.Nodes.getNodeAs<CXXRecordDecl>("class")) {
     unordered_map<string, unsigned> namecount;
@@ -189,18 +209,7 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
         outc << "void ";
       }
       outh << name << namecount[name] << "();\n";
-      outc << rfcls << "::" << name << namecount[name] << "() {\n";
-      int ramcount = 0;
-      for (const auto &ram : M->parameters()) {
-        const auto ty = ram->getType();
-        if (!ty->isScalarType())
-          continue;
-        ty.print(outc << "  ", prtpol);
-        outc << " ram" << ramcount++ << ";\n";
-      }
-      if (isa<CXXConstructorDecl>(M))
-        outc << "  return 0;\n";
-      outc << "}\n";
+      gen_method(rfcls + "::" + name + to_string(namecount[name]), M);
       namecount[name]++;
     }
     gen_meth_roulette(rfcls, namecount);
