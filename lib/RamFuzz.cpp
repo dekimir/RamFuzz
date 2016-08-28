@@ -174,7 +174,9 @@ void RamFuzz::gen_method(const string &rfname, const CXXMethodDecl *M) {
     if (!ty->isScalarType() || ty->isPointerType())
       continue;
     ty.print(outc << "  ", prtpol);
-    outc << " ram" << ramcount++ << ";\n";
+    ty.print(outc << " ram" << ramcount << " = g.any<", prtpol);
+    outc << ">(\"" << rfname << "::ram" << ramcount << "\");\n";
+    ramcount++;
   }
   if (isa<CXXConstructorDecl>(M))
     outc << "  return 0;\n";
@@ -191,6 +193,7 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
     outh << "  // Owns internally created objects. Must precede obj "
             "declaration.\n";
     outh << "  std::unique_ptr<" << cls << "> pobj;\n";
+    outh << "  runtime::gen g;\n";
     outh << " public:\n";
     outh << "  " << cls << "& obj; // Object under test.\n";
     outh << "  " << rfcls << "(" << cls << "& obj) \n";
@@ -235,6 +238,7 @@ int ramfuzz(ClangTool &tool, const vector<string> &sources, raw_ostream &outh,
   outh << "#include <memory>\n";
   for (const auto &f : sources)
     outh << "#include \"" << f << "\"\n";
+  outh << "#include \"ramfuzz-rt.hpp\"\n";
   outh << "\nnamespace ramfuzz {\n\n";
   outc << "\nnamespace ramfuzz {\n\n";
   const int runres = tool.run(&RamFuzz(outh, outc).getActionFactory());
