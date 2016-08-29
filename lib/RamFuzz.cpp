@@ -82,7 +82,8 @@ private:
                    );
 
   /// Generates the definition of a RamFuzz method named rfname, corresponding
-  /// to the method under test M.
+  /// to the method under test M.  Assumes that the return type of the generated
+  /// method has already been output.
   void gen_method(const string &rfname, const CXXMethodDecl *M);
 
   /// Where to output generated declarations (typically a header file).
