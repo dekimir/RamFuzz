@@ -36,7 +36,7 @@ to ensure that all methods under test have been called in some order.
 """
 
 from glob import glob
-from os import chdir, path, rmdir
+from os import chdir, path
 from subprocess import CalledProcessError, check_call
 import shutil
 import sys
@@ -61,7 +61,7 @@ for case in glob(path.join(scriptdir, '*.hpp')):
         check_call([path.join(bindir, 'clang++'), '-std=c++11', '-or', '-g',
                      cfile, 'fuzz.cpp'])
         check_call(path.join(temp, 'r'))
-        chdir(bindir) # Just a precaution to guarantee rmdir success.
-        rmdir(temp)
+        chdir(bindir) # Just a precaution to guarantee rmtree success.
+        shutil.rmtree(path.realpath(temp))
     except CalledProcessError:
         sys.exit('error in {} ({})'.format(testname,temp))

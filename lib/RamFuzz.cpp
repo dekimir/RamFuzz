@@ -181,6 +181,8 @@ void RamFuzz::gen_method(const string &rfname, const CXXMethodDecl *M) {
   }
   if (isa<CXXConstructorDecl>(M))
     outc << "  return 0;\n";
+  else if (!ramcount)
+    outc << "  obj." << M->getName() << "();\n";
   outc << "}\n";
 }
 
