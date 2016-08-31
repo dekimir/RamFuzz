@@ -171,13 +171,13 @@ void RamFuzz::gen_method(const string &rfname, const CXXMethodDecl *M) {
   outc << rfname << "() {\n";
   int ramcount = 0;
   for (const auto &ram : M->parameters()) {
+    ramcount++;
     const auto ty = ram->getType();
     if (!ty->isScalarType() || ty->isPointerType())
       continue;
     ty.print(outc << "  ", prtpol);
     ty.print(outc << " ram" << ramcount << " = g.any<", prtpol);
     outc << ">(\"" << rfname << "::ram" << ramcount << "\");\n";
-    ramcount++;
   }
   if (isa<CXXConstructorDecl>(M))
     outc << "  return 0;\n";
