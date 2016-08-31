@@ -169,7 +169,7 @@ void RamFuzz::gen_int_ctr(const string &rfcls) {
 
 void RamFuzz::gen_method(const string &rfname, const CXXMethodDecl *M) {
   outc << rfname << "() {\n";
-  int ramcount = 0;
+  auto ramcount = 0u;
   for (const auto &ram : M->parameters()) {
     ramcount++;
     const auto ty = ram->getType();
@@ -181,8 +181,13 @@ void RamFuzz::gen_method(const string &rfname, const CXXMethodDecl *M) {
   }
   if (isa<CXXConstructorDecl>(M))
     outc << "  return 0;\n";
-  else if (!ramcount)
-    outc << "  obj." << M->getName() << "();\n";
+  else {
+    M->printName(outc << "  obj.");
+    outc << "(";
+    for (auto i = 1u; i <= ramcount; ++i)
+      outc << (i == 1 ? "" : ", ") << "ram" << i;
+    outc << ");\n";
+  }
   outc << "}\n";
 }
 
