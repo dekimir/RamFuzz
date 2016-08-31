@@ -53,13 +53,14 @@ for case in glob(path.join(scriptdir, '*.hpp')):
     cfile = testname + '.cpp'
     temp = tempfile.mkdtemp()
     shutil.copy(path.join(rtdir, 'ramfuzz-rt.hpp'), temp)
+    shutil.copy(path.join(rtdir, 'ramfuzz-rt.cpp'), temp)
     shutil.copy(path.join(scriptdir, hfile), temp)
     shutil.copy(path.join(scriptdir, cfile), temp)
     try:
         chdir(temp)
         check_call([path.join(bindir, 'ramfuzz'), hfile, '--', '-std=c++11'])
         check_call([path.join(bindir, 'clang++'), '-std=c++11', '-or', '-g',
-                     cfile, 'fuzz.cpp'])
+                     cfile, 'fuzz.cpp', 'ramfuzz-rt.cpp'])
         check_call(path.join(temp, 'r'))
         chdir(bindir) # Just a precaution to guarantee rmtree success.
         shutil.rmtree(path.realpath(temp))
