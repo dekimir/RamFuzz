@@ -47,6 +47,7 @@ if len(sys.argv) != 2:
 bindir = path.join(sys.argv[1], 'bin')
 scriptdir = path.dirname(path.realpath(__file__))
 rtdir = path.join(scriptdir, '..', 'runtime')
+failures = 0
 for case in glob(path.join(scriptdir, '*.hpp')):
     hfile = path.basename(case)
     testname = hfile[:-4]
@@ -65,4 +66,6 @@ for case in glob(path.join(scriptdir, '*.hpp')):
         chdir(bindir) # Just a precaution to guarantee rmtree success.
         shutil.rmtree(path.realpath(temp))
     except CalledProcessError:
-        sys.exit('error in {} ({})'.format(testname,temp))
+        failures += 1
+        sys.stderr.write('error in {} ({})\n'.format(testname,temp))
+sys.exit(failures)
