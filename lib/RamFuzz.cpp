@@ -84,7 +84,8 @@ private:
   /// Generates the definition of a RamFuzz method named rfname, corresponding
   /// to the method under test M.  Assumes that the return type of the generated
   /// method has already been output.
-  void gen_method(const string &rfname, const CXXMethodDecl *M);
+  void gen_method(const string &rfname, const CXXMethodDecl *M,
+                  const ASTContext &ctx);
 
   /// Where to output generated declarations (typically a header file).
   raw_ostream &outh;
@@ -167,19 +168,22 @@ void RamFuzz::gen_int_ctr(const string &rfcls) {
   outc << "  : pobj((this->*ctr_roulette[ctr])()), obj(*pobj) {}\n";
 }
 
-void RamFuzz::gen_method(const string &rfname, const CXXMethodDecl *M) {
+void RamFuzz::gen_method(const string &rfname, const CXXMethodDecl *M,
+                         const ASTContext &ctx) {
   outc << rfname << "() {\n";
   auto ramcount = 0u;
   for (const auto &ram : M->parameters()) {
     ramcount++;
-    const auto ty = ram->getType();
-    if (ty->isPointerType())
-      continue;
-    if (ty->isScalarType()) {
-      ty.print(outc << "  ", prtpol);
-      ty.print(outc << " ram" << ramcount << " = g.any<", prtpol);
+    // Type of the generated variable:
+    auto vartype = ram->getType()
+                       .getNonReferenceType()
+                       .getDesugaredType(ctx)
+                       .getLocalUnqualifiedType();
+    if (vartype->isScalarType()) {
+      vartype.print(outc << "  ", prtpol);
+      vartype.print(outc << " ram" << ramcount << " = g.any<", prtpol);
       outc << ">(\"" << rfname << "::ram" << ramcount << "\");\n";
-    } else if (const auto ramcls = ty->getAsCXXRecordDecl()) {
+    } else if (const auto ramcls = vartype->getAsCXXRecordDecl()) {
       const auto rframcls = rfcls_prefix + ramcls->getNameAsString();
       outc << "  " << rframcls << " rfram" << ramcount
            << "(g.between<unsigned>(0, sizeof(" << rframcls
@@ -229,7 +233,8 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
         outc << "void ";
       }
       outh << name << namecount[name] << "();\n";
-      gen_method(rfcls + "::" + name + to_string(namecount[name]), M);
+      gen_method(rfcls + "::" + name + to_string(namecount[name]), M,
+                 *Result.Context);
       namecount[name]++;
     }
     gen_meth_roulette(rfcls, namecount);
