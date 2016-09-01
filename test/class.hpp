@@ -1,6 +1,11 @@
-class A { public: A(){} };
-class B {
+class A {
 public:
   int sum = 0;
-  void f(A) { sum += 11; }
+  A() { sum += 10; }
+};
+
+class B {
+public:
+  int sum = 1;
+  void f(A a) { sum += a.sum; }
 };

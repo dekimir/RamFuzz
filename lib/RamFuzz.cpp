@@ -190,14 +190,13 @@ void RamFuzz::gen_method(const string &rfname, const CXXMethodDecl *M) {
     }
   }
   if (isa<CXXConstructorDecl>(M))
-    outc << "  return 0;\n";
-  else {
+    M->getParent()->printQualifiedName(outc << "  return new ");
+  else
     M->printName(outc << "  obj.");
-    outc << "(";
-    for (auto i = 1u; i <= ramcount; ++i)
-      outc << (i == 1 ? "" : ", ") << "ram" << i;
-    outc << ");\n";
-  }
+  outc << "(";
+  for (auto i = 1u; i <= ramcount; ++i)
+    outc << (i == 1 ? "" : ", ") << "ram" << i;
+  outc << ");\n";
   outc << "}\n";
 }
 
