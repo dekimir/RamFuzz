@@ -183,11 +183,11 @@ void RamFuzz::gen_method(const string &rfname, const CXXMethodDecl *M,
       vartype.print(outc << "  ", prtpol);
       vartype.print(outc << " ram" << ramcount << " = g.any<", prtpol);
       outc << ">(\"" << rfname << "::ram" << ramcount << "\");\n";
-    } else if (const auto ramcls = vartype->getAsCXXRecordDecl()) {
-      const auto rframcls = rfcls_prefix + ramcls->getNameAsString();
-      outc << "  " << rframcls << " rfram" << ramcount
-           << "(g.between<unsigned>(0, sizeof(" << rframcls
-           << "::ctr_roulette)/sizeof(" << rframcls << "::ctr_roulette[0])-1,\""
+    } else if (const auto varcls = vartype->getAsCXXRecordDecl()) {
+      const auto rfvarcls = rfcls_prefix + varcls->getNameAsString();
+      outc << "  " << rfvarcls << " rfram" << ramcount
+           << "(g.between<unsigned>(0, sizeof(" << rfvarcls
+           << "::ctr_roulette)/sizeof(" << rfvarcls << "::ctr_roulette[0])-1,\""
            << rfname << "::rfram" << ramcount << " ctr roulette\"));\n";
       // TODO: spin meth_roulette.
       outc << "  auto ram" << ramcount << " = rfram" << ramcount << ".obj;\n";
