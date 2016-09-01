@@ -67,6 +67,11 @@ template <> int gen::any<int>(const string &val_id) {
                     rgen, val_id);
 }
 
+template <> unsigned gen::any<unsigned>(const string &val_id) {
+  return ::ibetween(numeric_limits<unsigned>::min(),
+                    numeric_limits<unsigned>::max(), rgen, val_id);
+}
+
 template <> double gen::any<double>(const string &val_id) {
   return ::rbetween(numeric_limits<double>::min(),
                     numeric_limits<double>::max(), rgen, val_id);
@@ -89,6 +94,12 @@ template <> string gen::any<string>(const string &val_id) {
 }
 
 template <> int gen::between<int>(int lo, int hi, const string &val_id) {
+  return ::ibetween(lo, hi, rgen, val_id);
+}
+
+template <>
+unsigned gen::between<unsigned>(unsigned lo, unsigned hi,
+                                const string &val_id) {
   return ::ibetween(lo, hi, rgen, val_id);
 }
 

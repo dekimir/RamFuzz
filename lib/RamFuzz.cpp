@@ -173,11 +173,21 @@ void RamFuzz::gen_method(const string &rfname, const CXXMethodDecl *M) {
   for (const auto &ram : M->parameters()) {
     ramcount++;
     const auto ty = ram->getType();
-    if (!ty->isScalarType() || ty->isPointerType())
+    if (ty->isPointerType())
       continue;
-    ty.print(outc << "  ", prtpol);
-    ty.print(outc << " ram" << ramcount << " = g.any<", prtpol);
-    outc << ">(\"" << rfname << "::ram" << ramcount << "\");\n";
+    if (ty->isScalarType()) {
+      ty.print(outc << "  ", prtpol);
+      ty.print(outc << " ram" << ramcount << " = g.any<", prtpol);
+      outc << ">(\"" << rfname << "::ram" << ramcount << "\");\n";
+    } else if (const auto ramcls = ty->getAsCXXRecordDecl()) {
+      const auto rframcls = rfcls_prefix + ramcls->getNameAsString();
+      outc << "  " << rframcls << " rfram" << ramcount
+           << "(g.between<unsigned>(0, sizeof(" << rframcls
+           << "::ctr_roulette)/sizeof(" << rframcls << "::ctr_roulette[0])-1,\""
+           << rfname << "::rfram" << ramcount << " ctr roulette\"));\n";
+      // TODO: spin meth_roulette.
+      outc << "  auto ram" << ramcount << " = rfram" << ramcount << ".obj;\n";
+    }
   }
   if (isa<CXXConstructorDecl>(M))
     outc << "  return 0;\n";
