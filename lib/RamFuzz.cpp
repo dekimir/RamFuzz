@@ -136,6 +136,7 @@ void RamFuzz::gen_croulette(const string &cls, const string &qualcls,
                             const string &rfcls, unsigned size) {
   outh << "  using cptr = " << qualcls << "* (" << rfcls << "::*)();\n";
   outh << "  static const cptr croulette[" << size << "];\n";
+  outh << "  static constexpr unsigned ccount = " << size << ";\n";
 
   outc << "const " << rfcls << "::cptr " << rfcls << "::croulette[] = {\n  ";
   for (unsigned i = 0; i < size; ++i)
@@ -164,12 +165,12 @@ void RamFuzz::gen_mroulette(const string &rfcls,
 
   outh << "  using mptr = void (" << rfcls << "::*)();\n";
   outh << "  static const mptr mroulette[" << mroulette_size << "];\n";
-  outh << "  static constexpr unsigned mcount =" << mroulette_size << ";\n";
+  outh << "  static constexpr unsigned mcount = " << mroulette_size << ";\n";
 }
 
 void RamFuzz::gen_int_ctr(const string &rfcls) {
   outh << "  // Creates obj internally, using indicated constructor.\n";
-  outh << "  " << rfcls << "(unsigned ctr);\n";
+  outh << "  explicit " << rfcls << "(unsigned ctr);\n";
   outc << rfcls << "::" << rfcls << "(unsigned ctr)\n";
   outc << "  : pobj((this->*croulette[ctr])()), obj(*pobj) {}\n";
 }
@@ -202,23 +203,20 @@ void RamFuzz::gen_method(const string &rfname, const CXXMethodDecl *M,
       outc << ">(\"" << rfname << "::ram" << ramcount << "\");\n";
     } else if (const auto varcls = vartype->getAsCXXRecordDecl()) {
       const auto rfvarcls = rfcls_prefix + varcls->getNameAsString();
-      const auto rfvarid = rfname + "::rfram" + to_string(ramcount);
-      outc << "  " << rfvarcls << " rfram" << ramcount
-           << "(g.between(std::size_t{0}, sizeof(" << rfvarcls
-           << "::croulette)/sizeof(" << rfvarcls << "::croulette[0])-1,\""
-           << rfvarid << "-croulette\"));\n";
-      outc << "  if (!rfram" << ramcount << ") {\n";
-      early_exit(rfname, M,
-                 "failed ram" + to_string(ramcount) + " constructor");
+      const auto rfvar = string("rfram") + to_string(ramcount);
+      const auto rfvarid = rfname + "::" + rfvar;
+      outc << "  " << rfvarcls << " " << rfvar << "(g.between(0u, " << rfvarcls
+           << "::ccount-1,\"" << rfvarid << "-croulette\"));\n";
+      outc << "  if (!" << rfvar << ") {\n";
+      early_exit(rfname, M, "failed " + rfvar + " constructor");
       outc << "  }\n";
       outc << "  const auto mspins" << ramcount
            << " = g.between(0u, ::ramfuzz::runtime::spinlimit, \"" << rfvarid
            << "-mspins\");\n";
       outc << "  for (auto i = 0u; i < mspins" << ramcount << "; ++i)\n";
-      outc << "    (rfram" << ramcount << ".*rfram" << ramcount
-           << ".mroulette[g.between(0u, mcount-1, \"" << rfvarid
-           << "-m\")])();\n";
-      outc << "  auto ram" << ramcount << " = rfram" << ramcount << ".obj;\n";
+      outc << "    (" << rfvar << ".*" << rfvar << ".mroulette[g.between(0u, "
+           << rfvarcls << "::mcount-1, \"" << rfvarid << "-m\")])();\n";
+      outc << "  auto ram" << ramcount << " = " << rfvar << ".obj;\n";
     }
   }
   if (isa<CXXConstructorDecl>(M)) {
