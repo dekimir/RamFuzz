@@ -20,8 +20,8 @@ using llvm::raw_ostream;
 using llvm::raw_string_ostream;
 using std::ostringstream;
 using std::to_string;
-using std::shared_ptr;
 using std::string;
+using std::unique_ptr;
 using std::unordered_map;
 using std::vector;
 
@@ -101,7 +101,7 @@ private:
 
   /// A FrontendActionFactory to run MF.  Owned by *this because it
   /// requires live MF to remain valid.
-  shared_ptr<FrontendActionFactory> AF;
+  unique_ptr<FrontendActionFactory> AF;
 
   /// A MatchFinder to run *this on ClassMatcher.  Owned by *this
   /// because it's only valid while *this is alive.
