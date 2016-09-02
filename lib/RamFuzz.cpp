@@ -230,7 +230,7 @@ void RamFuzz::gen_method(const string &rfname, const CXXMethodDecl *M,
   outc << ");\n";
   if (!isa<CXXConstructorDecl>(M))
     outc << "  --calldepth;\n";
-  outc << "}\n";
+  outc << "}\n\n";
 }
 
 void RamFuzz::run(const MatchFinder::MatchResult &Result) {
@@ -251,7 +251,7 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
     // without paying the overhead of thread-safety.
     outh << "  // Prevents infinite recursion.\n";
     outh << "  static unsigned calldepth;\n";
-    outc << "  unsigned " << rfcls << "::calldepth = 0;\n";
+    outc << "unsigned " << rfcls << "::calldepth = 0;\n\n";
     outh << "  static const unsigned depthlimit = "
             "::ramfuzz::runtime::depthlimit;\n";
     outh << " public:\n";
