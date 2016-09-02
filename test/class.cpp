@@ -10,3 +10,5 @@ int main() {
   else
     return 0;
 }
+
+unsigned ::ramfuzz::runtime::spinlimit = 3;

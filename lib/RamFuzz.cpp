@@ -80,8 +80,15 @@ private:
   void gen_int_ctr(const string &rfcls ///< Name of RamFuzz class.
                    );
 
-  /// Generates the definition of a RamFuzz method named rfname, corresponding
-  /// to the method under test M.  Assumes that the return type of the generated
+  /// Generates early exit from RamFuzz method named \c rfname, corresponding to
+  /// the method under test \c M.  The exit code prints \c reason as the reason
+  /// for exiting early.  The exit code is multiple statements, so the caller
+  /// may need to generate a pair of braces around it.
+  void early_exit(const string &rfname, const CXXMethodDecl *M,
+                  const string &reason);
+
+  /// Generates the definition of RamFuzz method named rfname, corresponding to
+  /// the method under test M.  Assumes that the return type of the generated
   /// method has already been output.
   void gen_method(const string &rfname, const CXXMethodDecl *M,
                   const ASTContext &ctx);
@@ -157,6 +164,7 @@ void RamFuzz::gen_mroulette(const string &rfcls,
 
   outh << "  using mptr = void (" << rfcls << "::*)();\n";
   outh << "  static const mptr mroulette[" << mroulette_size << "];\n";
+  outh << "  static constexpr unsigned mcount =" << mroulette_size << ";\n";
 }
 
 void RamFuzz::gen_int_ctr(const string &rfcls) {
@@ -166,9 +174,20 @@ void RamFuzz::gen_int_ctr(const string &rfcls) {
   outc << "  : pobj((this->*croulette[ctr])()), obj(*pobj) {}\n";
 }
 
+void RamFuzz::early_exit(const string &rfname, const CXXMethodDecl *M,
+                         const string &reason) {
+  outc << "    std::cout << \"" << rfname << " exiting early due to " << reason
+       << "\" << std::endl;\n";
+  outc << "    return" << (isa<CXXConstructorDecl>(M) ? " 0" : "") << ";\n";
+}
+
 void RamFuzz::gen_method(const string &rfname, const CXXMethodDecl *M,
                          const ASTContext &ctx) {
   outc << rfname << "() {\n";
+  outc << "  if (calldepth >= depthlimit) {\n";
+  early_exit(rfname, M, "call depth limit");
+  outc << "  }\n";
+  outc << "  ++calldepth;\n";
   auto ramcount = 0u;
   for (const auto &ram : M->parameters()) {
     ramcount++;
@@ -183,22 +202,36 @@ void RamFuzz::gen_method(const string &rfname, const CXXMethodDecl *M,
       outc << ">(\"" << rfname << "::ram" << ramcount << "\");\n";
     } else if (const auto varcls = vartype->getAsCXXRecordDecl()) {
       const auto rfvarcls = rfcls_prefix + varcls->getNameAsString();
+      const auto rfvarid = rfname + "::rfram" + to_string(ramcount);
       outc << "  " << rfvarcls << " rfram" << ramcount
-           << "(g.between<unsigned>(0, sizeof(" << rfvarcls
+           << "(g.between(std::size_t{0}, sizeof(" << rfvarcls
            << "::croulette)/sizeof(" << rfvarcls << "::croulette[0])-1,\""
-           << rfname << "::rfram" << ramcount << " ctr roulette\"));\n";
-      // TODO: spin mroulette.
+           << rfvarid << "-croulette\"));\n";
+      outc << "  if (!rfram" << ramcount << ") {\n";
+      early_exit(rfname, M,
+                 "failed ram" + to_string(ramcount) + " constructor");
+      outc << "  }\n";
+      outc << "  const auto mspins" << ramcount
+           << " = g.between(0u, ::ramfuzz::runtime::spinlimit, \"" << rfvarid
+           << "-mspins\");\n";
+      outc << "  for (auto i = 0u; i < mspins" << ramcount << "; ++i)\n";
+      outc << "    (rfram" << ramcount << ".*rfram" << ramcount
+           << ".mroulette[g.between(0u, mcount-1, \"" << rfvarid
+           << "-m\")])();\n";
       outc << "  auto ram" << ramcount << " = rfram" << ramcount << ".obj;\n";
     }
   }
-  if (isa<CXXConstructorDecl>(M))
+  if (isa<CXXConstructorDecl>(M)) {
+    outc << "  --calldepth;\n";
     M->getParent()->printQualifiedName(outc << "  return new ");
-  else
+  } else
     M->printName(outc << "  obj.");
   outc << "(";
   for (auto i = 1u; i <= ramcount; ++i)
     outc << (i == 1 ? "" : ", ") << "ram" << i;
   outc << ");\n";
+  if (!isa<CXXConstructorDecl>(M))
+    outc << "  --calldepth;\n";
   outc << "}\n";
 }
 
@@ -213,10 +246,22 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
             "declaration.\n";
     outh << "  std::unique_ptr<" << cls << "> pobj;\n";
     outh << "  runtime::gen g;\n";
+    // Call depth should be made atomic when we start supporting multi-threaded
+    // fuzzing.  Holding off for now because we expect to get a lot of mileage
+    // out of multi-process fuzzing (running multiple fuzzing executables, each
+    // in its own process).  That should still keep all the hardware occupied
+    // without paying the overhead of thread-safety.
+    outh << "  // Prevents infinite recursion.\n";
+    outh << "  static unsigned calldepth;\n";
+    outc << "  unsigned " << rfcls << "::calldepth = 0;\n";
+    outh << "  static const unsigned depthlimit = "
+            "::ramfuzz::runtime::depthlimit;\n";
     outh << " public:\n";
     outh << "  " << cls << "& obj; // Object under test.\n";
     outh << "  " << rfcls << "(" << cls << "& obj) \n";
     outh << "    : obj(obj) {} // Object already created by caller.\n";
+    outh << "  // True if obj was successfully internally created.\n";
+    outh << "  operator bool() const { return bool(pobj); }\n";
     bool ctrs = false;
     for (auto M : C->methods()) {
       if (skip(M))
@@ -260,6 +305,8 @@ int ramfuzz(ClangTool &tool, const vector<string> &sources, raw_ostream &outh,
     outh << "#include \"" << f << "\"\n";
   outh << "#include \"ramfuzz-rt.hpp\"\n";
   outh << "\nnamespace ramfuzz {\n\n";
+  outc << "#include <cstddef>\n";
+  outc << "#include <iostream>\n\n";
   outc << "\nnamespace ramfuzz {\n\n";
   const int runres = tool.run(&RamFuzz(outh, outc).getActionFactory());
   outc << "} // namespace ramfuzz\n";

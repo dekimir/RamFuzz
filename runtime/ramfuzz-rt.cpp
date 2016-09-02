@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstddef>
 #include <iostream>
 #include <limits>
 #include <sstream>
@@ -18,6 +19,7 @@ using std::noshowbase;
 using std::numeric_limits;
 using std::ostream;
 using std::ostringstream;
+using std::size_t;
 using std::string;
 using std::uniform_int_distribution;
 using std::uniform_real_distribution;
@@ -94,6 +96,11 @@ template <> string gen::any<string>(const string &val_id) {
 }
 
 template <> int gen::between<int>(int lo, int hi, const string &val_id) {
+  return ::ibetween(lo, hi, rgen, val_id);
+}
+
+template <>
+size_t gen::between<size_t>(size_t lo, size_t hi, const string &val_id) {
   return ::ibetween(lo, hi, rgen, val_id);
 }
 
