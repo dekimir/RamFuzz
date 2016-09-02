@@ -60,16 +60,15 @@ public:
   static const string rfcls_prefix;
 
 private:
-  /// Generates the declaration and definition of member ctr_roulette.
-  void
-  gen_ctr_roulette(const string &cls,     ///< Name of class under test.
-                   const string &qualcls, ///< Like cls but fully qualified.
-                   const string &rfcls,   ///< Name of RamFuzz class.
-                   unsigned size          ///< Size of ctr_roulette.
-                   );
+  /// Generates the declaration and definition of member croulette.
+  void gen_croulette(const string &cls,     ///< Name of class under test.
+                     const string &qualcls, ///< Like cls but fully qualified.
+                     const string &rfcls,   ///< Name of RamFuzz class.
+                     unsigned size          ///< Size of croulette.
+                     );
 
-  /// Generates the declaration and definition of member meth_roulette.
-  void gen_meth_roulette(
+  /// Generates the declaration and definition of member mroulette.
+  void gen_mroulette(
       const string &rfcls, ///< Name of RamFuzz class.
       const unordered_map<string, unsigned>
           &namecount ///< Method-name histogram of the class under test.
@@ -126,23 +125,22 @@ string valident(const string &mname) {
 
 const string RamFuzz::rfcls_prefix = "RF__";
 
-void RamFuzz::gen_ctr_roulette(const string &cls, const string &qualcls,
-                               const string &rfcls, unsigned size) {
+void RamFuzz::gen_croulette(const string &cls, const string &qualcls,
+                            const string &rfcls, unsigned size) {
   outh << "  using cptr = " << qualcls << "* (" << rfcls << "::*)();\n";
-  outh << "  static const cptr ctr_roulette[" << size << "];\n";
+  outh << "  static const cptr croulette[" << size << "];\n";
 
-  outc << "const " << rfcls << "::cptr " << rfcls << "::ctr_roulette[] = {\n  ";
+  outc << "const " << rfcls << "::cptr " << rfcls << "::croulette[] = {\n  ";
   for (unsigned i = 0; i < size; ++i)
     outc << (i ? ", " : "") << "&" << rfcls << "::" << cls << i;
   outc << "\n};\n";
 }
 
-void RamFuzz::gen_meth_roulette(
-    const string &rfcls, const unordered_map<string, unsigned> &namecount) {
+void RamFuzz::gen_mroulette(const string &rfcls,
+                            const unordered_map<string, unsigned> &namecount) {
   const string cls = rfcls.substr(rfcls_prefix.size());
-  unsigned meth_roulette_size = 0;
-  outc << "const " << rfcls << "::mptr " << rfcls
-       << "::meth_roulette[] = {\n  ";
+  unsigned mroulette_size = 0;
+  outc << "const " << rfcls << "::mptr " << rfcls << "::mroulette[] = {\n  ";
   bool firstel = true;
   for (const auto &nc : namecount) {
     if (nc.first == cls)
@@ -152,20 +150,20 @@ void RamFuzz::gen_meth_roulette(
         outc << ", ";
       firstel = false;
       outc << "&" << rfcls << "::" << nc.first << i;
-      meth_roulette_size++;
+      mroulette_size++;
     }
   }
   outc << "\n};\n";
 
   outh << "  using mptr = void (" << rfcls << "::*)();\n";
-  outh << "  static const mptr meth_roulette[" << meth_roulette_size << "];\n";
+  outh << "  static const mptr mroulette[" << mroulette_size << "];\n";
 }
 
 void RamFuzz::gen_int_ctr(const string &rfcls) {
   outh << "  // Creates obj internally, using indicated constructor.\n";
   outh << "  " << rfcls << "(unsigned ctr);\n";
   outc << rfcls << "::" << rfcls << "(unsigned ctr)\n";
-  outc << "  : pobj((this->*ctr_roulette[ctr])()), obj(*pobj) {}\n";
+  outc << "  : pobj((this->*croulette[ctr])()), obj(*pobj) {}\n";
 }
 
 void RamFuzz::gen_method(const string &rfname, const CXXMethodDecl *M,
@@ -187,9 +185,9 @@ void RamFuzz::gen_method(const string &rfname, const CXXMethodDecl *M,
       const auto rfvarcls = rfcls_prefix + varcls->getNameAsString();
       outc << "  " << rfvarcls << " rfram" << ramcount
            << "(g.between<unsigned>(0, sizeof(" << rfvarcls
-           << "::ctr_roulette)/sizeof(" << rfvarcls << "::ctr_roulette[0])-1,\""
+           << "::croulette)/sizeof(" << rfvarcls << "::croulette[0])-1,\""
            << rfname << "::rfram" << ramcount << " ctr roulette\"));\n";
-      // TODO: spin meth_roulette.
+      // TODO: spin mroulette.
       outc << "  auto ram" << ramcount << " = rfram" << ramcount << ".obj;\n";
     }
   }
@@ -237,11 +235,11 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
                  *Result.Context);
       namecount[name]++;
     }
-    gen_meth_roulette(rfcls, namecount);
+    gen_mroulette(rfcls, namecount);
     if (ctrs) {
       gen_int_ctr(rfcls);
-      gen_ctr_roulette(C->getNameAsString(), cls, rfcls,
-                       namecount[C->getNameAsString()]);
+      gen_croulette(C->getNameAsString(), cls, rfcls,
+                    namecount[C->getNameAsString()]);
     }
     outh << "};\n\n";
   }

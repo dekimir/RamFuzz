@@ -3,7 +3,7 @@
 int main() {
   C c;
   ramfuzz::RF__C rc(c);
-  for (auto m : rc.meth_roulette)
+  for (auto m : rc.mroulette)
     (rc.*m)();
   if (c.sum != 123)
     return 1;
