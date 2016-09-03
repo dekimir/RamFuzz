@@ -53,10 +53,15 @@ for case in glob(path.join(scriptdir, '*.hpp')):
     testname = hfile[:-4]
     cfile = testname + '.cpp'
     temp = tempfile.mkdtemp()
-    shutil.copy(path.join(rtdir, 'ramfuzz-rt.hpp'), temp)
-    shutil.copy(path.join(rtdir, 'ramfuzz-rt.cpp'), temp)
     shutil.copy(path.join(scriptdir, hfile), temp)
     shutil.copy(path.join(scriptdir, cfile), temp)
+    shutil.copy(path.join(rtdir, 'ramfuzz-rt.cpp'), temp)
+    # Also copy ramfuzz-rt.hpp, but with lower depthlimit so tests don't take
+    # forever:
+    with open(path.join(rtdir, 'ramfuzz-rt.hpp')) as fsrc:
+        newcontent = fsrc.read().replace('depthlimit = 20', 'depthlimit = 4')
+        with open(path.join(temp, 'ramfuzz-rt.hpp'), 'w') as fdst:
+            fdst.write(newcontent)
     try:
         chdir(temp)
         check_call([path.join(bindir, 'ramfuzz'), hfile, '--', '-std=c++11'])

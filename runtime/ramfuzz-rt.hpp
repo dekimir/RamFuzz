@@ -35,7 +35,7 @@ extern unsigned spinlimit;
 /// limit, infinite recursion is possible for certain code under test (eg,
 /// ClassA::method1(B b) and ClassB::method2(A a)).  The user can modify this
 /// value or the depthlimit member of any RamFuzz class.
-constexpr unsigned depthlimit = 100;
+constexpr unsigned depthlimit = 20;
 
 } // namespace runtime
 } // namespace ramfuzz
