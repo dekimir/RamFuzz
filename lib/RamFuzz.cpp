@@ -213,8 +213,9 @@ void RamFuzz::gen_method(const string &rfname, const CXXMethodDecl *M,
       outc << "  const auto mspins" << ramcount
            << " = g.between(0u, ::ramfuzz::runtime::spinlimit, \"" << rfvarid
            << "-mspins\");\n";
-      outc << "  for (auto i = 0u; i < mspins" << ramcount << "; ++i)\n";
-      outc << "    (" << rfvar << ".*" << rfvar << ".mroulette[g.between(0u, "
+      outc << "  if (" << rfvarcls << "::mcount)\n";
+      outc << "    for (auto i = 0u; i < mspins" << ramcount << "; ++i)\n";
+      outc << "      (" << rfvar << ".*" << rfvar << ".mroulette[g.between(0u, "
            << rfvarcls << "::mcount-1, \"" << rfvarid << "-m\")])();\n";
       outc << "  auto ram" << ramcount << " = " << rfvar << ".obj;\n";
     }
