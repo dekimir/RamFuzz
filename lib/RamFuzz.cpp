@@ -179,16 +179,16 @@ void RamFuzz::early_exit(const string &rfname, const CXXMethodDecl *M,
                          const string &reason) {
   outc << "    std::cout << \"" << rfname << " exiting early due to " << reason
        << "\" << std::endl;\n";
+  outc << "    --calldepth;\n";
   outc << "    return" << (isa<CXXConstructorDecl>(M) ? " 0" : "") << ";\n";
 }
 
 void RamFuzz::gen_method(const string &rfname, const CXXMethodDecl *M,
                          const ASTContext &ctx) {
   outc << rfname << "() {\n";
-  outc << "  if (calldepth >= depthlimit) {\n";
+  outc << "  if (++calldepth >= depthlimit) {\n";
   early_exit(rfname, M, "call depth limit");
   outc << "  }\n";
-  outc << "  ++calldepth;\n";
   auto ramcount = 0u;
   for (const auto &ram : M->parameters()) {
     ramcount++;
