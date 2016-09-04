@@ -18,8 +18,6 @@ using clang::tooling::FrontendActionFactory;
 using clang::tooling::newFrontendActionFactory;
 using llvm::raw_ostream;
 using llvm::raw_string_ostream;
-using std::ostringstream;
-using std::to_string;
 using std::string;
 using std::unique_ptr;
 using std::unordered_map;
@@ -55,21 +53,16 @@ public:
 
   FrontendActionFactory &getActionFactory() { return *AF; }
 
-  /// Prefix for RamFuzz class names. A RamFuzz class name is this prefix plus
-  /// the name of class under test.
-  static const string rfcls_prefix;
-
 private:
   /// Generates the declaration and definition of member croulette.
-  void gen_croulette(const string &cls,     ///< Name of class under test.
-                     const string &qualcls, ///< Like cls but fully qualified.
-                     const string &rfcls,   ///< Name of RamFuzz class.
-                     unsigned size          ///< Size of croulette.
-                     );
+  void gen_croulette(
+      const string &cls, ///< Fully qualified name of class under test.
+      unsigned size      ///< Size of croulette.
+      );
 
   /// Generates the declaration and definition of member mroulette.
   void gen_mroulette(
-      const string &rfcls, ///< Name of RamFuzz class.
+      const string &cls, ///< Qualified name of the class under test.
       const unordered_map<string, unsigned>
           &namecount ///< Method-name histogram of the class under test.
       );
@@ -77,21 +70,22 @@ private:
   /// Generates the declaration and definition of a RamFuzz class constructor
   /// from an int.  This constructor internally creates the object under test
   /// using a constructor indicated by the int.
-  void gen_int_ctr(const string &rfcls ///< Name of RamFuzz class.
-                   );
+  void
+  gen_int_ctr(const string &cls ///< Qualified name of the class under test.
+              );
 
-  /// Generates early exit from RamFuzz method named \c rfname, corresponding to
-  /// the method under test \c M.  The exit code prints \c reason as the reason
-  /// for exiting early.  The exit code is multiple statements, so the caller
-  /// may need to generate a pair of braces around it.
-  void early_exit(const string &rfname, const CXXMethodDecl *M,
-                  const string &reason);
+  /// Generates early exit from RamFuzz method \c name, corresponding to the
+  /// method under test \c M.  The exit code prints \c reason as the reason for
+  /// exiting early.  The exit code is multiple statements, so the caller may
+  /// need to generate a pair of braces around it.
+  void early_exit(const Twine &name, ///< Name of the exiting method.
+                  const CXXMethodDecl *M, const Twine &reason);
 
   /// Generates the definition of RamFuzz method named rfname, corresponding to
   /// the method under test M.  Assumes that the return type of the generated
   /// method has already been output.
-  void gen_method(const string &rfname, const CXXMethodDecl *M,
-                  const ASTContext &ctx);
+  void gen_method(const Twine &rfname, ///< Fully qualified RamFuzz method name.
+                  const CXXMethodDecl *M, const ASTContext &ctx);
 
   /// Where to output generated declarations (typically a header file).
   raw_ostream &outh;
@@ -128,62 +122,108 @@ string valident(const string &mname) {
   return transf;
 }
 
+/// Given a (possibly qualified) class name, returns its constructor's name.
+const char *ctrname(const string &cls) {
+  const auto found = cls.rfind("::");
+  return &cls[found == string::npos ? 0 : found];
+}
+
+/// Returns the first character that's not a colon or s.cend().
+string::const_iterator first_noncolon(const string &s) {
+  auto it = s.cbegin();
+  while (it != s.cend() && *it == ':')
+    ++it;
+  return it;
+}
+
+/// Opens one or more namespaces in \c s.  For each part of \c name delimited by
+/// "::", prints "namespace " <part of \c name> " { ".  Ends with a newline.
+void opennss(const string &name, raw_ostream &s) {
+  auto start = first_noncolon(name);
+  if (start == name.cend())
+    return;
+  s << "namespace ";
+  for (auto c = start; c != name.cend(); ++c)
+    if (*c == ':') {
+      s << " { namespace ";
+      ++c;
+      assert(c != name.cend() && *c == ':');
+    } else
+      s << *c;
+  s << " {\n";
+}
+
+/// Closes braces opened by opennss() and adds two newlines.
+void closenss(const string &name, raw_ostream &s) {
+  auto start = first_noncolon(name);
+  if (start == name.cend())
+    return;
+  s << "}";
+  for (auto c = start; c != name.cend(); ++c)
+    if (*c == ':') {
+      s << "}";
+      ++c;
+      assert(c != name.cend() && *c == ':');
+    }
+  s << "\n\n";
+}
+
 } // anonymous namespace
 
-const string RamFuzz::rfcls_prefix = "RF__";
-
-void RamFuzz::gen_croulette(const string &cls, const string &qualcls,
-                            const string &rfcls, unsigned size) {
-  outh << "  using cptr = " << qualcls << "* (" << rfcls << "::*)();\n";
-  outh << "  static const cptr croulette[" << size << "];\n";
+void RamFuzz::gen_croulette(const string &cls, unsigned size) {
+  outh << "  using cptr = ::" << cls << "* (control::*)();\n";
   outh << "  static constexpr unsigned ccount = " << size << ";\n";
+  outh << "  static const cptr croulette[ccount];\n";
 
-  outc << "const " << rfcls << "::cptr " << rfcls << "::croulette[] = {\n  ";
+  outc << "const " << cls << "::control::cptr " << cls
+       << "::control::croulette[] = {\n  ";
+
   for (unsigned i = 0; i < size; ++i)
-    outc << (i ? ", " : "") << "&" << rfcls << "::" << cls << i;
+    outc << (i ? ", " : "") << "&" << cls << "::control::" << ctrname(cls) << i;
   outc << "\n};\n";
 }
 
-void RamFuzz::gen_mroulette(const string &rfcls,
+void RamFuzz::gen_mroulette(const string &cls,
                             const unordered_map<string, unsigned> &namecount) {
-  const string cls = rfcls.substr(rfcls_prefix.size());
   unsigned mroulette_size = 0;
-  outc << "const " << rfcls << "::mptr " << rfcls << "::mroulette[] = {\n  ";
+  outc << "const " << cls << "::control::mptr " << cls
+       << "::control::mroulette[] = {\n  ";
   bool firstel = true;
+  const auto ctr = ctrname(cls);
   for (const auto &nc : namecount) {
-    if (nc.first == cls)
+    if (nc.first == ctr)
       continue; // Skip methods corresponding to constructors under test.
     for (unsigned i = 0; i < nc.second; ++i) {
       if (!firstel)
         outc << ", ";
       firstel = false;
-      outc << "&" << rfcls << "::" << nc.first << i;
+      outc << "&" << cls << "::control::" << nc.first << i;
       mroulette_size++;
     }
   }
   outc << "\n};\n";
 
-  outh << "  using mptr = void (" << rfcls << "::*)();\n";
-  outh << "  static const mptr mroulette[" << mroulette_size << "];\n";
+  outh << "  using mptr = void (control::*)();\n";
   outh << "  static constexpr unsigned mcount = " << mroulette_size << ";\n";
+  outh << "  static const mptr mroulette[mcount];\n";
 }
 
-void RamFuzz::gen_int_ctr(const string &rfcls) {
+void RamFuzz::gen_int_ctr(const string &cls) {
   outh << "  // Creates obj internally, using indicated constructor.\n";
-  outh << "  explicit " << rfcls << "(unsigned ctr);\n";
-  outc << rfcls << "::" << rfcls << "(unsigned ctr)\n";
+  outh << "  explicit control(unsigned ctr);\n";
+  outc << cls << "::control::control(unsigned ctr)\n";
   outc << "  : pobj((this->*croulette[ctr])()), obj(*pobj) {}\n";
 }
 
-void RamFuzz::early_exit(const string &rfname, const CXXMethodDecl *M,
-                         const string &reason) {
-  outc << "    std::cout << \"" << rfname << " exiting early due to " << reason
+void RamFuzz::early_exit(const Twine &name, const CXXMethodDecl *M,
+                         const Twine &reason) {
+  outc << "    std::cout << \"" << name << " exiting early due to " << reason
        << "\" << std::endl;\n";
   outc << "    --calldepth;\n";
   outc << "    return" << (isa<CXXConstructorDecl>(M) ? " 0" : "") << ";\n";
 }
 
-void RamFuzz::gen_method(const string &rfname, const CXXMethodDecl *M,
+void RamFuzz::gen_method(const Twine &rfname, const CXXMethodDecl *M,
                          const ASTContext &ctx) {
   outc << rfname << "() {\n";
   outc << "  if (++calldepth >= depthlimit) {\n";
@@ -193,36 +233,36 @@ void RamFuzz::gen_method(const string &rfname, const CXXMethodDecl *M,
   for (const auto &ram : M->parameters()) {
     ramcount++;
     // Type of the generated variable:
-    auto vartype = ram->getType()
-                       .getNonReferenceType()
-                       .getDesugaredType(ctx)
-                       .getLocalUnqualifiedType();
+    const auto vartype = ram->getType()
+                             .getNonReferenceType()
+                             .getDesugaredType(ctx)
+                             .getLocalUnqualifiedType();
     if (vartype->isScalarType()) {
       vartype.print(outc << "  ", prtpol);
       vartype.print(outc << " ram" << ramcount << " = g.any<", prtpol);
       outc << ">(\"" << rfname << "::ram" << ramcount << "\");\n";
     } else if (const auto varcls = vartype->getAsCXXRecordDecl()) {
-      const auto rfvarcls = rfcls_prefix + varcls->getNameAsString();
-      const auto rfvar = string("rfram") + to_string(ramcount);
+      const string cls = varcls->getQualifiedNameAsString();
+      const auto rfvar = Twine("rfram") + Twine(ramcount);
       const auto rfvarid = rfname + "::" + rfvar;
-      outc << "  " << rfvarcls << " " << rfvar << "(g.between(0u, " << rfvarcls
-           << "::ccount-1,\"" << rfvarid << "-croulette\"));\n";
+      outc << "  " << cls << "::control " << rfvar << "(g.between(0u, " << cls
+           << "::control::ccount-1,\"" << rfvarid << "-croulette\"));\n";
       outc << "  if (!" << rfvar << ") {\n";
-      early_exit(rfname, M, "failed " + rfvar + " constructor");
+      early_exit(rfname, M, Twine("failed ") + rfvar + " constructor");
       outc << "  }\n";
       outc << "  const auto mspins" << ramcount
            << " = g.between(0u, ::ramfuzz::runtime::spinlimit, \"" << rfvarid
            << "-mspins\");\n";
-      outc << "  if (" << rfvarcls << "::mcount)\n";
+      outc << "  if (" << cls << "::control::mcount)\n";
       outc << "    for (auto i = 0u; i < mspins" << ramcount << "; ++i)\n";
       outc << "      (" << rfvar << ".*" << rfvar << ".mroulette[g.between(0u, "
-           << rfvarcls << "::mcount-1, \"" << rfvarid << "-m\")])();\n";
+           << cls << "::control::mcount-1, \"" << rfvarid << "-m\")])();\n";
       outc << "  auto ram" << ramcount << " = " << rfvar << ".obj;\n";
     }
   }
   if (isa<CXXConstructorDecl>(M)) {
     outc << "  --calldepth;\n";
-    M->getParent()->printQualifiedName(outc << "  return new ");
+    M->getParent()->printQualifiedName(outc << "  return new class ");
   } else
     M->printName(outc << "  obj.");
   outc << "(";
@@ -236,14 +276,20 @@ void RamFuzz::gen_method(const string &rfname, const CXXMethodDecl *M,
 
 void RamFuzz::run(const MatchFinder::MatchResult &Result) {
   if (const auto *C = Result.Nodes.getNodeAs<CXXRecordDecl>("class")) {
-    unordered_map<string, unsigned> namecount;
     const string cls = C->getQualifiedNameAsString();
-    const string rfcls = rfcls_prefix + C->getNameAsString();
-    outh << "class " << rfcls << " {\n";
+    // Open namespaces for each part of cls split on "::".  Doesn't matter if
+    // the part is a namespace or a class -- in RamFuzz code, they'll all be
+    // namespaces.  The RamFuzz control class (that invokes under-test methods
+    // with fuzzed parameters) will be named "control" in this nest of
+    // namespaces.  That class can now be referenced as cls+"::control".  But
+    // the class under test C must now be referenced as "::"+cls, due to C++
+    // lookup-resolution rules.
+    opennss(cls, outh);
+    outh << "\nclass control {\n";
     outh << " private:\n";
     outh << "  // Owns internally created objects. Must precede obj "
             "declaration.\n";
-    outh << "  std::unique_ptr<" << cls << "> pobj;\n";
+    outh << "  std::unique_ptr<::" << cls << "> pobj;\n";
     outh << "  runtime::gen g;\n";
     // Call depth should be made atomic when we start supporting multi-threaded
     // fuzzing.  Holding off for now because we expect to get a lot of mileage
@@ -252,40 +298,41 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
     // without paying the overhead of thread-safety.
     outh << "  // Prevents infinite recursion.\n";
     outh << "  static unsigned calldepth;\n";
-    outc << "unsigned " << rfcls << "::calldepth = 0;\n\n";
+    outc << "unsigned " << cls << "::control::calldepth = 0;\n\n";
     outh << "  static const unsigned depthlimit = "
             "::ramfuzz::runtime::depthlimit;\n";
     outh << " public:\n";
-    outh << "  " << cls << "& obj; // Object under test.\n";
-    outh << "  " << rfcls << "(" << cls << "& obj) \n";
-    outh << "    : obj(obj) {} // Object already created by caller.\n";
+    outh << "  ::" << cls << "& obj; // Object under test.\n";
+    outh << "  control(::" << cls
+         << "& obj) : obj(obj) {} // Object already created by caller.\n";
     outh << "  // True if obj was successfully internally created.\n";
     outh << "  operator bool() const { return bool(pobj); }\n";
+    unordered_map<string, unsigned> namecount;
     bool ctrs = false;
     for (auto M : C->methods()) {
       if (skip(M))
         continue;
       const string name = valident(M->getNameAsString());
       if (isa<CXXConstructorDecl>(M)) {
-        outh << "  " << cls << "* ";
-        outc << cls << "* ";
+        outh << "  ::" << cls << "* ";
+        outc << "::" << cls << "* ";
         ctrs = true;
       } else {
         outh << "  void ";
         outc << "void ";
       }
       outh << name << namecount[name] << "();\n";
-      gen_method(rfcls + "::" + name + to_string(namecount[name]), M,
+      gen_method(Twine(cls) + "::control::" + name + Twine(namecount[name]), M,
                  *Result.Context);
       namecount[name]++;
     }
-    gen_mroulette(rfcls, namecount);
+    gen_mroulette(cls, namecount);
     if (ctrs) {
-      gen_int_ctr(rfcls);
-      gen_croulette(C->getNameAsString(), cls, rfcls,
-                    namecount[C->getNameAsString()]);
+      gen_int_ctr(cls);
+      gen_croulette(cls, namecount[C->getNameAsString()]);
     }
-    outh << "};\n\n";
+    outh << "};\n";
+    closenss(cls, outh);
   }
 }
 

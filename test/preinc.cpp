@@ -2,7 +2,7 @@
 
 int main() {
   C c;
-  ramfuzz::RF__C rc(c);
+  ramfuzz::C::control rc(c);
   for (auto m : rc.mroulette)
     (rc.*m)();
   if (c.sum != 10)

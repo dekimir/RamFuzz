@@ -1,7 +1,7 @@
 #include "fuzz.hpp"
 
 int main() {
-  ramfuzz::RF__A ra(0);
+  ramfuzz::A::control ra(0);
   for (auto m : ra.mroulette)
     (ra.*m)();
   if (ra.obj.sum != 220)

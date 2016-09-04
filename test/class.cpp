@@ -2,7 +2,7 @@
 
 int main() {
   B b;
-  ramfuzz::RF__B rb(b);
+  ramfuzz::B::control rb(b);
   for (auto m : rb.mroulette)
     (rb.*m)();
   if (b.sum != 11)
