@@ -285,7 +285,7 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
     // the class under test C must now be referenced as "::"+cls, due to C++
     // lookup-resolution rules.
     opennss(cls, outh);
-    outh << "\nclass control {\n";
+    outh << "class control {\n";
     outh << " private:\n";
     outh << "  // Owns internally created objects. Must precede obj "
             "declaration.\n";
