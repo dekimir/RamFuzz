@@ -13,4 +13,10 @@ int main() {
     (ra1.*m)();
   if (a1.sum != 123)
     return 1;
+  ns2::ns2i::A a2i;
+  ramfuzz::ns2::ns2i::A::control ra2i(a2i);
+  for (auto m : ra2i.mroulette)
+    (ra2i.*m)();
+  if (a2i.sum != 45)
+    return 1;
 }

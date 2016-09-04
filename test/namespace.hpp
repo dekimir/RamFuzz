@@ -20,9 +20,14 @@ namespace ns2i {
 class A {
 public:
   int sum = 0;
-  void a() { sum += 1; }
-  void a(int) { sum += 20; }
-  void a(bool) { sum += 300; }
+  void a() { sum += 45; }
 };
 } // namespace ns2i
+namespace {
+class A {
+public:
+  int sum = 0;
+  void a() { sum += 45; }
+};
+} // anonymous namespace
 } // namespace ns2
