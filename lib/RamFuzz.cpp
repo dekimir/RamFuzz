@@ -9,6 +9,7 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Tooling/Tooling.h"
+#include "llvm/ADT/SmallBitVector.h"
 
 using namespace clang;
 using namespace ast_matchers;
@@ -16,6 +17,7 @@ using namespace ast_matchers;
 using clang::tooling::ClangTool;
 using clang::tooling::FrontendActionFactory;
 using clang::tooling::newFrontendActionFactory;
+using llvm::SmallBitVector;
 using llvm::raw_ostream;
 using llvm::raw_string_ostream;
 using std::string;
@@ -229,14 +231,19 @@ void RamFuzz::gen_method(const Twine &rfname, const CXXMethodDecl *M,
   outc << "  if (++calldepth >= depthlimit) {\n";
   early_exit(rfname, M, "call depth limit");
   outc << "  }\n";
+  SmallBitVector isptr(M->param_size() + 1);
   auto ramcount = 0u;
   for (const auto &ram : M->parameters()) {
     ramcount++;
     // Type of the generated variable:
-    const auto vartype = ram->getType()
-                             .getNonReferenceType()
-                             .getDesugaredType(ctx)
-                             .getLocalUnqualifiedType();
+    auto vartype = ram->getType()
+                       .getNonReferenceType()
+                       .getDesugaredType(ctx)
+                       .getLocalUnqualifiedType();
+    if (vartype->isPointerType()) {
+      isptr.set(ramcount);
+      vartype = vartype->getPointeeType();
+    }
     if (vartype->isScalarType()) {
       vartype.print(outc << "  ", prtpol);
       vartype.print(outc << " ram" << ramcount << " = g.any<", prtpol);
@@ -267,7 +274,7 @@ void RamFuzz::gen_method(const Twine &rfname, const CXXMethodDecl *M,
     M->printName(outc << "  obj.");
   outc << "(";
   for (auto i = 1u; i <= ramcount; ++i)
-    outc << (i == 1 ? "" : ", ") << "ram" << i;
+    outc << (i == 1 ? "" : ", ") << (isptr[i] ? "&" : "") << "ram" << i;
   outc << ");\n";
   if (!isa<CXXConstructorDecl>(M))
     outc << "  --calldepth;\n";
