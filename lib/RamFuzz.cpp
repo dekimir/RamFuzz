@@ -127,7 +127,7 @@ string valident(const string &mname) {
 /// Given a (possibly qualified) class name, returns its constructor's name.
 const char *ctrname(const string &cls) {
   const auto found = cls.rfind("::");
-  return &cls[found == string::npos ? 0 : found];
+  return &cls[found == string::npos ? 0 : found + 2];
 }
 
 /// Returns the first character that's not a colon or s.cend().
@@ -332,6 +332,13 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
       gen_method(Twine(cls) + "::control::" + name + Twine(namecount[name]), M,
                  *Result.Context);
       namecount[name]++;
+    }
+    if (C->needsImplicitDefaultConstructor()) {
+      const auto name = ctrname(cls);
+      outh << "  ::" << cls << "* ";
+      outh << name << namecount[name]++ << "() { return new ::" << cls
+           << "();}\n";
+      ctrs = true;
     }
     gen_mroulette(cls, namecount);
     if (ctrs) {
