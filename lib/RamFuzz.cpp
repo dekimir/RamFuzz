@@ -302,7 +302,7 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
     // fuzzing.  Holding off for now because we expect to get a lot of mileage
     // out of multi-process fuzzing (running multiple fuzzing executables, each
     // in its own process).  That should still keep all the hardware occupied
-    // without paying the overhead of thread-safety.
+    // without paying for the overhead of thread-safety.
     outh << "  // Prevents infinite recursion.\n";
     outh << "  static unsigned calldepth;\n";
     outc << "unsigned " << cls << "::control::calldepth = 0;\n\n";
