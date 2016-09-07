@@ -129,7 +129,8 @@ const char *ctrname(const string &cls) {
   return &cls[found == string::npos ? 0 : found + 2];
 }
 
-/// Returns the first character that's not a colon or s.cend().
+/// Finds the first character that's not a colon.  If no such character exists,
+/// returns s.cend().
 string::const_iterator first_noncolon(const string &s) {
   auto it = s.cbegin();
   while (it != s.cend() && *it == ':')
