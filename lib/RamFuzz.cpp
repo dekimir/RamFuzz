@@ -56,6 +56,10 @@ public:
   FrontendActionFactory &getActionFactory() { return *AF; }
 
 private:
+  /// If C is abstract, generates an inner class that's a concrete subclass of
+  /// C.  Otherwise, typedefs `concrete_impl` to C.
+  void gen_concrete_impl(const CXXRecordDecl *C);
+
   /// Generates the declaration and definition of member croulette.
   void gen_croulette(
       const string &cls, ///< Fully qualified name of class under test.
@@ -172,6 +176,25 @@ void closenss(const string &name, raw_ostream &s) {
 
 } // anonymous namespace
 
+void RamFuzz::gen_concrete_impl(const CXXRecordDecl *C) {
+  if (C->isAbstract()) {
+    C->printQualifiedName(outh << "  struct concrete_impl : public ::");
+    outh << " {\n";
+    for (auto M : C->methods()) {
+      if (M->isPure()) {
+        outh << "    " << M->getReturnType().stream(prtpol) << " " << *M
+             << "() override { return ";
+	// TODO: generate a random value of return type.
+        outh << "; }\n";
+      }
+    }
+    outh << "  };\n";
+  } else {
+    C->printQualifiedName(outh << "  typedef ::");
+    outh << " concrete_impl;\n";
+  }
+}
+
 void RamFuzz::gen_croulette(const string &cls, unsigned size) {
   outh << "  using cptr = ::" << cls << "* (control::*)();\n";
   outh << "  static constexpr unsigned ccount = " << size << ";\n";
@@ -264,12 +287,12 @@ void RamFuzz::gen_method(const Twine &rfname, const CXXMethodDecl *M,
       outc << "    for (auto i = 0u; i < mspins" << ramcount << "; ++i)\n";
       outc << "      (" << rfvar << ".*" << rfvar << ".mroulette[g.between(0u, "
            << cls << "::control::mcount-1, \"" << rfvarid << "-m\")])();\n";
-      outc << "  auto ram" << ramcount << " = " << rfvar << ".obj;\n";
+      outc << "  auto& ram" << ramcount << " = " << rfvar << ".obj;\n";
     }
   }
   if (isa<CXXConstructorDecl>(M)) {
     outc << "  --calldepth;\n";
-    M->getParent()->printQualifiedName(outc << "  return new class ");
+    outc << "  return new concrete_impl";
   } else
     M->printName(outc << "  obj.");
   outc << "(";
@@ -308,6 +331,7 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
     outc << "unsigned " << cls << "::control::calldepth = 0;\n\n";
     outh << "  static const unsigned depthlimit = "
             "::ramfuzz::runtime::depthlimit;\n";
+    gen_concrete_impl(C);
     outh << " public:\n";
     outh << "  ::" << cls << "& obj; // Object under test.\n";
     outh << "  control(::" << cls
@@ -336,8 +360,8 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
     if (C->needsImplicitDefaultConstructor()) {
       const auto name = ctrname(cls);
       outh << "  ::" << cls << "* ";
-      outh << name << namecount[name]++ << "() { return new ::" << cls
-           << "();}\n";
+      outh << name << namecount[name]++
+           << "() { return new concrete_impl(); }\n";
       ctrs = true;
     }
     gen_mroulette(cls, namecount);
