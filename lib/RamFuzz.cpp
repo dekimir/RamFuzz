@@ -177,14 +177,25 @@ void RamFuzz::gen_concrete_impl(const CXXRecordDecl *C) {
     C->printQualifiedName(outh << "  struct concrete_impl : public ::");
     outh << " {\n";
     for (auto M : C->methods()) {
+      const auto bg = M->param_begin(), en = M->param_end();
+      const auto mcom = [bg](decltype(bg)& P) { return P == bg ? "" : ", "; };
       if (M->isPure()) {
         outh << "    " << M->getReturnType().stream(prtpol) << " " << *M << "(";
-        for (auto P = M->param_begin(); P != M->param_end(); ++P)
-          outh << (P == M->param_begin() ? "" : ", ")
-               << (*P)->getType().stream(prtpol);
+        for (auto P = bg; P != en; ++P)
+          outh << mcom(P) << (*P)->getType().stream(prtpol);
         outh << ") override { return ";
         // TODO: generate a random value of return type.
         outh << "; }\n";
+      } else if (isa<CXXConstructorDecl>(M)) {
+        outh << "    concrete_impl(";
+        for (auto P = bg; P != en; ++P)
+          outh << mcom(P) << (*P)->getType().stream(prtpol) << " p"
+               << P - bg + 1;
+        C->printQualifiedName(outh << ") : ");
+        outh << "(";
+        for (auto P = bg; P != en; ++P)
+          outh << mcom(P) << "p" << P - bg + 1;
+        outh << ") {}\n";
       }
     }
     outh << "  };\n";
@@ -316,10 +327,11 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
     opennss(cls, outh);
     outh << "class control {\n";
     outh << " private:\n";
+    outh << "  runtime::gen g; // Declare first to initialize early; "
+            "constructors may use it.\n";
     outh << "  // Owns internally created objects. Must precede obj "
             "declaration.\n";
     outh << "  std::unique_ptr<::" << cls << "> pobj;\n";
-    outh << "  runtime::gen g;\n";
     // Call depth should be made atomic when we start supporting multi-threaded
     // fuzzing.  Holding off for now because we expect to get a lot of mileage
     // out of multi-process fuzzing (running multiple fuzzing executables, each
