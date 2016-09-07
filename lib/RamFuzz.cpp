@@ -178,7 +178,7 @@ void RamFuzz::gen_concrete_impl(const CXXRecordDecl *C) {
     outh << " {\n";
     for (auto M : C->methods()) {
       const auto bg = M->param_begin(), en = M->param_end();
-      const auto mcom = [bg](decltype(bg)& P) { return P == bg ? "" : ", "; };
+      const auto mcom = [bg](decltype(bg) &P) { return P == bg ? "" : ", "; };
       if (M->isPure()) {
         outh << "    " << M->getReturnType().stream(prtpol) << " " << *M << "(";
         for (auto P = bg; P != en; ++P)
@@ -186,7 +186,7 @@ void RamFuzz::gen_concrete_impl(const CXXRecordDecl *C) {
         outh << ") override { return ";
         // TODO: generate a random value of return type.
         outh << "; }\n";
-      } else if (isa<CXXConstructorDecl>(M)) {
+      } else if (isa<CXXConstructorDecl>(M) && M->getAccess() != AS_private) {
         outh << "    concrete_impl(";
         for (auto P = bg; P != en; ++P)
           outh << mcom(P) << (*P)->getType().stream(prtpol) << " p"

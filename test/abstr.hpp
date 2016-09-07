@@ -5,6 +5,11 @@ public:
   A(const A&) {}
   virtual void f1() = 0;
   virtual void f2(int, double, A&, bool) = 0;
+protected:
+  A(double, double) {}
+private:
+  A(double) {}
+  virtual void f3(unsigned) = 0;
 };
 
 class B {
