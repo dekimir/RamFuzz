@@ -271,9 +271,9 @@ void RamFuzz::gen_method(const Twine &rfname, const CXXMethodDecl *M,
       vartype = vartype->getPointeeType();
     }
     if (vartype->isScalarType()) {
-      vartype.print(outc << "  ", prtpol);
-      vartype.print(outc << " ram" << ramcount << " = g.any<", prtpol);
-      outc << ">(\"" << rfname << "::ram" << ramcount << "\");\n";
+      outc << "  " << vartype.stream(prtpol) << " ram" << ramcount
+           << " = g.any<" << vartype.stream(prtpol) << ">(\"" << rfname
+           << "::ram" << ramcount << "\");\n";
     } else if (const auto varcls = vartype->getAsCXXRecordDecl()) {
       const string cls = varcls->getQualifiedNameAsString();
       const auto rfvar = Twine("rfram") + Twine(ramcount);
@@ -297,7 +297,7 @@ void RamFuzz::gen_method(const Twine &rfname, const CXXMethodDecl *M,
     outc << "  --calldepth;\n";
     outc << "  return new concrete_impl";
   } else
-    M->printName(outc << "  obj.");
+    outc << "  obj." << *M;
   outc << "(";
   for (auto i = 1u; i <= ramcount; ++i)
     outc << (i == 1 ? "" : ", ") << (isptr[i] ? "&" : "") << "ram" << i;
