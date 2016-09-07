@@ -1,11 +1,12 @@
 class A {
 public:
   int sum = 21;
-  virtual void f() = 0;
+  virtual void f1() = 0;
+  virtual void f2(int, double, A&, bool) = 0;
 };
 
 class B {
 public:
   int sum = 300;
-  void g(A a) { sum += a.sum; }
+  void g(const A& a) { sum += a.sum; }
 };

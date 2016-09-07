@@ -182,9 +182,12 @@ void RamFuzz::gen_concrete_impl(const CXXRecordDecl *C) {
     outh << " {\n";
     for (auto M : C->methods()) {
       if (M->isPure()) {
-        outh << "    " << M->getReturnType().stream(prtpol) << " " << *M
-             << "() override { return ";
-	// TODO: generate a random value of return type.
+        outh << "    " << M->getReturnType().stream(prtpol) << " " << *M << "(";
+        for (auto P = M->param_begin(); P != M->param_end(); ++P)
+          outh << (P == M->param_begin() ? "" : ", ")
+               << (*P)->getType().stream(prtpol);
+        outh << ") override { return ";
+        // TODO: generate a random value of return type.
         outh << "; }\n";
       }
     }
