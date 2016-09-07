@@ -27,11 +27,6 @@ using std::vector;
 
 namespace {
 
-bool skip(CXXMethodDecl *M) {
-  return isa<CXXDestructorDecl>(M) || M->getAccess() != AS_public ||
-         !M->isInstance();
-}
-
 auto ClassMatcher =
     cxxRecordDecl(isExpansionInMainFile(),
                   unless(hasAncestor(namespaceDecl(isAnonymous()))),
@@ -344,7 +339,8 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
     unordered_map<string, unsigned> namecount;
     bool ctrs = false;
     for (auto M : C->methods()) {
-      if (skip(M))
+      if (isa<CXXDestructorDecl>(M) || M->getAccess() != AS_public ||
+          !M->isInstance())
         continue;
       const string name = valident(M->getNameAsString());
       if (isa<CXXConstructorDecl>(M)) {
