@@ -1,7 +1,8 @@
 #include "fuzz.hpp"
 
 int main() {
-  ramfuzz::A::control ra(0);
+  ramfuzz::runtime::gen g;
+  ramfuzz::A::control ra(g, 0);
   for (auto m : ra.mroulette)
     (ra.*m)();
   if (ra.obj.sum != 220)

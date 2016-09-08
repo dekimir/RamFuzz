@@ -1,8 +1,9 @@
 #include "fuzz.hpp"
 
 int main() {
+  ramfuzz::runtime::gen g;
   B b;
-  ramfuzz::B::control rb(b);
+  ramfuzz::B::control rb(g, b);
   for (auto m : rb.mroulette)
     (rb.*m)();
   if (b.sum != 11)

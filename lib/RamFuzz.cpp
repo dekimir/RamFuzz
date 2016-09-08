@@ -245,9 +245,9 @@ void RamFuzz::gen_mroulette(const string &cls,
 
 void RamFuzz::gen_int_ctr(const string &cls) {
   outh << "  // Creates obj internally, using indicated constructor.\n";
-  outh << "  explicit control(unsigned ctr);\n";
-  outc << cls << "::control::control(unsigned ctr)\n";
-  outc << "  : pobj((this->*croulette[ctr])()), obj(*pobj) {}\n";
+  outh << "  control(runtime::gen& g, unsigned ctr);\n";
+  outc << cls << "::control::control(runtime::gen& g, unsigned ctr)\n";
+  outc << "  : g(g), pobj((this->*croulette[ctr])()), obj(*pobj) {}\n";
 }
 
 void RamFuzz::early_exit(const Twine &name, const CXXMethodDecl *M,
@@ -285,8 +285,8 @@ void RamFuzz::gen_method(const Twine &rfname, const CXXMethodDecl *M,
       const string cls = varcls->getQualifiedNameAsString();
       const auto rfvar = Twine("rfram") + Twine(ramcount);
       const auto rfvarid = rfname + "::" + rfvar;
-      outc << "  " << cls << "::control " << rfvar << "(g.between(0u, " << cls
-           << "::control::ccount-1,\"" << rfvarid << "-croulette\"));\n";
+      outc << "  " << cls << "::control " << rfvar << "(g, g.between(0u, "
+           << cls << "::control::ccount-1,\"" << rfvarid << "-croulette\"));\n";
       outc << "  if (!" << rfvar << ") {\n";
       early_exit(rfname, M, Twine("failed ") + rfvar + " constructor");
       outc << "  }\n";
@@ -327,7 +327,7 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
     opennss(cls, outh);
     outh << "class control {\n";
     outh << " private:\n";
-    outh << "  runtime::gen g; // Declare first to initialize early; "
+    outh << "  runtime::gen& g; // Declare first to initialize early; "
             "constructors may use it.\n";
     outh << "  // Owns internally created objects. Must precede obj "
             "declaration.\n";
@@ -345,8 +345,8 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
     gen_concrete_impl(C);
     outh << " public:\n";
     outh << "  ::" << cls << "& obj; // Object under test.\n";
-    outh << "  control(::" << cls
-         << "& obj) : obj(obj) {} // Object already created by caller.\n";
+    outh << "  control(runtime::gen& g, ::" << cls
+         << "& obj) : g(g), obj(obj) {} // Object already created by caller.\n";
     outh << "  // True if obj was successfully internally created.\n";
     outh << "  operator bool() const { return bool(pobj); }\n";
     unordered_map<string, unsigned> namecount;
