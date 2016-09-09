@@ -16,8 +16,14 @@ private:
   virtual void f3(unsigned) = 0;
 };
 
-class B {
+struct B {
+  int sum = 4000;
+  virtual float f(bool) = 0;
+};
+
+class C {
 public:
   int sum = 300;
   void g(const A& a) { sum += a.sum; }
+  void g(const B& b) { sum += b.sum; }
 };

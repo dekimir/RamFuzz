@@ -79,6 +79,11 @@ template <> double gen::any<double>(const string &val_id) {
                     numeric_limits<double>::max(), rgen, val_id);
 }
 
+template <> float gen::any<float>(const string &val_id) {
+  return ::rbetween(numeric_limits<float>::min(), numeric_limits<float>::max(),
+                    rgen, val_id);
+}
+
 template <> string gen::any<string>(const string &val_id) {
   static const int maxlen = 1025;
   const int len = ::ibetween(0, maxlen, rgen, "");

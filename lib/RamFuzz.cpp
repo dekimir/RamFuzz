@@ -52,7 +52,7 @@ public:
 
 private:
   /// If C is abstract, generates an inner class that's a concrete subclass of
-  /// C.  Otherwise, typedefs `concrete_impl` to C.
+  /// C.
   void gen_concrete_impl(const CXXRecordDecl *C, const ASTContext &ctx);
 
   /// Generates the declaration and definition of member croulette.
@@ -177,7 +177,6 @@ void RamFuzz::gen_concrete_impl(const CXXRecordDecl *C, const ASTContext &ctx) {
     C->printQualifiedName(outh << "  struct concrete_impl : public ::");
     outh << " {\n";
     outh << "    runtime::gen& g;\n";
-    bool ctrs = false;
     for (auto M : C->methods()) {
       const auto bg = M->param_begin(), en = M->param_end();
       const auto mcom = [bg](decltype(bg) &P) { return P == bg ? "" : ", "; };
@@ -194,7 +193,6 @@ void RamFuzz::gen_concrete_impl(const CXXRecordDecl *C, const ASTContext &ctx) {
         // TODO: handle other types.
         outh << "; }\n";
       } else if (isa<CXXConstructorDecl>(M) && M->getAccess() != AS_private) {
-        ctrs = true;
         outh << "    concrete_impl(runtime::gen& g";
         for (auto P = bg; P != en; ++P)
           outh << ", " << (*P)->getType().stream(prtpol) << " p" << P - bg + 1;
@@ -205,6 +203,8 @@ void RamFuzz::gen_concrete_impl(const CXXRecordDecl *C, const ASTContext &ctx) {
         outh << "), g(g) {}\n";
       }
     }
+    if (C->needsImplicitDefaultConstructor())
+      outh << "    concrete_impl(runtime::gen& g) : g(g) {}\n";
     outh << "  };\n";
   }
 }

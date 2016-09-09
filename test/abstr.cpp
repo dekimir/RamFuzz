@@ -2,10 +2,10 @@
 
 int main() {
   ramfuzz::runtime::gen g;
-  ramfuzz::B::control rb(g, 0);
-  for (auto m : rb.mroulette)
-    (rb.*m)();
-  return (rb.obj.sum != 321);
+  ramfuzz::C::control rc(g, 0);
+  for (auto m : rc.mroulette)
+    (rc.*m)();
+  return (rc.obj.sum != 4321);
 }
 
 unsigned ::ramfuzz::runtime::spinlimit = 3;
