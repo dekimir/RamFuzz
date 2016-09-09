@@ -7,7 +7,7 @@ public:
   int sum = 21;
   A(int) {}
   A(const R&) {}
-  virtual void f1() = 0;
+  virtual unsigned f1() = 0;
   virtual void f2(int, double, R&, bool) = 0;
 protected:
   A(double, double) {}

@@ -53,7 +53,7 @@ public:
 private:
   /// If C is abstract, generates an inner class that's a concrete subclass of
   /// C.  Otherwise, typedefs `concrete_impl` to C.
-  void gen_concrete_impl(const CXXRecordDecl *C);
+  void gen_concrete_impl(const CXXRecordDecl *C, const ASTContext &ctx);
 
   /// Generates the declaration and definition of member croulette.
   void gen_croulette(
@@ -172,10 +172,12 @@ void closenss(const string &name, raw_ostream &s) {
 
 } // anonymous namespace
 
-void RamFuzz::gen_concrete_impl(const CXXRecordDecl *C) {
+void RamFuzz::gen_concrete_impl(const CXXRecordDecl *C, const ASTContext &ctx) {
   if (C->isAbstract()) {
     C->printQualifiedName(outh << "  struct concrete_impl : public ::");
     outh << " {\n";
+    outh << "    runtime::gen& g;\n";
+    bool ctrs = false;
     for (auto M : C->methods()) {
       const auto bg = M->param_begin(), en = M->param_end();
       const auto mcom = [bg](decltype(bg) &P) { return P == bg ? "" : ", "; };
@@ -184,24 +186,26 @@ void RamFuzz::gen_concrete_impl(const CXXRecordDecl *C) {
         for (auto P = bg; P != en; ++P)
           outh << mcom(P) << (*P)->getType().stream(prtpol);
         outh << ") override { return ";
-        // TODO: generate a random value of return type.
+        auto rety =
+            M->getReturnType().getDesugaredType(ctx).getLocalUnqualifiedType();
+        if (rety->isScalarType()) {
+          outh << "g.any<" << rety.stream(prtpol) << ">()";
+        }
+        // TODO: handle other types.
         outh << "; }\n";
       } else if (isa<CXXConstructorDecl>(M) && M->getAccess() != AS_private) {
-        outh << "    concrete_impl(";
+        ctrs = true;
+        outh << "    concrete_impl(runtime::gen& g";
         for (auto P = bg; P != en; ++P)
-          outh << mcom(P) << (*P)->getType().stream(prtpol) << " p"
-               << P - bg + 1;
+          outh << ", " << (*P)->getType().stream(prtpol) << " p" << P - bg + 1;
         C->printQualifiedName(outh << ") : ");
         outh << "(";
         for (auto P = bg; P != en; ++P)
           outh << mcom(P) << "p" << P - bg + 1;
-        outh << ") {}\n";
+        outh << "), g(g) {}\n";
       }
     }
     outh << "  };\n";
-  } else {
-    C->printQualifiedName(outh << "  typedef ::");
-    outh << " concrete_impl;\n";
   }
 }
 
@@ -302,10 +306,15 @@ void RamFuzz::gen_method(const Twine &rfname, const CXXMethodDecl *M,
   }
   if (isa<CXXConstructorDecl>(M)) {
     outc << "  --calldepth;\n";
-    outc << "  return new concrete_impl";
+    outc << "  return new ";
+    if (M->getParent()->isAbstract())
+      outc << "concrete_impl(g" << (ramcount ? ", " : "");
+    else {
+      M->getParent()->printQualifiedName(outc << "::");
+      outc << "(";
+    }
   } else
-    outc << "  obj." << *M;
-  outc << "(";
+    outc << "  obj." << *M << "(";
   for (auto i = 1u; i <= ramcount; ++i)
     outc << (i == 1 ? "" : ", ") << (isptr[i] ? "&" : "") << "ram" << i;
   outc << ");\n";
@@ -342,7 +351,7 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
     outc << "unsigned " << cls << "::control::calldepth = 0;\n\n";
     outh << "  static const unsigned depthlimit = "
             "::ramfuzz::runtime::depthlimit;\n";
-    gen_concrete_impl(C);
+    gen_concrete_impl(C, *Result.Context);
     outh << " public:\n";
     outh << "  ::" << cls << "& obj; // Object under test.\n";
     outh << "  control(runtime::gen& g, ::" << cls
@@ -372,8 +381,12 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
     if (C->needsImplicitDefaultConstructor()) {
       const auto name = ctrname(cls);
       outh << "  ::" << cls << "* ";
-      outh << name << namecount[name]++
-           << "() { return new concrete_impl(); }\n";
+      outh << name << namecount[name]++ << "() { return new ";
+      if (C->isAbstract())
+        outh << "concrete_impl(g)";
+      else
+        outh << "::" << cls << "()";
+      outh << "; }\n";
       ctrs = true;
     }
     gen_mroulette(cls, namecount);
