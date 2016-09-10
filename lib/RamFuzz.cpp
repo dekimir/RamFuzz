@@ -199,8 +199,8 @@ void RamFuzz::gen_concrete_impl(const CXXRecordDecl *C, const ASTContext &ctx) {
           outh << mcom(P) << (*P)->getType().stream(prtpol);
           outc << mcom(P) << (*P)->getType().stream(prtpol);
         }
-        outh << ") override;\n"; // TODO: const.
-        outc << ") {\n";
+        outh << ") " << (M->isConst() ? "const " : "") << "override;\n";
+        outc << ") " << (M->isConst() ? "const " : "") << "{\n";
         auto rety =
             M->getReturnType().getDesugaredType(ctx).getLocalUnqualifiedType();
         if (rety->isScalarType()) {

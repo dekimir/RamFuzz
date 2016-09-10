@@ -8,7 +8,7 @@ public:
   A(int) {}
   A(const R&) {}
   virtual unsigned f1() = 0;
-  virtual void f2(int, double, R&, bool) = 0;
+  virtual void f2(int, double, R&, bool) const = 0;
 protected:
   A(double, double) {}
 private:
