@@ -77,10 +77,20 @@ private:
 
   /// Generates early exit from RamFuzz method \c name, corresponding to the
   /// method under test \c M.  The exit code prints \c reason as the reason for
-  /// exiting early.  The exit code is multiple statements, so the caller may
-  /// need to generate a pair of braces around it.
-  void early_exit(const Twine &name, ///< Name of the exiting method.
-                  const CXXMethodDecl *M, const Twine &reason);
+  /// exiting early, then returns \c failval.  The exit code is multiple
+  /// statements, so the caller may need to generate a pair of braces around it.
+  void early_exit(const Twine &loc,     ///< Code location for logging purposes.
+                  const Twine &failval, ///< Value to return in early exit.
+                  const Twine &reason   ///< Exit reason, for logging purposes.
+                  );
+
+  /// Generates an instance of the RamFuzz control class for cls, naming that
+  /// instance varname.
+  void gen_object(const string &cls,    ///< Qualified name of class under test.
+                  const Twine &varname, ///< Name of the generated variable.
+                  const Twine &loc,     ///< Code location for logging purposes.
+                  const Twine &failval  ///< Value to return in early exit.
+                  );
 
   /// Generates the definition of RamFuzz method named rfname, corresponding to
   /// the method under test M.  Assumes that the return type of the generated
@@ -174,7 +184,8 @@ void closenss(const string &name, raw_ostream &s) {
 
 void RamFuzz::gen_concrete_impl(const CXXRecordDecl *C, const ASTContext &ctx) {
   if (C->isAbstract()) {
-    C->printQualifiedName(outh << "  struct concrete_impl : public ::");
+    const auto cls = C->getQualifiedNameAsString();
+    outh << "  struct concrete_impl : public ::" << cls;
     outh << " {\n";
     outh << "    runtime::gen& g;\n";
     for (auto M : C->methods()) {
@@ -182,16 +193,27 @@ void RamFuzz::gen_concrete_impl(const CXXRecordDecl *C, const ASTContext &ctx) {
       const auto mcom = [bg](decltype(bg) &P) { return P == bg ? "" : ", "; };
       if (M->isPure()) {
         outh << "    " << M->getReturnType().stream(prtpol) << " " << *M << "(";
-        for (auto P = bg; P != en; ++P)
+        outc << M->getReturnType().stream(prtpol) << " " << cls
+             << "::control::concrete_impl::" << *M << "(";
+        for (auto P = bg; P != en; ++P) {
           outh << mcom(P) << (*P)->getType().stream(prtpol);
-        outh << ") override { return ";
+          outc << mcom(P) << (*P)->getType().stream(prtpol);
+        }
+        outh << ") override;\n"; // TODO: const.
+        outc << ") {\n";
         auto rety =
             M->getReturnType().getDesugaredType(ctx).getLocalUnqualifiedType();
         if (rety->isScalarType()) {
-          outh << "g.any<" << rety.stream(prtpol) << ">()";
+          outc << "  return g.any<" << rety.stream(prtpol) << ">();\n";
+        } else if (const auto retcls = rety->getAsCXXRecordDecl()) {
+          // TODO: handle classes from std namespace.
+          gen_object(retcls->getQualifiedNameAsString(), "rfctl",
+                     Twine(cls) + "::concrete_impl::" + M->getName(),
+                     "rfctl.obj");
+          outc << "  return rfctl.obj;\n";
         }
         // TODO: handle other types.
-        outh << "; }\n";
+        outc << "}\n";
       } else if (isa<CXXConstructorDecl>(M) && M->getAccess() != AS_private) {
         outh << "    concrete_impl(runtime::gen& g";
         for (auto P = bg; P != en; ++P)
@@ -254,19 +276,38 @@ void RamFuzz::gen_int_ctr(const string &cls) {
   outc << "  : g(g), pobj((this->*croulette[ctr])()), obj(*pobj) {}\n";
 }
 
-void RamFuzz::early_exit(const Twine &name, const CXXMethodDecl *M,
+void RamFuzz::early_exit(const Twine &loc, const Twine &failval,
                          const Twine &reason) {
-  outc << "    std::cout << \"" << name << " exiting early due to " << reason
+  outc << "    std::cout << \"" << loc << " exiting early due to " << reason
        << "\" << std::endl;\n";
   outc << "    --calldepth;\n";
-  outc << "    return" << (isa<CXXConstructorDecl>(M) ? " 0" : "") << ";\n";
+  outc << "    return " << failval << ";\n";
+}
+
+void RamFuzz::gen_object(const string &cls, const Twine &varname,
+                         const Twine &loc, const Twine &failval) {
+  const auto varid = loc + "::" + varname;
+  outc << "  " << cls << "::control " << varname << "(g, g.between(0u, " << cls
+       << "::control::ccount-1,\"" << varid << "-croulette\"));\n";
+  outc << "  if (!" << varname << ") {\n";
+  early_exit(loc, failval, Twine("failed ") + varname + " constructor");
+  outc << "  }\n";
+  outc << "  if (" << cls << "::control::mcount) {\n";
+  outc << "    const auto mspins = g.between(0u, "
+          "::ramfuzz::runtime::spinlimit, \""
+       << varid << "-mspins\");\n";
+  outc << "    for (auto i = 0u; i < mspins; ++i)\n";
+  outc << "      (" << varname << ".*" << varname << ".mroulette[g.between(0u, "
+       << cls << "::control::mcount-1, \"" << varid << "-m\")])();\n";
+  outc << "  }\n";
 }
 
 void RamFuzz::gen_method(const Twine &rfname, const CXXMethodDecl *M,
                          const ASTContext &ctx) {
   outc << rfname << "() {\n";
   outc << "  if (++calldepth >= depthlimit) {\n";
-  early_exit(rfname, M, "call depth limit");
+  early_exit(rfname, isa<CXXConstructorDecl>(M) ? "nullptr" : "",
+             "call depth limit");
   outc << "  }\n";
   SmallBitVector isptr(M->param_size() + 1);
   auto ramcount = 0u;
@@ -286,21 +327,10 @@ void RamFuzz::gen_method(const Twine &rfname, const CXXMethodDecl *M,
            << " = g.any<" << vartype.stream(prtpol) << ">(\"" << rfname
            << "::ram" << ramcount << "\");\n";
     } else if (const auto varcls = vartype->getAsCXXRecordDecl()) {
-      const string cls = varcls->getQualifiedNameAsString();
+      // TODO: handle classes from std namespace.
       const auto rfvar = Twine("rfram") + Twine(ramcount);
-      const auto rfvarid = rfname + "::" + rfvar;
-      outc << "  " << cls << "::control " << rfvar << "(g, g.between(0u, "
-           << cls << "::control::ccount-1,\"" << rfvarid << "-croulette\"));\n";
-      outc << "  if (!" << rfvar << ") {\n";
-      early_exit(rfname, M, Twine("failed ") + rfvar + " constructor");
-      outc << "  }\n";
-      outc << "  const auto mspins" << ramcount
-           << " = g.between(0u, ::ramfuzz::runtime::spinlimit, \"" << rfvarid
-           << "-mspins\");\n";
-      outc << "  if (" << cls << "::control::mcount)\n";
-      outc << "    for (auto i = 0u; i < mspins" << ramcount << "; ++i)\n";
-      outc << "      (" << rfvar << ".*" << rfvar << ".mroulette[g.between(0u, "
-           << cls << "::control::mcount-1, \"" << rfvarid << "-m\")])();\n";
+      gen_object(varcls->getQualifiedNameAsString(), rfvar, rfname,
+                 isa<CXXConstructorDecl>(M) ? "nullptr" : "");
       outc << "  auto& ram" << ramcount << " = " << rfvar << ".obj;\n";
     }
   }

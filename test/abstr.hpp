@@ -13,7 +13,7 @@ protected:
   A(double, double) {}
 private:
   A(double) {}
-  virtual void f3(unsigned) = 0;
+  virtual R f3(unsigned) = 0;
 };
 
 struct B {
