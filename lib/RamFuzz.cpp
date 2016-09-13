@@ -443,6 +443,10 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
       gen_int_ctr(cls);
       gen_croulette(cls, namecount[C->getNameAsString()]);
     }
+    outc << "template <> " << cls << "::control runtime::gen::any<" << cls
+         << "::control>(const std::string &val_id) {\n"
+         << "  return runtime::make_control<" << cls
+         << "::control>(*this);\n}\n";
     outh << "};\n";
     closenss(cls, outh);
   }
@@ -463,9 +467,13 @@ int ramfuzz(ClangTool &tool, const vector<string> &sources, raw_ostream &outh,
     outh << "#include \"" << f << "\"\n";
   outh << "#include \"ramfuzz-rt.hpp\"\n";
   outh << "\nnamespace ramfuzz {\n\n";
-  outc << "#include <cstddef>\n";
-  outc << "#include <iostream>\n\n";
-  outc << "\nnamespace ramfuzz {\n\n";
+  outc << R"(#include <cstddef>
+#include <iostream>
+#include <string>
+
+namespace ramfuzz {
+
+)";
   const int runres = tool.run(&RamFuzz(outh, outc).getActionFactory());
   outc << "} // namespace ramfuzz\n";
   outh << "} // namespace ramfuzz\n";

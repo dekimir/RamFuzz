@@ -6,8 +6,7 @@ int main() {
   ramfuzz::C::control rc(g, c);
   for (auto m : rc.mroulette)
     (rc.*m)();
-  if (c.sum != 10)
-    return 1;
-  else
-    return 0;
+  return (c.sum != 10);
 }
+
+unsigned ::ramfuzz::runtime::spinlimit = 3;

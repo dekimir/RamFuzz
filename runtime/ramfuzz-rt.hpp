@@ -37,5 +37,21 @@ extern unsigned spinlimit;
 /// value or the depthlimit member of any RamFuzz class.
 constexpr unsigned depthlimit = 20;
 
+/// Returns an instance of a RamFuzz control after randomly spinning its
+/// roulettes.
+template <typename ramfuzz_control>
+ramfuzz_control make_control(ramfuzz::runtime::gen &g) {
+  ramfuzz_control ctl(
+      g, g.between(0u, ramfuzz_control::ccount - 1, "make_control ctr"));
+  if (ctl && ramfuzz_control::mcount) {
+    const auto mspins = g.between(0u, ::ramfuzz::runtime::spinlimit, "mspins");
+    for (auto i = 0u; i < mspins; ++i)
+      (ctl.*
+       ctl.mroulette[g.between(0u, ramfuzz_control::control::mcount - 1,
+                               "spin")])();
+  }
+  return ctl;
+}
+
 } // namespace runtime
 } // namespace ramfuzz

@@ -21,3 +21,5 @@ int main() {
   if (a2i.sum != 45)
     return 1;
 }
+
+unsigned ::ramfuzz::runtime::spinlimit = 3;

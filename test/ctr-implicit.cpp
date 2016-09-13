@@ -7,3 +7,5 @@ int main() {
     (rb.*m)();
   return rb.obj.sum != 8;
 }
+
+unsigned ::ramfuzz::runtime::spinlimit = 3;
