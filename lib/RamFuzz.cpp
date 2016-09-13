@@ -180,6 +180,23 @@ void closenss(const string &name, raw_ostream &s) {
   s << "\n\n";
 }
 
+/// Streams a type in RamFuzz-specific way, so classes and namespaces resolve
+/// correctly.
+struct mystream {
+  string s;
+  mystream(const QualType &ty, const PrintingPolicy &prtpol)
+      : s(ty.getAsString(prtpol)) {}
+};
+
+raw_ostream &operator<<(raw_ostream &ostr, const mystream &m) {
+  const auto sep = m.s.find("::");
+  if (sep == string::npos)
+    return ostr << m.s;
+  const auto ins = m.s.rfind(' ', sep);
+  ostr << StringRef(&m.s[0], ins + 1) << "::" << StringRef(&m.s[ins + 1]);
+  return ostr;
+}
+
 } // anonymous namespace
 
 void RamFuzz::gen_concrete_impl(const CXXRecordDecl *C, const ASTContext &ctx) {
@@ -192,12 +209,13 @@ void RamFuzz::gen_concrete_impl(const CXXRecordDecl *C, const ASTContext &ctx) {
       const auto bg = M->param_begin(), en = M->param_end();
       const auto mcom = [bg](decltype(bg) &P) { return P == bg ? "" : ", "; };
       if (M->isPure()) {
-        outh << "    " << M->getReturnType().stream(prtpol) << " " << *M << "(";
-        outc << M->getReturnType().stream(prtpol) << " " << cls
+        outh << "    " << mystream(M->getReturnType(), prtpol) << " " << *M
+             << "(";
+        outc << mystream(M->getReturnType(), prtpol) << " " << cls
              << "::control::concrete_impl::" << *M << "(";
         for (auto P = bg; P != en; ++P) {
-          outh << mcom(P) << (*P)->getType().stream(prtpol);
-          outc << mcom(P) << (*P)->getType().stream(prtpol);
+          outh << mcom(P) << mystream((*P)->getType(), prtpol);
+          outc << mcom(P) << mystream((*P)->getType(), prtpol);
         }
         outh << ") " << (M->isConst() ? "const " : "") << "override;\n";
         outc << ") " << (M->isConst() ? "const " : "") << "{\n";
@@ -217,8 +235,9 @@ void RamFuzz::gen_concrete_impl(const CXXRecordDecl *C, const ASTContext &ctx) {
       } else if (isa<CXXConstructorDecl>(M) && M->getAccess() != AS_private) {
         outh << "    concrete_impl(runtime::gen& g";
         for (auto P = bg; P != en; ++P)
-          outh << ", " << (*P)->getType().stream(prtpol) << " p" << P - bg + 1;
-        C->printQualifiedName(outh << ") : ");
+          outh << ", " << mystream((*P)->getType(), prtpol) << " p"
+               << P - bg + 1;
+        C->printQualifiedName(outh << ") : ::");
         outh << "(";
         for (auto P = bg; P != en; ++P)
           outh << mcom(P) << "p" << P - bg + 1;
