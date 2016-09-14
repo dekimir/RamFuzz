@@ -98,6 +98,10 @@ private:
   void gen_method(const Twine &rfname, ///< Fully qualified RamFuzz method name.
                   const CXXMethodDecl *M, const ASTContext &ctx);
 
+  /// Generates the declaration and definition of
+  /// runtime::gen::any<cls::control>.
+  void gen_instantiation(const string &cls);
+
   /// Where to output generated declarations (typically a header file).
   raw_ostream &outh;
 
@@ -306,8 +310,8 @@ void RamFuzz::early_exit(const Twine &loc, const Twine &failval,
 void RamFuzz::gen_object(const string &cls, const Twine &varname,
                          const Twine &loc, const Twine &failval) {
   const auto varid = loc + "::" + varname;
-  outc << "  " << cls << "::control " << varname << " = runtime::make_control<"
-       << cls << "::control>(g, \"" << varid << "\");\n";
+  outc << "  " << cls << "::control " << varname << " = g.any<" << cls
+       << "::control>(\"" << varid << "\");\n";
   outc << "  if (!" << varname << ") {\n";
   early_exit(loc, failval, Twine("failed ") + varname + " constructor");
   outc << "  }\n";
@@ -362,6 +366,15 @@ void RamFuzz::gen_method(const Twine &rfname, const CXXMethodDecl *M,
   if (!isa<CXXConstructorDecl>(M))
     outc << "  --calldepth;\n";
   outc << "}\n\n";
+}
+
+void RamFuzz::gen_instantiation(const string &cls) {
+  outh << "template <> " << cls << "::control runtime::gen::any<" << cls
+       << "::control>(const std::string&);\n";
+  outc << "template <> " << cls << "::control runtime::gen::any<" << cls
+       << "::control>(const std::string &val_id) {\n"
+       << "  return runtime::make_control<" << cls
+       << "::control>(*this, val_id);\n}\n";
 }
 
 void RamFuzz::run(const MatchFinder::MatchResult &Result) {
@@ -435,12 +448,9 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
       gen_int_ctr(cls);
       gen_croulette(cls, namecount[C->getNameAsString()]);
     }
-    outc << "template <> " << cls << "::control runtime::gen::any<" << cls
-         << "::control>(const std::string &val_id) {\n"
-         << "  return runtime::make_control<" << cls
-         << "::control>(*this, val_id);\n}\n";
     outh << "};\n";
     closenss(cls, outh);
+    gen_instantiation(cls);
   }
 }
 
