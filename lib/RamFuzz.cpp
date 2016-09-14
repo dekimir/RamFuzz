@@ -306,18 +306,10 @@ void RamFuzz::early_exit(const Twine &loc, const Twine &failval,
 void RamFuzz::gen_object(const string &cls, const Twine &varname,
                          const Twine &loc, const Twine &failval) {
   const auto varid = loc + "::" + varname;
-  outc << "  " << cls << "::control " << varname << "(g, g.between(0u, " << cls
-       << "::control::ccount-1,\"" << varid << "-croulette\"));\n";
+  outc << "  " << cls << "::control " << varname << " = runtime::make_control<"
+       << cls << "::control>(g, \"" << varid << "\");\n";
   outc << "  if (!" << varname << ") {\n";
   early_exit(loc, failval, Twine("failed ") + varname + " constructor");
-  outc << "  }\n";
-  outc << "  if (" << cls << "::control::mcount) {\n";
-  outc << "    const auto mspins = g.between(0u, "
-          "::ramfuzz::runtime::spinlimit, \""
-       << varid << "-mspins\");\n";
-  outc << "    for (auto i = 0u; i < mspins; ++i)\n";
-  outc << "      (" << varname << ".*" << varname << ".mroulette[g.between(0u, "
-       << cls << "::control::mcount-1, \"" << varid << "-m\")])();\n";
   outc << "  }\n";
 }
 
@@ -446,7 +438,7 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
     outc << "template <> " << cls << "::control runtime::gen::any<" << cls
          << "::control>(const std::string &val_id) {\n"
          << "  return runtime::make_control<" << cls
-         << "::control>(*this);\n}\n";
+         << "::control>(*this, val_id);\n}\n";
     outh << "};\n";
     closenss(cls, outh);
   }

@@ -40,15 +40,17 @@ constexpr unsigned depthlimit = 20;
 /// Returns an instance of a RamFuzz control after randomly spinning its
 /// roulettes.
 template <typename ramfuzz_control>
-ramfuzz_control make_control(ramfuzz::runtime::gen &g) {
-  ramfuzz_control ctl(
-      g, g.between(0u, ramfuzz_control::ccount - 1, "make_control ctr"));
+ramfuzz_control make_control(ramfuzz::runtime::gen &g,
+                             const std::string &val_id = "") {
+  ramfuzz_control ctl(g, g.between(0u, ramfuzz_control::ccount - 1,
+                                   "make_control ctr " + val_id));
   if (ctl && ramfuzz_control::mcount) {
-    const auto mspins = g.between(0u, ::ramfuzz::runtime::spinlimit, "mspins");
+    const auto mspins =
+        g.between(0u, ::ramfuzz::runtime::spinlimit, "mspins " + val_id);
     for (auto i = 0u; i < mspins; ++i)
       (ctl.*
        ctl.mroulette[g.between(0u, ramfuzz_control::control::mcount - 1,
-                               "spin")])();
+                               "spin" + std::to_string(i) + " " + val_id)])();
   }
   return ctl;
 }
