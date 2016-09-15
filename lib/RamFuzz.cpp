@@ -224,7 +224,6 @@ void RamFuzz::gen_concrete_impl(const CXXRecordDecl *C, const ASTContext &ctx) {
         if (rety->isScalarType()) {
           outc << "  return g.any<" << rety.stream(prtpol) << ">();\n";
         } else if (const auto retcls = rety->getAsCXXRecordDecl()) {
-          // TODO: handle classes from std namespace.
           gen_object(retcls->getQualifiedNameAsString(), "rfctl",
                      Twine(cls) + "::concrete_impl::" + M->getName(),
                      "rfctl.obj");
@@ -297,8 +296,8 @@ void RamFuzz::gen_int_ctr(const string &cls) {
 
 void RamFuzz::early_exit(const Twine &loc, const Twine &failval,
                          const Twine &reason) {
-  outc << "    std::cout << \"" << loc << " exiting early due to " << reason
-       << "\" << std::endl;\n";
+  outc << "    ::std::cout << \"" << loc << " exiting early due to " << reason
+       << "\" << ::std::endl;\n";
   outc << "    --calldepth;\n";
   outc << "    return " << failval << ";\n";
 }
@@ -338,7 +337,6 @@ void RamFuzz::gen_method(const Twine &rfname, const CXXMethodDecl *M,
            << " = g.any<" << vartype.stream(prtpol) << ">(\"" << rfname
            << "::ram" << ramcount << "\");\n";
     } else if (const auto varcls = vartype->getAsCXXRecordDecl()) {
-      // TODO: handle classes from std namespace.
       const auto rfvar = Twine("rfram") + Twine(ramcount);
       gen_object(varcls->getQualifiedNameAsString(), rfvar, rfname,
                  isa<CXXConstructorDecl>(M) ? "nullptr" : "");
@@ -381,7 +379,7 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
             "constructors may use it.\n";
     outh << "  // Owns internally created objects. Must precede obj "
             "declaration.\n";
-    outh << "  std::unique_ptr<::" << cls << "> pobj;\n";
+    outh << "  ::std::unique_ptr<::" << cls << "> pobj;\n";
     // Call depth should be made atomic when we start supporting multi-threaded
     // fuzzing.  Holding off for now because we expect to get a lot of mileage
     // out of multi-process fuzzing (running multiple fuzzing executables, each

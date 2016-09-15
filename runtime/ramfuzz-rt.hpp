@@ -3,6 +3,7 @@
 #pragma once
 
 #include <cstdlib>
+#include <exception>
 #include <random>
 #include <string>
 #include <utility>
@@ -56,4 +57,26 @@ ramfuzz_control make_control(ramfuzz::runtime::gen &g,
 }
 
 } // namespace runtime
+
+namespace std {
+namespace exception {
+class control {
+private:
+  // Declare first to initialize early; constructors may use it.
+  runtime::gen &g;
+
+public:
+  ::std::exception obj;
+  control(runtime::gen &g, unsigned);
+  operator bool() const { return true; }
+
+  using mptr = void (control::*)();
+  static constexpr unsigned mcount = 0;
+  static const mptr mroulette[mcount];
+
+  static constexpr unsigned ccount = 1;
+};
+} // namespace exception
+} // namespace std
+
 } // namespace ramfuzz

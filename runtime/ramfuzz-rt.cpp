@@ -14,11 +14,8 @@ using std::endl;
 using std::generate;
 using std::hex;
 using std::isprint;
-using std::make_pair;
-using std::noshowbase;
 using std::numeric_limits;
 using std::ostream;
-using std::ostringstream;
 using std::size_t;
 using std::string;
 using std::uniform_int_distribution;
@@ -121,4 +118,8 @@ int64_t gen::between<int64_t>(int64_t lo, int64_t hi, const string &val_id) {
 }
 
 } // namespace runtime
+
+const std::exception::control::mptr std::exception::control::mroulette[] = {};
+std::exception::control::control(runtime::gen &g, unsigned ctr) : g(g) {}
+
 } // namespace ramfuzz
