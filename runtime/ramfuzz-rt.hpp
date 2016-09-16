@@ -59,6 +59,7 @@ ramfuzz_control make_control(ramfuzz::runtime::gen &g,
 } // namespace runtime
 
 namespace std {
+
 namespace exception {
 class control {
 private:
@@ -77,6 +78,36 @@ public:
   static constexpr unsigned ccount = 1;
 };
 } // namespace exception
+
+template <class Tp> using allocator = ::std::allocator<Tp>;
+
+template <typename Tp, typename Alloc = ::std::allocator<Tp>> struct vector {
+  class control {
+  private:
+    // Declare first to initialize early; constructors may use it.
+    runtime::gen &g;
+
+  public:
+    ::std::vector<Tp, Alloc> obj;
+    control(runtime::gen &g, unsigned)
+        : g(g), obj(g.between(0u, 1000u, "vector size")) {
+      for (int i = 0; i < obj.size(); ++i)
+        obj[i] = g.any<Tp>("element " + ::std::to_string(i));
+    }
+    operator bool() const { return true; }
+
+    using mptr = void (control::*)();
+    static constexpr unsigned mcount = 0;
+    static const mptr mroulette[mcount];
+
+    static constexpr unsigned ccount = 1;
+  };
+};
+
+template <typename Tp, typename Alloc>
+const typename vector<Tp, Alloc>::control::mptr
+    vector<Tp, Alloc>::control::mroulette[] = {};
+
 } // namespace std
 
 } // namespace ramfuzz

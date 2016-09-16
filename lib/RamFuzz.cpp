@@ -43,6 +43,7 @@ public:
     MF.addMatcher(ClassMatcher, this);
     AF = newFrontendActionFactory(&MF);
     prtpol.Bool = 1;
+    prtpol.SuppressUnwrittenScope = true;
   }
 
   /// Match callback.
@@ -86,10 +87,10 @@ private:
 
   /// Generates an instance of the RamFuzz control class for cls, naming that
   /// instance varname.
-  void gen_object(const string &cls,    ///< Qualified name of class under test.
-                  const Twine &varname, ///< Name of the generated variable.
-                  const Twine &loc,     ///< Code location for logging purposes.
-                  const Twine &failval  ///< Value to return in early exit.
+  void gen_object(const CXXRecordDecl &cls, ///< Class under test.
+                  const Twine &varname,     ///< Name of the generated variable.
+                  const Twine &loc,    ///< Code location for logging purposes.
+                  const Twine &failval ///< Value to return in early exit.
                   );
 
   /// Generates the definition of RamFuzz method named rfname, corresponding to
@@ -224,7 +225,7 @@ void RamFuzz::gen_concrete_impl(const CXXRecordDecl *C, const ASTContext &ctx) {
         if (rety->isScalarType()) {
           outc << "  return g.any<" << rety.stream(prtpol) << ">();\n";
         } else if (const auto retcls = rety->getAsCXXRecordDecl()) {
-          gen_object(retcls->getQualifiedNameAsString(), "rfctl",
+          gen_object(*retcls, "rfctl",
                      Twine(cls) + "::concrete_impl::" + M->getName(),
                      "rfctl.obj");
           outc << "  return rfctl.obj;\n";
@@ -302,14 +303,18 @@ void RamFuzz::early_exit(const Twine &loc, const Twine &failval,
   outc << "    return " << failval << ";\n";
 }
 
-void RamFuzz::gen_object(const string &cls, const Twine &varname,
+void RamFuzz::gen_object(const CXXRecordDecl &cls, const Twine &varname,
                          const Twine &loc, const Twine &failval) {
+  prtpol.SuppressTagKeyword = true;
   const auto varid = loc + "::" + varname;
-  outc << "  " << cls << "::control " << varname << " = runtime::make_control<"
-       << cls << "::control>(g, \"" << varid << "\");\n";
+  cls.getNameForDiagnostic(outc << "  ", prtpol, true /*qualified*/);
+  outc << "::control " << varname << " = runtime::make_control<";
+  cls.getNameForDiagnostic(outc, prtpol, true /*qualified*/);
+  outc << "::control>(g, \"" << varid << "\");\n";
   outc << "  if (!" << varname << ") {\n";
   early_exit(loc, failval, Twine("failed ") + varname + " constructor");
   outc << "  }\n";
+  prtpol.SuppressTagKeyword = false;
 }
 
 void RamFuzz::gen_method(const Twine &rfname, const CXXMethodDecl *M,
@@ -338,7 +343,7 @@ void RamFuzz::gen_method(const Twine &rfname, const CXXMethodDecl *M,
            << "::ram" << ramcount << "\");\n";
     } else if (const auto varcls = vartype->getAsCXXRecordDecl()) {
       const auto rfvar = Twine("rfram") + Twine(ramcount);
-      gen_object(varcls->getQualifiedNameAsString(), rfvar, rfname,
+      gen_object(*varcls, rfvar, rfname,
                  isa<CXXConstructorDecl>(M) ? "nullptr" : "");
       outc << "  auto& ram" << ramcount << " = " << rfvar << ".obj;\n";
     }
