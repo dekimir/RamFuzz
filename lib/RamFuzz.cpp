@@ -194,6 +194,8 @@ raw_ostream &operator<<(raw_ostream &ostr, const mystream &m) {
   if (sep == string::npos)
     return ostr << m.s;
   const auto ins = m.s.rfind(' ', sep);
+  if (ins == string::npos)
+    return ostr << "::" << m.s;
   ostr << StringRef(&m.s[0], ins + 1) << "::" << StringRef(&m.s[ins + 1]);
   return ostr;
 }
