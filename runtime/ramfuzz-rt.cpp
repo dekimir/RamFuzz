@@ -119,7 +119,8 @@ int64_t gen::between<int64_t>(int64_t lo, int64_t hi, const string &val_id) {
 
 } // namespace runtime
 
-const std::exception::control::mptr std::exception::control::mroulette[] = {};
-std::exception::control::control(runtime::gen &g, unsigned ctr) : g(g) {}
+const qqstdqqexception::control::mptr qqstdqqexception::control::mroulette[] =
+    {};
+qqstdqqexception::control::control(runtime::gen &g, unsigned ctr) : g(g) {}
 
 } // namespace ramfuzz

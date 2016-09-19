@@ -58,9 +58,7 @@ ramfuzz_control make_control(ramfuzz::runtime::gen &g,
 
 } // namespace runtime
 
-namespace std {
-
-namespace exception {
+namespace qqstdqqexception {
 class control {
 private:
   // Declare first to initialize early; constructors may use it.
@@ -77,37 +75,33 @@ public:
 
   static constexpr unsigned ccount = 1;
 };
-} // namespace exception
+} // namespace qqstdqqexception
 
-template <class Tp> using allocator = ::std::allocator<Tp>;
+namespace qqstdqqvector {
+template <typename Tp, typename Alloc = ::std::allocator<Tp>> class control {
+private:
+  // Declare first to initialize early; constructors may use it.
+  runtime::gen &g;
 
-template <typename Tp, typename Alloc = ::std::allocator<Tp>> struct vector {
-  class control {
-  private:
-    // Declare first to initialize early; constructors may use it.
-    runtime::gen &g;
+public:
+  ::std::vector<Tp, Alloc> obj;
+  control(runtime::gen &g, unsigned)
+      : g(g), obj(g.between(0u, 1000u, "vector size")) {
+    for (int i = 0; i < obj.size(); ++i)
+      obj[i] = g.any<Tp>("element " + ::std::to_string(i));
+  }
+  operator bool() const { return true; }
 
-  public:
-    ::std::vector<Tp, Alloc> obj;
-    control(runtime::gen &g, unsigned)
-        : g(g), obj(g.between(0u, 1000u, "vector size")) {
-      for (int i = 0; i < obj.size(); ++i)
-        obj[i] = g.any<Tp>("element " + ::std::to_string(i));
-    }
-    operator bool() const { return true; }
+  using mptr = void (control::*)();
+  static constexpr unsigned mcount = 0;
+  static const mptr mroulette[mcount];
 
-    using mptr = void (control::*)();
-    static constexpr unsigned mcount = 0;
-    static const mptr mroulette[mcount];
-
-    static constexpr unsigned ccount = 1;
-  };
+  static constexpr unsigned ccount = 1;
 };
+} // namespace qqstdqqvector
 
 template <typename Tp, typename Alloc>
-const typename vector<Tp, Alloc>::control::mptr
-    vector<Tp, Alloc>::control::mroulette[] = {};
-
-} // namespace std
+const typename qqstdqqvector::control<Tp, Alloc>::mptr
+    qqstdqqvector::control<Tp, Alloc>::control::mroulette[] = {};
 
 } // namespace ramfuzz
