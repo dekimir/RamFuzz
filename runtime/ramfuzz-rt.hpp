@@ -23,6 +23,15 @@ public:
   /// is non-empty, prints "<val_id>=<value>" on stdout.
   template <typename T> T between(T lo, T hi, const std::string &val_id = "");
 
+  /// Sets obj to any(val_id).  Specialized in RamFuzz-generated code for
+  /// classes under test.
+  template <typename T> void set_any(T &obj, const std::string &val_id = "") {
+    obj = any<T>(val_id);
+  }
+
+  void set_any(std::vector<bool>::reference obj,
+               const std::string &val_id = "");
+
 private:
   /// Used for random value generation.
   std::ranlux24 rgen = std::ranlux24(std::random_device{}());
@@ -88,7 +97,7 @@ public:
   control(runtime::gen &g, unsigned)
       : g(g), obj(g.between(0u, 1000u, "vector size")) {
     for (int i = 0; i < obj.size(); ++i)
-      obj[i] = g.any<Tp>("element " + ::std::to_string(i));
+      g.set_any(obj[i], "element " + ::std::to_string(i));
   }
   operator bool() const { return true; }
 

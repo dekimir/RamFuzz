@@ -410,6 +410,14 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
     }
     outh << "};\n";
     outh << "}; // namespace " << ns << "\n";
+    outh << "template <> void runtime::gen::set_any<::" << cls << ">(::" << cls
+         << "&obj, const std::string &val_id);\n";
+    outc << "template <> void runtime::gen::set_any<::" << cls << ">(::" << cls
+         << "&obj, const std::string &val_id) {\n";
+    outc << "  auto ctl = runtime::make_control<" << ns
+         << "::control>(*this, val_id);\n";
+    outc << "  if (ctl) obj = ctl.obj;\n";
+    outc << "}\n\n";
   }
 }
 

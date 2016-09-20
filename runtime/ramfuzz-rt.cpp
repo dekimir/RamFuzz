@@ -18,6 +18,7 @@ using std::numeric_limits;
 using std::ostream;
 using std::size_t;
 using std::string;
+using std::vector;
 using std::uniform_int_distribution;
 using std::uniform_real_distribution;
 
@@ -95,6 +96,11 @@ template <> string gen::any<string>(const string &val_id) {
     cout << endl;
   }
   return val;
+}
+
+void gen::set_any(std::vector<bool>::reference obj,
+                  const std::string &val_id) {
+  obj = any<bool>(val_id);
 }
 
 template <> int gen::between<int>(int lo, int hi, const string &val_id) {
