@@ -5,7 +5,6 @@
 #include <cstdlib>
 #include <exception>
 #include <random>
-#include <string>
 #include <utility>
 #include <vector>
 
@@ -15,22 +14,22 @@ namespace runtime {
 /// Generates random values for certain types.
 class gen {
 public:
-  /// Returns an unconstrained random value of type T.  If val_id is non-empty,
-  /// prints "<val_id>=<value>" on stdout.
-  template <typename T> T any(const std::string &val_id = "");
+  /// Returns an unconstrained random value of type T.  Logs the returned value,
+  /// together with val_id and sub_id.  Their combination should be unique, so
+  /// the callsite can be identified unambiguously.
+  template <typename T> T any(long val_id, long sub_id = 0);
 
-  /// Returns a random value of type T between lo and hi, inclusive.  If val_id
-  /// is non-empty, prints "<val_id>=<value>" on stdout.
-  template <typename T> T between(T lo, T hi, const std::string &val_id = "");
+  /// Returns a random value of type T between lo and hi, inclusive.  Logs the
+  /// returned value like any().
+  template <typename T> T between(T lo, T hi, long val_id, long sub_id = 0);
 
-  /// Sets obj to any(val_id).  Specialized in RamFuzz-generated code for
-  /// classes under test.
-  template <typename T> void set_any(T &obj, const std::string &val_id = "") {
-    obj = any<T>(val_id);
+  /// Sets obj to any(val_id, sub_id).  Specialized in RamFuzz-generated code
+  /// for classes under test.
+  template <typename T> void set_any(T &obj, long val_id, long sub_id = 0) {
+    obj = any<T>(val_id, sub_id);
   }
 
-  void set_any(std::vector<bool>::reference obj,
-               const std::string &val_id = "");
+  void set_any(std::vector<bool>::reference obj, long val_id, long sub_id = 0);
 
 private:
   /// Used for random value generation.
@@ -50,17 +49,15 @@ constexpr unsigned depthlimit = 20;
 /// Returns an instance of a RamFuzz control after randomly spinning its
 /// roulettes.
 template <typename ramfuzz_control>
-ramfuzz_control make_control(ramfuzz::runtime::gen &g,
-                             const std::string &val_id = "") {
-  ramfuzz_control ctl(g, g.between(0u, ramfuzz_control::ccount - 1,
-                                   "make_control ctr " + val_id));
+ramfuzz_control make_control(ramfuzz::runtime::gen &g, long val_id,
+                             long sub_id = 0) {
+  ramfuzz_control ctl(g, g.between(0u, ramfuzz_control::ccount - 1, val_id, 1));
   if (ctl && ramfuzz_control::mcount) {
-    const auto mspins =
-        g.between(0u, ::ramfuzz::runtime::spinlimit, "mspins " + val_id);
+    const auto mspins = g.between(0u, ::ramfuzz::runtime::spinlimit, val_id, 2);
     for (auto i = 0u; i < mspins; ++i)
       (ctl.*
-       ctl.mroulette[g.between(0u, ramfuzz_control::control::mcount - 1,
-                               "spin" + std::to_string(i) + " " + val_id)])();
+       ctl.mroulette[g.between(0u, ramfuzz_control::control::mcount - 1, val_id,
+                               i + 3)])();
   }
   return ctl;
 }
@@ -94,10 +91,9 @@ private:
 
 public:
   ::std::vector<Tp, Alloc> obj;
-  control(runtime::gen &g, unsigned)
-      : g(g), obj(g.between(0u, 1000u, "vector size")) {
+  control(runtime::gen &g, unsigned) : g(g), obj(g.between(0u, 1000u, 10)) {
     for (int i = 0; i < obj.size(); ++i)
-      g.set_any(obj[i], "element " + ::std::to_string(i));
+      g.set_any(obj[i], 10, i);
   }
   operator bool() const { return true; }
 
