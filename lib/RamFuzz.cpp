@@ -116,9 +116,6 @@ private:
 
   /// Policy for printing to outh and outc.
   PrintingPolicy prtpol;
-
-  /// For generating unique value ids.
-  long id_watermark = 10000; // Lower values reserved for runtime.
 };
 
 /// Valid identifier from a CXXMethodDecl name.
@@ -204,8 +201,7 @@ void RamFuzz::gen_concrete_impl(const CXXRecordDecl *C, const ASTContext &ctx) {
         auto rety =
             M->getReturnType().getDesugaredType(ctx).getLocalUnqualifiedType();
         if (rety->isScalarType()) {
-          outc << "  return g.any<" << rety.stream(prtpol) << ">("
-               << id_watermark++ << ");\n";
+          outc << "  return g.any<" << rety.stream(prtpol) << ">();\n";
         } else if (const auto retcls = rety->getAsCXXRecordDecl()) {
           gen_object(retcls, "rfctl",
                      Twine(ns) + "::concrete_impl::" + M->getName(),
@@ -288,8 +284,8 @@ void RamFuzz::gen_object(const CXXRecordDecl *cls, const Twine &varname,
                          const Twine &loc, const Twine &failval) {
   prtpol.SuppressTagKeyword = true;
   const auto ctl = control(cls, prtpol);
-  outc << ctl << " " << varname << " = runtime::make_control<" << ctl << ">(g, "
-       << id_watermark++ << ");\n";
+  outc << ctl << " " << varname << " = runtime::make_control<" << ctl
+       << ">(g);\n";
   outc << "  if (!" << varname << ") {\n";
   early_exit(loc, failval, Twine("failed ") + varname + " constructor");
   outc << "  }\n";
@@ -318,8 +314,7 @@ void RamFuzz::gen_method(const Twine &rfname, const CXXMethodDecl *M,
     }
     if (vartype->isScalarType()) {
       outc << "  " << vartype.stream(prtpol) << " ram" << ramcount
-           << " = g.any<" << vartype.stream(prtpol) << ">(" << id_watermark++
-           << ");\n";
+           << " = g.any<" << vartype.stream(prtpol) << ">();\n";
     } else if (const auto varcls = vartype->getAsCXXRecordDecl()) {
       const auto rfvar = Twine("rfram") + Twine(ramcount);
       gen_object(varcls, rfvar, rfname,
@@ -414,11 +409,11 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
     outh << "};\n";
     outh << "}; // namespace " << ns << "\n";
     outh << "template <> void runtime::gen::set_any<::" << cls << ">(::" << cls
-         << "&, long, long);\n";
+         << "&);\n";
     outc << "template <> void runtime::gen::set_any<::" << cls << ">(::" << cls
-         << "&obj, long val_id, long sub_id) {\n";
+         << "&obj) {\n";
     outc << "  auto ctl = runtime::make_control<" << ns
-         << "::control>(*this, val_id, sub_id);\n";
+         << "::control>(*this);\n";
     outc << "  if (ctl) obj = ctl.obj;\n";
     outc << "}\n\n";
   }
