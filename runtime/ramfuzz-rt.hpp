@@ -32,8 +32,8 @@ private:
   std::ranlux24 rgen = std::ranlux24(std::random_device{}());
 };
 
-/// How many times to spin the method roulette in generated RamFuzz classes.
-/// Should be defined in user's code.
+/// The upper limit on how many times to spin the method roulette in generated
+/// RamFuzz classes.  Should be defined in user's code.
 extern unsigned spinlimit;
 
 /// Limit on the call-stack depth in generated RamFuzz methods.  Without such a
@@ -42,10 +42,11 @@ extern unsigned spinlimit;
 /// value or the depthlimit member of any RamFuzz class.
 constexpr unsigned depthlimit = 20;
 
-/// Returns an instance of a RamFuzz control after randomly spinning its
-/// roulettes.
+/// Creates a RamFuzz control instance using a random spin of croulette,
+/// followed by a random number of random spins of mroulette, if mroulette is
+/// not empty.
 template <typename ramfuzz_control>
-ramfuzz_control make_control(ramfuzz::runtime::gen &g) {
+ramfuzz_control spin_roulette(ramfuzz::runtime::gen &g) {
   ramfuzz_control ctl(g, g.between(0u, ramfuzz_control::ccount - 1));
   if (ctl && ramfuzz_control::mcount) {
     const auto mspins = g.between(0u, ::ramfuzz::runtime::spinlimit);
