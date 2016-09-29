@@ -284,7 +284,7 @@ void RamFuzz::gen_object(const CXXRecordDecl *cls, const Twine &varname,
                          const Twine &loc, const Twine &failval) {
   prtpol.SuppressTagKeyword = true;
   const auto ctl = control(cls, prtpol);
-  outc << ctl << " " << varname << " = runtime::spin_roulette<" << ctl
+  outc << "  " << ctl << " " << varname << " = runtime::spin_roulette<" << ctl
        << ">(g);\n";
   outc << "  if (!" << varname << ") {\n";
   early_exit(loc, failval, Twine("failed ") + varname + " constructor");
