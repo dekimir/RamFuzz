@@ -4,7 +4,10 @@
 
 #include <cstdlib>
 #include <exception>
+#include <fstream>
+#include <limits>
 #include <random>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -13,13 +16,40 @@ namespace runtime {
 
 /// Generates random values for certain types.
 class gen {
+  /// Are we generating values or replaying already generated ones?
+  enum { generate, replay } runmode;
+
 public:
-  /// Returns an unconstrained random value of type T.
-  template <typename T> T any();
+  /// Values will be generated and logged in ologname.
+  gen(const std::string &ologname = "fuzzlog")
+      : runmode(generate), olog(ologname) {}
+
+  /// Values will be replayed from ilogname and logged into ologname.
+  gen(const std::string &ilogname, const std::string &ologname)
+      : runmode(replay), olog(ologname), ilog(ilogname) {}
+
+  /// Returns an unconstrained random value of type T and logs it.
+  template <typename T> T any() {
+    return between(std::numeric_limits<T>::min(),
+                   std::numeric_limits<T>::max());
+  }
 
   /// Returns a random value of type T between lo and hi, inclusive.  Logs the
   /// returned value like any().
-  template <typename T> T between(T lo, T hi);
+  template <typename T> T between(T lo, T hi) {
+    if (runmode == generate)
+      return gbetw(lo, hi);
+    else {
+      T val;
+      ilog.read(reinterpret_cast<char *>(&val), sizeof(val));
+      olog.write(reinterpret_cast<char *>(&val), sizeof(val));
+      return val;
+    }
+  }
+
+  /// Invoked when roulette-spinning has been aborted.  Logs a special value
+  /// that indicates the current object has been abandoned.
+  void abort_spin() {}
 
   /// Sets obj to any().  Specialized in RamFuzz-generated code for classes
   /// under test.
@@ -28,8 +58,16 @@ public:
   void set_any(std::vector<bool>::reference obj);
 
 private:
+  template <typename T> T gbetw(T lo, T hi);
+
   /// Used for random value generation.
   std::ranlux24 rgen = std::ranlux24(std::random_device{}());
+
+  /// Output log.
+  std::ofstream olog;
+
+  /// Input log (in replay mode).
+  std::ifstream ilog;
 };
 
 /// The upper limit on how many times to spin the method roulette in generated
@@ -47,8 +85,13 @@ constexpr unsigned depthlimit = 20;
 /// not empty.
 template <typename ramfuzz_control>
 ramfuzz_control spin_roulette(ramfuzz::runtime::gen &g) {
-  ramfuzz_control ctl(g, g.between(0u, ramfuzz_control::ccount - 1));
-  if (ctl && ramfuzz_control::mcount) {
+  const auto ctr = g.between(0u, ramfuzz_control::ccount - 1);
+  ramfuzz_control ctl(g, ctr);
+  if (!ctl) {
+    g.abort_spin();
+    return ctl;
+  }
+  if (ramfuzz_control::mcount) {
     const auto mspins = g.between(0u, ::ramfuzz::runtime::spinlimit);
     for (auto i = 0u; i < mspins; ++i)
       (ctl.*
