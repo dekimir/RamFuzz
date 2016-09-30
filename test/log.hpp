@@ -9,9 +9,9 @@ struct A {
     vi.push_back(i);
     vc.push_back(c);
   }
-  void g(float f, unsigned u) {
+  void g(float f, const std::vector<unsigned> u) {
     vf.push_back(f);
-    vu.push_back(u);
+    vu.insert(vu.cbegin(), u.cbegin(), u.cend());
   }
   bool operator!=(const A &that) {
     return vi != that.vi || vu != that.vu || vc != that.vc || vf != that.vf;
