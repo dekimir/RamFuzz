@@ -14,7 +14,9 @@
 namespace ramfuzz {
 namespace runtime {
 
-/// Generates random values for certain types.
+/// Generates values for RamFuzz code.  Can be used in the "generate" or
+/// "replay" mode.  In "generate" mode, values are created at random and logged.
+/// In "replay" mode, values are read from a previously generated log.
 class gen {
   /// Are we generating values or replaying already generated ones?
   enum { generate, replay } runmode;
@@ -34,11 +36,11 @@ public:
                    std::numeric_limits<T>::max());
   }
 
-  /// Returns a random value of type T between lo and hi, inclusive.  Logs the
-  /// returned value like any().
+  /// Returns a random value of type T between lo and hi, inclusive, and logs
+  /// it.
   template <typename T> T between(T lo, T hi) {
     if (runmode == generate)
-      return gbetw(lo, hi);
+      return uniform_random(lo, hi);
     else {
       T val;
       ilog.read(reinterpret_cast<char *>(&val), sizeof(val));
@@ -58,7 +60,9 @@ public:
   void set_any(std::vector<bool>::reference obj);
 
 private:
-  template <typename T> T gbetw(T lo, T hi);
+  /// Returns a random value distributed uniformly between lo and hi, inclusive.
+  /// Logs the value in olog.
+  template <typename T> T uniform_random(T lo, T hi);
 
   /// Used for random value generation.
   std::ranlux24 rgen = std::ranlux24(std::random_device{}());

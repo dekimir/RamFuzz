@@ -43,37 +43,37 @@ RealT rbetween(RealT lo, RealT hi, ranlux24 &gen, ofstream &log) {
 namespace ramfuzz {
 namespace runtime {
 
-template <> bool gen::gbetw<bool>(bool lo, bool hi) {
+template <> bool gen::uniform_random<bool>(bool lo, bool hi) {
   return ::ibetween(lo, hi, rgen, olog);
 }
 
-template <> double gen::gbetw<double>(double lo, double hi) {
+template <> double gen::uniform_random<double>(double lo, double hi) {
   return ::rbetween(lo, hi, rgen, olog);
 }
 
-template <> float gen::gbetw<float>(float lo, float hi) {
+template <> float gen::uniform_random<float>(float lo, float hi) {
   return ::rbetween(lo, hi, rgen, olog);
 }
 
 void gen::set_any(std::vector<bool>::reference obj) { obj = any<bool>(); }
 
-template <> int gen::gbetw<int>(int lo, int hi) {
+template <> int gen::uniform_random<int>(int lo, int hi) {
   return ::ibetween(lo, hi, rgen, olog);
 }
 
-template <> size_t gen::gbetw<size_t>(size_t lo, size_t hi) {
+template <> size_t gen::uniform_random<size_t>(size_t lo, size_t hi) {
   return ::ibetween(lo, hi, rgen, olog);
 }
 
-template <> unsigned gen::gbetw<unsigned>(unsigned lo, unsigned hi) {
+template <> unsigned gen::uniform_random<unsigned>(unsigned lo, unsigned hi) {
   return ::ibetween(lo, hi, rgen, olog);
 }
 
-template <> int64_t gen::gbetw<int64_t>(int64_t lo, int64_t hi) {
+template <> int64_t gen::uniform_random<int64_t>(int64_t lo, int64_t hi) {
   return ::ibetween(lo, hi, rgen, olog);
 }
 
-template <> char gen::gbetw<char>(char lo, char hi) {
+template <> char gen::uniform_random<char>(char lo, char hi) {
   return ::ibetween(lo, hi, rgen, olog);
 }
 
