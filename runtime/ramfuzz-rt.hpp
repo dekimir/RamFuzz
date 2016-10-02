@@ -49,10 +49,6 @@ public:
     }
   }
 
-  /// Invoked when roulette-spinning has been aborted.  Logs a special value
-  /// that indicates the current object has been abandoned.
-  void abort_spin() {}
-
   /// Sets obj to any().  Specialized in RamFuzz-generated code for classes
   /// under test.
   template <typename T> void set_any(T &obj) { obj = any<T>(); }
@@ -91,10 +87,8 @@ template <typename ramfuzz_control>
 ramfuzz_control spin_roulette(ramfuzz::runtime::gen &g) {
   const auto ctr = g.between(0u, ramfuzz_control::ccount - 1);
   ramfuzz_control ctl(g, ctr);
-  if (!ctl) {
-    g.abort_spin();
+  if (!ctl)
     return ctl;
-  }
   if (ramfuzz_control::mcount) {
     const auto mspins = g.between(0u, ::ramfuzz::runtime::spinlimit);
     for (auto i = 0u; i < mspins; ++i)
