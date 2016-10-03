@@ -44,37 +44,37 @@ namespace ramfuzz {
 namespace runtime {
 
 template <> bool gen::uniform_random<bool>(bool lo, bool hi) {
-  return ::ibetween(lo, hi, rgen, olog);
+  return scalar_region(ibetween(lo, hi, rgen, olog));
 }
 
 template <> double gen::uniform_random<double>(double lo, double hi) {
-  return ::rbetween(lo, hi, rgen, olog);
+  return scalar_region(rbetween(lo, hi, rgen, olog));
 }
 
 template <> float gen::uniform_random<float>(float lo, float hi) {
-  return ::rbetween(lo, hi, rgen, olog);
+  return scalar_region(rbetween(lo, hi, rgen, olog));
 }
 
 void gen::set_any(std::vector<bool>::reference obj) { obj = any<bool>(); }
 
 template <> int gen::uniform_random<int>(int lo, int hi) {
-  return ::ibetween(lo, hi, rgen, olog);
+  return scalar_region(ibetween(lo, hi, rgen, olog));
 }
 
 template <> size_t gen::uniform_random<size_t>(size_t lo, size_t hi) {
-  return ::ibetween(lo, hi, rgen, olog);
+  return scalar_region(ibetween(lo, hi, rgen, olog));
 }
 
 template <> unsigned gen::uniform_random<unsigned>(unsigned lo, unsigned hi) {
-  return ::ibetween(lo, hi, rgen, olog);
+  return scalar_region(ibetween(lo, hi, rgen, olog));
 }
 
 template <> int64_t gen::uniform_random<int64_t>(int64_t lo, int64_t hi) {
-  return ::ibetween(lo, hi, rgen, olog);
+  return scalar_region(ibetween(lo, hi, rgen, olog));
 }
 
 template <> char gen::uniform_random<char>(char lo, char hi) {
-  return ::ibetween(lo, hi, rgen, olog);
+  return scalar_region(ibetween(lo, hi, rgen, olog));
 }
 
 } // namespace runtime

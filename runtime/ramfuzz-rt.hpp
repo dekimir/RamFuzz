@@ -2,10 +2,12 @@
 
 #pragma once
 
+#include <cstdint>
 #include <cstdlib>
 #include <exception>
 #include <fstream>
 #include <limits>
+#include <ostream>
 #include <random>
 #include <string>
 #include <utility>
@@ -24,11 +26,12 @@ class gen {
 public:
   /// Values will be generated and logged in ologname.
   gen(const std::string &ologname = "fuzzlog")
-      : runmode(generate), olog(ologname) {}
+      : runmode(generate), olog(ologname), olog_index(ologname + ".i") {}
 
   /// Values will be replayed from ilogname and logged into ologname.
   gen(const std::string &ilogname, const std::string &ologname)
-      : runmode(replay), olog(ologname), ilog(ilogname) {}
+      : runmode(replay), olog(ologname), olog_index(ologname + ".i"),
+        ilog(ilogname), ilog_index(ilogname + ".i") {}
 
   /// Returns an unconstrained random value of type T and logs it.
   template <typename T> T any() {
@@ -55,6 +58,23 @@ public:
 
   void set_any(std::vector<bool>::reference obj);
 
+  /// Marks the start of a new region in the output log index.
+  uint64_t start_region() {
+    olog_index << next_reg << '{' << olog.tellp() << std::endl;
+    return next_reg++;
+  }
+
+  /// Marks the end of a new region in the output log index.
+  void end_region(uint64_t reg) {
+    olog_index << reg << '}' << olog.tellp() << std::endl;
+  }
+
+  /// Marks a single-value region in the output log index.
+  template <typename T> T scalar_region(T val) {
+    olog_index << next_reg++ << '|' << olog.tellp() << std::endl;
+    return val;
+  }
+
 private:
   /// Returns a random value distributed uniformly between lo and hi, inclusive.
   /// Logs the value in olog.
@@ -63,11 +83,14 @@ private:
   /// Used for random value generation.
   std::ranlux24 rgen = std::ranlux24(std::random_device{}());
 
-  /// Output log.
-  std::ofstream olog;
+  /// Output log and its index.
+  std::ofstream olog, olog_index;
 
-  /// Input log (in replay mode).
-  std::ifstream ilog;
+  /// Region high water mark.
+  uint64_t next_reg = 0;
+
+  /// Input log (in replay mode) and its index.
+  std::ifstream ilog, ilog_index;
 };
 
 /// The upper limit on how many times to spin the method roulette in generated
@@ -85,6 +108,7 @@ constexpr unsigned depthlimit = 20;
 /// not empty.
 template <typename ramfuzz_control>
 ramfuzz_control spin_roulette(ramfuzz::runtime::gen &g) {
+  const auto reg = g.start_region();
   const auto ctr = g.between(0u, ramfuzz_control::ccount - 1);
   ramfuzz_control ctl(g, ctr);
   if (!ctl)
@@ -95,6 +119,7 @@ ramfuzz_control spin_roulette(ramfuzz::runtime::gen &g) {
       (ctl.*
        ctl.mroulette[g.between(0u, ramfuzz_control::control::mcount - 1)])();
   }
+  g.end_region(reg);
   return ctl;
 }
 
