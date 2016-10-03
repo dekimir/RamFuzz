@@ -25,17 +25,12 @@ using std::uniform_real_distribution;
 namespace {
 
 template <typename IntegralT>
-IntegralT ibetween(IntegralT lo, IntegralT hi, ranlux24 &gen, ofstream &log) {
-  auto val = uniform_int_distribution<IntegralT>{lo, hi}(gen);
-  log.write(reinterpret_cast<char *>(&val), sizeof(val));
-  return val;
+IntegralT ibetween(IntegralT lo, IntegralT hi, ranlux24 &gen) {
+  return uniform_int_distribution<IntegralT>{lo, hi}(gen);
 }
 
-template <typename RealT>
-RealT rbetween(RealT lo, RealT hi, ranlux24 &gen, ofstream &log) {
-  auto val = uniform_real_distribution<RealT>{lo, hi}(gen);
-  log.write(reinterpret_cast<char *>(&val), sizeof(val));
-  return val;
+template <typename RealT> RealT rbetween(RealT lo, RealT hi, ranlux24 &gen) {
+  return uniform_real_distribution<RealT>{lo, hi}(gen);
 }
 
 } // anonymous namespace
@@ -44,37 +39,37 @@ namespace ramfuzz {
 namespace runtime {
 
 template <> bool gen::uniform_random<bool>(bool lo, bool hi) {
-  return scalar_region(ibetween(lo, hi, rgen, olog));
+  return scalar_region(ibetween(lo, hi, rgen));
 }
 
 template <> double gen::uniform_random<double>(double lo, double hi) {
-  return scalar_region(rbetween(lo, hi, rgen, olog));
+  return scalar_region(rbetween(lo, hi, rgen));
 }
 
 template <> float gen::uniform_random<float>(float lo, float hi) {
-  return scalar_region(rbetween(lo, hi, rgen, olog));
+  return scalar_region(rbetween(lo, hi, rgen));
 }
 
 void gen::set_any(std::vector<bool>::reference obj) { obj = any<bool>(); }
 
 template <> int gen::uniform_random<int>(int lo, int hi) {
-  return scalar_region(ibetween(lo, hi, rgen, olog));
+  return scalar_region(ibetween(lo, hi, rgen));
 }
 
 template <> size_t gen::uniform_random<size_t>(size_t lo, size_t hi) {
-  return scalar_region(ibetween(lo, hi, rgen, olog));
+  return scalar_region(ibetween(lo, hi, rgen));
 }
 
 template <> unsigned gen::uniform_random<unsigned>(unsigned lo, unsigned hi) {
-  return scalar_region(ibetween(lo, hi, rgen, olog));
+  return scalar_region(ibetween(lo, hi, rgen));
 }
 
 template <> int64_t gen::uniform_random<int64_t>(int64_t lo, int64_t hi) {
-  return scalar_region(ibetween(lo, hi, rgen, olog));
+  return scalar_region(ibetween(lo, hi, rgen));
 }
 
 template <> char gen::uniform_random<char>(char lo, char hi) {
-  return scalar_region(ibetween(lo, hi, rgen, olog));
+  return scalar_region(ibetween(lo, hi, rgen));
 }
 
 } // namespace runtime

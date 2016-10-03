@@ -71,6 +71,7 @@ public:
 
   /// Marks a single-value region in the output log index.
   template <typename T> T scalar_region(T val) {
+    olog.write(reinterpret_cast<char *>(&val), sizeof(val));
     olog_index << next_reg++ << '|' << olog.tellp() << std::endl;
     return val;
   }
