@@ -31,7 +31,7 @@ public:
   /// Values will be replayed from ilogname and logged into ologname.
   gen(const std::string &ilogname, const std::string &ologname)
       : runmode(replay), olog(ologname), olog_index(ologname + ".i"),
-        ilog(ilogname), ilog_index(ilogname + ".i") {}
+        ilog(ilogname), ilog_ctl(ilogname + ".c") {}
 
   /// Returns an unconstrained random value of type T and logs it.
   template <typename T> T any() {
@@ -91,7 +91,7 @@ private:
   uint64_t next_reg = 0;
 
   /// Input log (in replay mode) and its index.
-  std::ifstream ilog, ilog_index;
+  std::ifstream ilog, ilog_ctl;
 };
 
 /// The upper limit on how many times to spin the method roulette in generated
