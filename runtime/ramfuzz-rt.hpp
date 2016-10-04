@@ -18,17 +18,40 @@ namespace runtime {
 
 /// Generates values for RamFuzz code.  Can be used in the "generate" or
 /// "replay" mode.  In "generate" mode, values are created at random and logged.
-/// In "replay" mode, values are read from a previously generated log.
+/// In "replay" mode, values are read from a previously generated log.  This
+/// allows debugging of failed tests.
+///
+/// Additionally, it is possible in replay mode to depart from the log for a
+/// while and then return to replaying it.  This allows fuzzing: mutate the
+/// input in order to run a slightly different test, then keep the mutations
+/// that (somehow) prove themselves useful.  The idea is to replace a continuous
+/// part of the input log with another execution path dictated by freshly
+/// generated values, skip that part of the log, and resume the replay from the
+/// log point right after it.  To make this possible, RamFuzz code marks log
+/// regions as it executes.  Each region is a continuous subset of the log that
+/// can be replaced by a different execution path during replay without
+/// affecting the replay of the rest of the log.  For example, a spin_roulette()
+/// invocation is a region, as one set of spins can be wholly replaced by
+/// another.
+///
+/// For clarity, the regions aren't marked in the output log itself but rather
+/// in a separate file we call the index file.
+///
+/// During a replay, something needs to tell us _which_ region(s) to
+/// skip/regenerate during replay, and that something is the input-log control
+/// file.
 class gen {
   /// Are we generating values or replaying already generated ones?
   enum { generate, replay } runmode;
 
 public:
-  /// Values will be generated and logged in ologname.
+  /// Values will be generated and logged in ologname (with index in
+  /// ologname.i).
   gen(const std::string &ologname = "fuzzlog")
       : runmode(generate), olog(ologname), olog_index(ologname + ".i") {}
 
-  /// Values will be replayed from ilogname and logged into ologname.
+  /// Values will be replayed from ilogname (controlled by ilogname.c) and
+  /// logged into ologname.
   gen(const std::string &ilogname, const std::string &ologname)
       : runmode(replay), olog(ologname), olog_index(ologname + ".i"),
         ilog(ilogname), ilog_ctl(ilogname + ".c") {}
@@ -40,25 +63,38 @@ public:
   }
 
   /// Returns a random value of type T between lo and hi, inclusive, and logs
-  /// it.
+  /// it via scalar_region().
   template <typename T> T between(T lo, T hi) {
+    T val;
     if (runmode == generate)
-      return uniform_random(lo, hi);
-    else {
-      T val;
+      val = uniform_random(lo, hi);
+    else
       ilog.read(reinterpret_cast<char *>(&val), sizeof(val));
-      olog.write(reinterpret_cast<char *>(&val), sizeof(val));
-      return val;
-    }
+    scalar_region(val);
+    return val;
+  }
+
+  /// Returns a random value of type T between lo and hi, inclusive, and logs
+  /// it in a way that ties it to its region.
+  template <typename T> T region_tied(T lo, T hi, uint64_t reg) {
+    T val;
+    if (runmode == generate)
+      val = uniform_random(lo, hi);
+    else
+      ilog.read(reinterpret_cast<char *>(&val), sizeof(val));
+    olog.write(reinterpret_cast<char *>(&val), sizeof(val));
+    return val;
   }
 
   /// Sets obj to any().  Specialized in RamFuzz-generated code for classes
   /// under test.
   template <typename T> void set_any(T &obj) { obj = any<T>(); }
 
+  /// Bool vector overload of set_any().
   void set_any(std::vector<bool>::reference obj);
 
-  /// Marks the start of a new region in the output log index.
+  /// Marks the start of a new region in the output log index, returning the new
+  /// region's id.
   uint64_t start_region() {
     olog_index << next_reg << '{' << olog.tellp() << std::endl;
     return next_reg++;
@@ -112,10 +148,12 @@ ramfuzz_control spin_roulette(ramfuzz::runtime::gen &g) {
   const auto reg = g.start_region();
   const auto ctr = g.between(0u, ramfuzz_control::ccount - 1);
   ramfuzz_control ctl(g, ctr);
-  if (!ctl)
+  if (!ctl) {
+    g.end_region(reg);
     return ctl;
+  }
   if (ramfuzz_control::mcount) {
-    const auto mspins = g.between(0u, ::ramfuzz::runtime::spinlimit);
+    const auto mspins = g.region_tied(0u, ::ramfuzz::runtime::spinlimit, reg);
     for (auto i = 0u; i < mspins; ++i)
       (ctl.*
        ctl.mroulette[g.between(0u, ramfuzz_control::control::mcount - 1)])();
@@ -153,9 +191,12 @@ private:
 
 public:
   ::std::vector<Tp, Alloc> obj;
-  control(runtime::gen &g, unsigned) : g(g), obj(g.between(0u, 1000u)) {
+  control(runtime::gen &g, unsigned) : g(g) {
+    const auto reg = g.start_region();
+    obj.resize(g.region_tied(0u, 1000u, reg));
     for (int i = 0; i < obj.size(); ++i)
       g.set_any(obj[i]);
+    g.end_region(reg);
   }
   operator bool() const { return true; }
 
