@@ -137,10 +137,12 @@ string valident(const string &mname) {
 
 /// Returns the namespace for cls's control class.
 string control_namespace(const string &cls) {
-  string transf = "qq" + cls;
-  for (char &c : transf)
-    if (c == ':')
-      c = 'q';
+  string transf = "rf";
+  for (const char &c : cls)
+    if (c != ':')
+      transf.push_back(c);
+    else if (transf.back() != '_')
+      transf.push_back('_');
   return transf;
 }
 

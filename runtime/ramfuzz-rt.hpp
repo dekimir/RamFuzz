@@ -172,7 +172,7 @@ ramfuzz_control spin_roulette(ramfuzz::runtime::gen &g) {
 
 } // namespace runtime
 
-namespace qqstdqqexception {
+namespace rfstd_exception {
 class control {
 private:
   // Declare first to initialize early; constructors may use it.
@@ -189,9 +189,9 @@ public:
 
   static constexpr unsigned ccount = 1;
 };
-} // namespace qqstdqqexception
+} // namespace rfstd_exception
 
-namespace qqstdqqvector {
+namespace rfstd_vector {
 template <typename Tp, typename Alloc = ::std::allocator<Tp>> class control {
 private:
   // Declare first to initialize early; constructors may use it.
@@ -213,10 +213,10 @@ public:
 
   static constexpr unsigned ccount = 1;
 };
-} // namespace qqstdqqvector
+} // namespace rfstd_vector
 
 template <typename Tp, typename Alloc>
-const typename qqstdqqvector::control<Tp, Alloc>::mptr
-    qqstdqqvector::control<Tp, Alloc>::control::mroulette[] = {};
+const typename rfstd_vector::control<Tp, Alloc>::mptr
+    rfstd_vector::control<Tp, Alloc>::control::mroulette[] = {};
 
 } // namespace ramfuzz

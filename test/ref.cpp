@@ -2,7 +2,7 @@
 
 int main() {
   ramfuzz::runtime::gen g;
-  ramfuzz::qqA::control ra(g, 0);
+  ramfuzz::rfA::control ra(g, 0);
   for (auto m : ra.mroulette)
     (ra.*m)();
   if (ra.obj.sum != 220)

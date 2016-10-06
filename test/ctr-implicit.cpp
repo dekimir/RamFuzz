@@ -2,7 +2,7 @@
 
 int main() {
   ramfuzz::runtime::gen g;
-  ramfuzz::qqB::control rb(g, ramfuzz::qqB::control::ccount - 1);
+  ramfuzz::rfB::control rb(g, ramfuzz::rfB::control::ccount - 1);
   for (auto m : rb.mroulette)
     (rb.*m)();
   return rb.obj.sum != 8;

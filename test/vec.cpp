@@ -2,7 +2,7 @@
 
 int main() {
   ramfuzz::runtime::gen g;
-  ramfuzz::qqns1qqA::control ra1(g, 0);
+  ramfuzz::rfns1_A::control ra1(g, 0);
   for (auto m : ra1.mroulette)
     (ra1.*m)();
   return (ra1.obj.sum != 3);

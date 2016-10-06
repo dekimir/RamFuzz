@@ -74,9 +74,8 @@ template <> char gen::uniform_random<char>(char lo, char hi) {
 
 } // namespace runtime
 
-const qqstdqqexception::control::mptr qqstdqqexception::control::mroulette[] =
-    {};
+const rfstd_exception::control::mptr rfstd_exception::control::mroulette[] = {};
 
-qqstdqqexception::control::control(runtime::gen &g, unsigned ctr) : g(g) {}
+rfstd_exception::control::control(runtime::gen &g, unsigned ctr) : g(g) {}
 
 } // namespace ramfuzz
