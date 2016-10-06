@@ -56,7 +56,9 @@ public:
       : runmode(replay), olog(ologname), olog_index(ologname + ".i"),
         ilog(ilogname), ilog_ctl(ilogname + ".c") {}
 
-  /// Returns an unconstrained random value of type T and logs it.
+  /// Returns an unconstrained random value of type T, inclusive, logs it, and
+  /// indexes it.  When replaying the log, this value could be modified without
+  /// affecting the replay of the rest of the log.
   template <typename T> T any() {
     return between(std::numeric_limits<T>::min(),
                    std::numeric_limits<T>::max());
@@ -67,7 +69,7 @@ public:
   /// without affecting the replay of the rest of the log.
   template <typename T> T between(T lo, T hi) {
     T val = gen_or_read(lo, hi);
-    olog_index << next_reg++ << '|' << olog.tellp() << std::endl;
+    olog_index << "0|" << olog.tellp() << std::endl;
     return val;
   }
 
@@ -132,7 +134,7 @@ private:
   std::ofstream olog, olog_index;
 
   /// Region high water mark.
-  uint64_t next_reg = 0;
+  uint64_t next_reg = 1;
 
   /// Input log (in replay mode) and its index.
   std::ifstream ilog, ilog_ctl;
