@@ -74,18 +74,6 @@ public:
     return val;
   }
 
-  /// Returns a random value of type T between lo and hi, inclusive, and logs
-  /// it in a way that ties it to its region.
-  template <typename T> T region_tied(T lo, T hi, uint64_t reg) {
-    T val;
-    if (runmode == generate)
-      val = uniform_random(lo, hi);
-    else
-      ilog.read(reinterpret_cast<char *>(&val), sizeof(val));
-    olog.write(reinterpret_cast<char *>(&val), sizeof(val));
-    return val;
-  }
-
   /// Sets obj to any().  Specialized in RamFuzz-generated code for classes
   /// under test.
   template <typename T> void set_any(T &obj) { obj = any<T>(); }
@@ -93,19 +81,39 @@ public:
   /// Bool vector overload of set_any().
   void set_any(std::vector<bool>::reference obj);
 
-  /// Marks the start of a new region in the output log index, returning the new
-  /// region's id.
-  uint64_t start_region() {
-    olog_index << next_reg << '{' << olog.tellp() << std::endl;
-    return next_reg++;
-  }
+  friend class region;
+  /// RAII for region (a continuous subset of the log that can be replaced by a
+  /// different execution path during replay without affecting the replay of the
+  /// rest of the log).
+  class region {
+  public:
+    /// Marks the start of a new region in the output log index.
+    region(gen &g) : g(g), id(g.next_reg++) {
+      g.olog_index << id << '{' << g.olog.tellp() << std::endl;
+    }
 
-  /// Marks the end of a new region in the output log index.
-  void end_region(uint64_t reg) {
-    olog_index << reg << '}' << olog.tellp() << std::endl;
-  }
+    /// Marks the end of a new region in the output log index.
+    ~region() { g.olog_index << id << '}' << g.olog.tellp() << std::endl; }
 
-  /// Marks a single-value region in the output log index.
+    /// Returns a random value of type T between lo and hi, inclusive, and logs
+    /// it in a way that ties it to this region.  On replay, the value cannot be
+    /// modified without regenerating the whole region.
+    template <typename T> T between(T lo, T hi) {
+      T val;
+      if (g.runmode == generate)
+        val = g.uniform_random(lo, hi);
+      else
+        g.ilog.read(reinterpret_cast<char *>(&val), sizeof(val));
+      g.olog.write(reinterpret_cast<char *>(&val), sizeof(val));
+      return val;
+    }
+
+  private:
+    gen &g;
+    uint64_t id;
+  };
+
+  /// Logs val, marking it a single-value region in the log index.  Returns val.
   template <typename T> T scalar_region(T val) {
     olog.write(reinterpret_cast<char *>(&val), sizeof(val));
     olog_index << next_reg++ << '|' << olog.tellp() << std::endl;
@@ -145,20 +153,17 @@ constexpr unsigned depthlimit = 20;
 /// not empty.
 template <typename ramfuzz_control>
 ramfuzz_control spin_roulette(ramfuzz::runtime::gen &g) {
-  const auto reg = g.start_region();
+  auto reg = gen::region(g);
   const auto ctr = g.between(0u, ramfuzz_control::ccount - 1);
   ramfuzz_control ctl(g, ctr);
-  if (!ctl) {
-    g.end_region(reg);
+  if (!ctl)
     return ctl;
-  }
   if (ramfuzz_control::mcount) {
-    const auto mspins = g.region_tied(0u, ::ramfuzz::runtime::spinlimit, reg);
+    const auto mspins = reg.between(0u, ::ramfuzz::runtime::spinlimit);
     for (auto i = 0u; i < mspins; ++i)
       (ctl.*
        ctl.mroulette[g.between(0u, ramfuzz_control::control::mcount - 1)])();
   }
-  g.end_region(reg);
   return ctl;
 }
 
@@ -192,11 +197,10 @@ private:
 public:
   ::std::vector<Tp, Alloc> obj;
   control(runtime::gen &g, unsigned) : g(g) {
-    const auto reg = g.start_region();
-    obj.resize(g.region_tied(0u, 1000u, reg));
+    auto reg = runtime::gen::region(g);
+    obj.resize(reg.between(0u, 1000u));
     for (int i = 0; i < obj.size(); ++i)
       g.set_any(obj[i]);
-    g.end_region(reg);
   }
   operator bool() const { return true; }
 
