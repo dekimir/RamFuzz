@@ -95,6 +95,9 @@ public:
     /// Marks the end of a new region in the output log index.
     ~region() { g.olog_index << id << '}' << g.olog.tellp() << std::endl; }
 
+    /// Every region must have a unique id, so no copying.
+    region(const region &) = delete;
+
     /// Returns a random value of type T between lo and hi, inclusive, and logs
     /// it in a way that ties it to this region.  On replay, the value cannot be
     /// modified without regenerating the whole region.
@@ -153,7 +156,7 @@ constexpr unsigned depthlimit = 20;
 /// not empty.
 template <typename ramfuzz_control>
 ramfuzz_control spin_roulette(ramfuzz::runtime::gen &g) {
-  auto reg = gen::region(g);
+  gen::region reg(g);
   const auto ctr = g.between(0u, ramfuzz_control::ccount - 1);
   ramfuzz_control ctl(g, ctr);
   if (!ctl)
@@ -197,7 +200,7 @@ private:
 public:
   ::std::vector<Tp, Alloc> obj;
   control(runtime::gen &g, unsigned) : g(g) {
-    auto reg = runtime::gen::region(g);
+    runtime::gen::region reg(g);
     obj.resize(reg.between(0u, 1000u));
     for (int i = 0; i < obj.size(); ++i)
       g.set_any(obj[i]);
