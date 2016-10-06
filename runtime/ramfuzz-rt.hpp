@@ -62,15 +62,12 @@ public:
                    std::numeric_limits<T>::max());
   }
 
-  /// Returns a random value of type T between lo and hi, inclusive, and logs
-  /// it via scalar_region().
+  /// Returns a random value of type T between lo and hi, inclusive, logs it,
+  /// and indexes it.  When replaying the log, this value could be modified
+  /// without affecting the replay of the rest of the log.
   template <typename T> T between(T lo, T hi) {
-    T val;
-    if (runmode == generate)
-      val = uniform_random(lo, hi);
-    else
-      ilog.read(reinterpret_cast<char *>(&val), sizeof(val));
-    scalar_region(val);
+    T val = gen_or_read(lo, hi);
+    olog_index << next_reg++ << '|' << olog.tellp() << std::endl;
     return val;
   }
 
@@ -102,13 +99,7 @@ public:
     /// it in a way that ties it to this region.  On replay, the value cannot be
     /// modified without regenerating the whole region.
     template <typename T> T between(T lo, T hi) {
-      T val;
-      if (g.runmode == generate)
-        val = g.uniform_random(lo, hi);
-      else
-        g.ilog.read(reinterpret_cast<char *>(&val), sizeof(val));
-      g.olog.write(reinterpret_cast<char *>(&val), sizeof(val));
-      return val;
+      return g.gen_or_read(lo, hi);
     }
 
   private:
@@ -116,14 +107,20 @@ public:
     uint64_t id;
   };
 
-  /// Logs val, marking it a single-value region in the log index.  Returns val.
-  template <typename T> T scalar_region(T val) {
+private:
+  /// In generating mode, generates a random value between lo and hi.  In replay
+  /// mode, reads the next value from the input log.  Either way, logs the value
+  /// in the output log and returns it.
+  template <typename T> T gen_or_read(T lo, T hi) {
+    T val;
+    if (runmode == generate)
+      val = uniform_random(lo, hi);
+    else
+      ilog.read(reinterpret_cast<char *>(&val), sizeof(val));
     olog.write(reinterpret_cast<char *>(&val), sizeof(val));
-    olog_index << next_reg++ << '|' << olog.tellp() << std::endl;
     return val;
   }
 
-private:
   /// Returns a random value distributed uniformly between lo and hi, inclusive.
   /// Logs the value in olog.
   template <typename T> T uniform_random(T lo, T hi);
