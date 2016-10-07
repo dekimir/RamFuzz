@@ -35,7 +35,18 @@ namespace runtime {
 /// another.
 ///
 /// For clarity, the regions aren't marked in the output log itself but rather
-/// in a separate file we call the index file.
+/// in a separate file we call the index file.  The index file is a text file
+/// where each line corresponds to a log region.  Each line begins with a number
+/// that's the region ID, followed by a character '{', '}', or '|'.  The open
+/// brace indicates the beginning of the region and is followed by a number
+/// indicating the start position of that region in the log.  Conversely, the
+/// closed brace indicates the end of the region and is followed by a number
+/// indicating the start position of that region in the log.  Finally, the pipe
+/// character indicates a single-value region and is followed by two numbers:
+/// the first is the log position starting that value, and the second is the log
+/// position right after the value.  Since each single value is independent,
+/// they all have region ID of 0.  All position values are as returned by
+/// std::ofstream::tellp().
 ///
 /// During a replay, something needs to tell us _which_ region(s) to
 /// skip/regenerate during replay; that something is the input-log control file.
@@ -152,7 +163,14 @@ private:
   public:
     skip() : valid(false) {}
 
-    /// Reads the next skip line from str and initializes self from it.
+    /// Reads the next skip line from str and initializes self from it.  The
+    /// line must be of the format "t start end", where "t" is a character
+    /// describing the skip type ('s' for single value, 'r' for whole region),
+    /// "start" is the position in the replay log where the skip begins, and
+    /// "end' is the position in the replay log where the replay resumes.  In
+    /// other words, we skip over the region [start,end) from the replay log.
+    /// The start/end numbers are obtained from the log index -- see the index
+    /// format description in the gen class blurb.
     skip(std::istream &str);
 
     operator bool() const { return valid; }
