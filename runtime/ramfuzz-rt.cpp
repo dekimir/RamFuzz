@@ -13,6 +13,7 @@ using std::endl;
 using std::generate;
 using std::hex;
 using std::isprint;
+using std::istream;
 using std::numeric_limits;
 using std::ofstream;
 using std::ranlux24;
@@ -70,6 +71,26 @@ template <> int64_t gen::uniform_random<int64_t>(int64_t lo, int64_t hi) {
 
 template <> char gen::uniform_random<char>(char lo, char hi) {
   return ibetween(lo, hi, rgen);
+}
+
+gen::skip::skip(istream &str) : valid(false) {
+  char c;
+  if (!(str >> c) || !str.gcount())
+    return;
+  if (c != 's' && c != 'r') {
+    std::cerr << "warning: unrecognized skip type: " << c << '\n';
+    return;
+  }
+  region_ = (c == 'r');
+  if (!(str >> start_) || !str.gcount()) {
+    std::cerr << "warning: no start position in control file\n";
+    return;
+  }
+  if (!(str >> end_) || !str.gcount()) {
+    std::cerr << "warning: no end position in control file\n";
+    return;
+  }
+  valid = true;
 }
 
 } // namespace runtime

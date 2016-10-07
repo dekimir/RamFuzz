@@ -38,11 +38,16 @@ namespace runtime {
 /// in a separate file we call the index file.
 ///
 /// During a replay, something needs to tell us _which_ region(s) to
-/// skip/regenerate during replay, and that something is the input-log control
-/// file.
+/// skip/regenerate during replay; that something is the input-log control file.
+/// See the skip class for that file's format.
 class gen {
-  /// Are we generating values or replaying already generated ones?
-  enum { generate, replay } runmode;
+  /// Are we generating values or replaying a previous run?
+  enum {
+    generate, ///< Generate only, no replay.
+    replay,   ///< Replay from input log.
+    gen1val,  ///< Generate a single value, then return to replay.
+    gen1reg   ///< Generate all values in a region, then return to replay.
+  } runmode;
 
 public:
   /// Values will be generated and logged in ologname (with index in
@@ -68,8 +73,9 @@ public:
   /// and indexes it.  When replaying the log, this value could be modified
   /// without affecting the replay of the rest of the log.
   template <typename T> T between(T lo, T hi) {
+    olog_index << "0|" << olog.tellp();
     T val = gen_or_read(lo, hi);
-    olog_index << "0|" << olog.tellp() << std::endl;
+    olog_index << ' ' << olog.tellp() << '\n';
     return val;
   }
 
@@ -92,7 +98,13 @@ public:
     }
 
     /// Marks the end of a new region in the output log index.
-    ~region() { g.olog_index << id << '}' << g.olog.tellp() << std::endl; }
+    ~region() {
+      g.olog_index << id << '}' << g.olog.tellp() << std::endl;
+      if (g.runmode == gen1reg) {
+        g.runmode = replay;
+        g.to_skip = skip(g.ilog_ctl);
+      }
+    }
 
     /// Every region must have a unique id, so no copying.
     region(const region &) = delete;
@@ -115,11 +127,19 @@ private:
   /// in the output log and returns it.
   template <typename T> T gen_or_read(T lo, T hi) {
     T val;
-    if (runmode == generate)
-      val = uniform_random(lo, hi);
-    else
+    if (runmode == replay)
       ilog.read(reinterpret_cast<char *>(&val), sizeof(val));
+    else
+      val = uniform_random(lo, hi);
     olog.write(reinterpret_cast<char *>(&val), sizeof(val));
+    if (runmode == gen1val) {
+      runmode = replay;
+      to_skip = skip(ilog_ctl);
+    }
+    if (runmode == replay && to_skip && ilog.tellg() == to_skip.start()) {
+      runmode = to_skip.region() ? gen1reg : gen1val;
+      ilog.seekg(to_skip.end());
+    }
     return val;
   }
 
@@ -127,16 +147,38 @@ private:
   /// Logs the value in olog.
   template <typename T> T uniform_random(T lo, T hi);
 
+  /// Tracks which part of the input log to skip.
+  class skip {
+  public:
+    skip() : valid(false) {}
+
+    /// Reads the next skip line from str and initializes self from it.
+    skip(std::istream &str);
+
+    operator bool() const { return valid; }
+    bool region() const { return region_; }
+    std::streampos start() const { return start_; }
+    std::streampos end() const { return end_; }
+
+  private:
+    bool valid;   ///< True if type/start/end are meaningful.
+    bool region_; ///< If true, skip whole region; otherwise skip single value.
+    std::streamoff start_, end_; ///< Skip start/end position in the log.
+  };
+
+  /// If valid, holds the position of the next ilog part to skip.
+  skip to_skip;
+
   /// Used for random value generation.
   std::ranlux24 rgen = std::ranlux24(std::random_device{}());
 
   /// Output log and its index.
   std::ofstream olog, olog_index;
 
-  /// Region high water mark.
+  /// Region ID high water mark.
   uint64_t next_reg = 1;
 
-  /// Input log (in replay mode) and its index.
+  /// Input log (in replay mode) and the control file.
   std::ifstream ilog, ilog_ctl;
 };
 
