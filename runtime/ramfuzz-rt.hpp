@@ -70,7 +70,7 @@ public:
   /// logged into ologname.
   gen(const std::string &ilogname, const std::string &ologname)
       : runmode(replay), olog(ologname), olog_index(ologname + ".i"),
-        ilog(ilogname), ilog_ctl(ilogname + ".c") {}
+        ilog(ilogname), ilog_ctl(ilogname + ".c"), to_skip(ilog_ctl) {}
 
   /// Returns an unconstrained random value of type T, inclusive, logs it, and
   /// indexes it.  When replaying the log, this value could be modified without
@@ -184,9 +184,6 @@ private:
     std::streamoff start_, end_; ///< Skip start/end position in the log.
   };
 
-  /// If valid, holds the position of the next ilog part to skip.
-  skip to_skip;
-
   /// Used for random value generation.
   std::ranlux24 rgen = std::ranlux24(std::random_device{}());
 
@@ -198,6 +195,9 @@ private:
 
   /// Input log (in replay mode) and the control file.
   std::ifstream ilog, ilog_ctl;
+
+  /// If valid, holds the position of the next ilog part to skip.
+  skip to_skip;
 };
 
 /// The upper limit on how many times to spin the method roulette in generated

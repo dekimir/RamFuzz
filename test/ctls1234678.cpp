@@ -52,10 +52,11 @@ positions value_positions(const vector<size_t> &subs) {
       exit(4);
     if (!(idx >> end) || !idx.gcount())
       exit(5);
-    if (i == *next_sub)
+    if (i == *next_sub) {
       pos.push_back(make_pair(start, end));
-    if (++next_sub == subs.cend())
-      return pos;
+      if (++next_sub == subs.cend())
+        return pos;
+    }
     idx.ignore(999999, '\n');
   }
   return pos;
