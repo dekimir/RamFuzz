@@ -18,6 +18,7 @@ using std::numeric_limits;
 using std::ofstream;
 using std::ranlux24;
 using std::size_t;
+using std::streamsize;
 using std::string;
 using std::vector;
 using std::uniform_int_distribution;
@@ -91,6 +92,7 @@ gen::skip::skip(istream &str) : valid(false) {
     return;
   }
   valid = true;
+  str.ignore(numeric_limits<streamsize>::max(), '\n');
 }
 
 } // namespace runtime

@@ -62,7 +62,7 @@ positions value_positions(const vector<size_t> &subs) {
 }
 
 int main() {
-  const vector<size_t> to_skip = {3};
+  const vector<size_t> to_skip = {0, 1, 5, 9};
   const auto r1 = first_run();
   {
     ofstream ctl("fuzzlog1.c");
