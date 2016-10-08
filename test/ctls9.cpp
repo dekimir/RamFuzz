@@ -48,9 +48,9 @@ positions value_positions(const vector<size_t> &subs) {
     if (!idx.get(c) || c != '|')
       exit(3);
     streamoff start, end;
-    if (!(idx >> start) || !idx.gcount())
+    if (!(idx >> start))
       exit(4);
-    if (!(idx >> end) || !idx.gcount())
+    if (!(idx >> end))
       exit(5);
     if (i == *next_sub) {
       pos.push_back(make_pair(start, end));
