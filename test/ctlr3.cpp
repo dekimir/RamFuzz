@@ -84,7 +84,7 @@ int main() {
   {
     ofstream ctl("fuzzlog1.c");
     for (auto p : region_positions(to_skip))
-      ctl << "r " << p.first << ' ' << p.second << endl;
+      ctl << p.first << ' ' << p.second << endl;
   }
   const auto r2 = second_run();
   auto skip = to_skip.cbegin();

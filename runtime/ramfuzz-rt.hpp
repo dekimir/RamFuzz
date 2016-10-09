@@ -152,13 +152,12 @@ private:
     skip() : valid(false) {}
 
     /// Reads the next skip line from str and initializes self from it.  The
-    /// line must be of the format "t start end", where "t" is a character
-    /// describing the skip type ('s' for single value, 'r' for whole region),
-    /// "start" is the position in the replay log where the skip begins, and
-    /// "end' is the position in the replay log where the replay resumes.  In
-    /// other words, we skip over the region [start,end) from the replay log.
-    /// The start/end numbers are obtained from the log index -- see the index
-    /// format description in the gen class blurb.
+    /// line must be of the format "start end", where "start" is the position in
+    /// the replay log where the skip begins, and "end' is the position in the
+    /// replay log where the replay resumes.  In other words, we skip over the
+    /// region [start,end) from the replay log.  The start/end numbers are
+    /// obtained from the log index -- see the index format description in the
+    /// gen class blurb.
     skip(std::istream &str);
 
     operator bool() const { return valid; }

@@ -75,18 +75,8 @@ template <> char gen::uniform_random<char>(char lo, char hi) {
 }
 
 gen::skip::skip(istream &str) : valid(false) {
-  char c;
-  if (!(str >> c))
+  if (!(str >> start_))
     return;
-  if (c != 's' && c != 'r') {
-    std::cerr << "warning: unrecognized skip type: " << c << '\n';
-    return;
-  }
-  region_ = (c == 'r');
-  if (!(str >> start_)) {
-    std::cerr << "warning: no start position in control file\n";
-    return;
-  }
   if (!(str >> end_)) {
     std::cerr << "warning: no end position in control file\n";
     return;
