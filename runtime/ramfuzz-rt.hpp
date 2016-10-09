@@ -1,5 +1,3 @@
-// Copyright 2016 Heavy Automation Limited.  All rights reserved.
-
 #pragma once
 
 #include <cstdint>

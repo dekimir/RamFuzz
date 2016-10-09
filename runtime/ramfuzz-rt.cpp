@@ -1,5 +1,3 @@
-// Copyright 2016 Heavy Automation Limited.  All rights reserved.
-
 #include "ramfuzz-rt.hpp"
 
 #include <algorithm>
