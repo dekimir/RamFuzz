@@ -53,12 +53,7 @@ namespace runtime {
 /// See the skip class for that file's format.
 class gen {
   /// Are we generating values or replaying a previous run?
-  enum {
-    generate, ///< Generate only, no replay.
-    replay,   ///< Replay from input log.
-    gen1val,  ///< Generate a single value, then return to replay.
-    gen1reg   ///< Generate all values in a region, then return to replay.
-  } runmode;
+  enum { generate, replay } runmode;
 
 public:
   /// Values will be generated and logged in ologname (with index in
@@ -109,13 +104,7 @@ public:
     }
 
     /// Marks the end of a new region in the output log index.
-    ~region() {
-      g.olog_index << id << '}' << g.olog.tellp() << std::endl;
-      if (g.runmode == gen1reg) {
-        g.runmode = replay;
-        g.to_skip = skip(g.ilog_ctl);
-      }
-    }
+    ~region() { g.olog_index << id << '}' << g.olog.tellp() << std::endl; }
 
     /// Every region must have a unique id, so no copying.
     region(const region &) = delete;
@@ -138,19 +127,18 @@ private:
   /// in the output log and returns it.
   template <typename T> T gen_or_read(T lo, T hi) {
     T val;
-    if (runmode == replay)
-      ilog.read(reinterpret_cast<char *>(&val), sizeof(val));
-    else
+    if (runmode == generate)
       val = uniform_random(lo, hi);
+    else {
+      const auto pos = ilog.tellg();
+      ilog.read(reinterpret_cast<char *>(&val), sizeof(val));
+      // NB: pos now differs from ilog.tellg()!
+      if (to_skip && pos >= to_skip.start() && pos < to_skip.end())
+        val = uniform_random(lo, hi);
+      if (to_skip && ilog.tellg() >= to_skip.end())
+        to_skip = skip(ilog_ctl);
+    }
     olog.write(reinterpret_cast<char *>(&val), sizeof(val));
-    if (runmode == gen1val) {
-      runmode = replay;
-      to_skip = skip(ilog_ctl);
-    }
-    if (runmode == replay && to_skip && ilog.tellg() == to_skip.start()) {
-      runmode = to_skip.region() ? gen1reg : gen1val;
-      ilog.seekg(to_skip.end());
-    }
     return val;
   }
 
