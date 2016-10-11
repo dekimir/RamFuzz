@@ -39,7 +39,7 @@ int main() {
 
 ## How to Use the Code Generator
 
-The `bin/ramfuzz` executable (in LLVM build, see "how to build" below) generates test code from C++ headers declaring the classes under test.  Instructions for its use are in [main.cpp](main.cpp).
+The `bin/ramfuzz` executable (in LLVM build, see "How to Build" below) generates test code from C++ headers declaring the classes under test.  Instructions for its use are in [main.cpp](main.cpp).
 
 ### Known Limitations
 
@@ -52,9 +52,13 @@ It is also worth noting that the random objects produced by the generated code a
 
 ## How to Build the Code Generator
 
-RamFuzz source is intended to go under `clang/tools/extra` and build from there, as described in [this](http://clang.llvm.org/docs/LibASTMatchersTutorial.html#step-1-create-a-clangtool) clang tutorial (see "Step 1: Create a ClangTool").  Drop the top-level RamFuzz directory into `clang/tools/extra` and add it (using `add_subdirectory`) to `clang/tools/extra/CMakeLists.txt`.  After that, the standard llvm build procedure should produce a `bin/ramfuzz` executable.
+1. **Get Clang:** the RamFuzz code genertor is a Clang tool, so first get and build Clang using [these instructions](http://clang.llvm.org/get_started.html).  RamFuzz is known to work with Clang/LLVM version 3.8.1.
 
-There are some end-to-end tests in the [`test`](test) directory -- see [`test.py`](test/test.py) there.  RamFuzz adds a new build target `ramfuzz-test`, which executes all RamFuzz tests.  This target depends on `bin/ramfuzz`, so `bin/ramfuzz` will be rebuilt before testing if it's out of date.
+2. **Drop RamFuzz into Clang:** RamFuzz source is intended to go under `clang/tools/extra` and build from there (as described in [this](http://clang.llvm.org/docs/LibASTMatchersTutorial.html#step-1-create-a-clangtool) Clang tutorial).  Drop the top-level RamFuzz directory into `clang/tools/extra` and add it (using `add_subdirectory`) to `clang/tools/extra/CMakeLists.txt`.
+
+3. **Rebuild Clang:** Now the standard LLVM build procedure should produce a `bin/ramfuzz` executable.
+
+4. **Run Tests:** There are some end-to-end tests in the [`test`](test) directory -- see [`test.py`](test/test.py) there.  RamFuzz adds a new build target `ramfuzz-test`, which executes all RamFuzz tests.  This target depends on `bin/ramfuzz`, so `bin/ramfuzz` will be rebuilt before testing if it's out of date.
 
 ## Contributing
 
