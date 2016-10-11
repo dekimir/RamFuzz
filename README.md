@@ -12,6 +12,31 @@ RamFuzz currently supports C++ (with some limitations that we're working to remo
 
 Simply add the source files under [runtime](runtime) to your project.  See [ramfuzz-rt.hpp](runtime/ramfuzz-rt.hpp) comments for instructions on how to generate random values, replay logs, and mutate log regions.
 
+For example, this code will print two identical arrays of random integers:
+
+```c++
+#include <iostream>
+
+#include "ramfuzz/runtime/ramfuzz-rt.hpp"
+
+int main() {
+  {
+    ramfuzz::runtime::gen g1("fuzzlog1");
+    std::cout << "generated: [";
+    for (int i = 0; i < g1.between(0, 10); ++i)
+      std::cout << ' ' << g1.any<int>();
+    std::cout << " ]\n";
+  }
+  {
+    ramfuzz::runtime::gen g2("fuzzlog1", "fuzzlog2");
+    std::cout << "replay: [";
+    for (int i = 0; i < g2.between(0, 10); ++i)
+      std::cout << ' ' << g2.any<int>();
+    std::cout << " ]\n";
+  }
+}
+```
+
 ## How to Use the Code Generator
 
 The `bin/ramfuzz` executable (in LLVM build, see "how to build" below) generates test code from C++ headers declaring the classes under test.  Instructions for its use are in [main.cpp](main.cpp).
