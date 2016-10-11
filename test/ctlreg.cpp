@@ -92,8 +92,18 @@ positions region_positions(const vector<uint64_t> &ids) {
   return pos;
 }
 
+/// Creates a random set of valid region ids using RamFuzz runtime.  Logs values
+/// in log.
+vector<uint64_t> rnd_ids(const string &log) {
+  gen g(log);
+  vector<uint64_t> subs;
+  for (int i = 1; i <= g.between(0, regcnt); ++i)
+    subs.push_back(i);
+  return subs;
+}
+
 int main() {
-  const vector<uint64_t> to_skip = {5};
+  const vector<uint64_t> to_skip = rnd_ids("to-skip");
   const auto r1 = first_run();
   {
     ofstream ctl("fuzzlog1.c");
