@@ -23,14 +23,14 @@ int main() {
   {
     ramfuzz::runtime::gen g1("fuzzlog1");
     std::cout << "generated: [";
-    for (int i = 0; i < g1.between(0, 10); ++i)
+    for (int i = 0, n = g1.between(0, 10); i < n; ++i)
       std::cout << ' ' << g1.any<int>();
     std::cout << " ]\n";
   }
   {
     ramfuzz::runtime::gen g2("fuzzlog1", "fuzzlog2");
     std::cout << "replay: [";
-    for (int i = 0; i < g2.between(0, 10); ++i)
+    for (int i = 0, n = g2.between(0, 10); i < n; ++i)
       std::cout << ' ' << g2.any<int>();
     std::cout << " ]\n";
   }
