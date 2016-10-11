@@ -23,11 +23,8 @@ using namespace std;
 constexpr int regcnt = 5;     ///< How many regions to generate.
 constexpr int val_in_reg = 3; ///< How many values per region.
 
-/// Spins rfA's roulette, logging generated values in file fuzzlog1.  Returns
-/// the accumulated parameter values.
-vector<int> first_run() {
+vector<int> spin(gen &g) {
   A a;
-  gen g("fuzzlog1");
   ramfuzz::rfA::control rf(g, a);
   for (int reg = 0; reg < regcnt; ++reg) {
     gen::region reg_raii(g);
@@ -37,18 +34,18 @@ vector<int> first_run() {
   return a.vi;
 }
 
+/// Spins rfA's roulette, logging generated values in file fuzzlog1.  Returns
+/// the accumulated parameter values.
+vector<int> first_run() {
+  gen g("fuzzlog1");
+  return spin(g);
+}
+
 /// Replays first run, obeying fuzzlog1.c.  Returns the accumulated parameter
 /// values.
 vector<int> second_run() {
-  A a;
   gen g("fuzzlog1", "fuzzlog2");
-  ramfuzz::rfA::control rf(g, a);
-  for (int reg = 0; reg < regcnt; ++reg) {
-    gen::region reg_raii(g);
-    for (int val = 0; val < val_in_reg; ++val)
-      rf.f0();
-  }
-  return a.vi;
+  return spin(g);
 }
 
 using positions = vector<pair<streamoff, streamoff>>;

@@ -20,11 +20,8 @@
 using namespace ramfuzz::runtime;
 using namespace std;
 
-/// Spins rfA's roulette, logging generated values in file fuzzlog1.  Returns
-/// the accumulated parameter values.
-vector<int> first_run() {
+vector<int> spin(gen &g) {
   A a;
-  gen g("fuzzlog1");
   ramfuzz::rfA::control rf(g, a);
   gen::region r1(g);
   {
@@ -35,19 +32,18 @@ vector<int> first_run() {
   return a.vi;
 }
 
+/// Spins rfA's roulette, logging generated values in file fuzzlog1.  Returns
+/// the accumulated parameter values.
+vector<int> first_run() {
+  gen g("fuzzlog1");
+  return spin(g);
+}
+
 /// Replays first run, obeying fuzzlog1.c.  Returns the accumulated parameter
 /// values.
 vector<int> second_run() {
-  A a;
   gen g("fuzzlog1", "fuzzlog2");
-  ramfuzz::rfA::control rf(g, a);
-  gen::region r1(g);
-  {
-    gen::region r2(g);
-    { gen::region r3(g); }
-  }
-  rf.f0();
-  return a.vi;
+  return spin(g);
 }
 
 using positions = vector<pair<streamoff, streamoff>>;

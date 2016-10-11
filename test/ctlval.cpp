@@ -22,26 +22,26 @@ using namespace std;
 
 constexpr int mspins = 10; ///< How many times to spin rfA's roulette.
 
-/// Spins rfA's roulette, logging generated values in file fuzzlog1.  Returns
-/// the accumulated parameter values.
-vector<int> first_run() {
+vector<int> spin(gen &g) {
   A a;
-  gen g("fuzzlog1");
   ramfuzz::rfA::control rf(g, a);
   for (int i = 0; i < mspins; ++i)
     rf.f0();
   return a.vi;
 }
 
+/// Spins rfA's roulette, logging generated values in file fuzzlog1.  Returns
+/// the accumulated parameter values.
+vector<int> first_run() {
+  gen g("fuzzlog1");
+  return spin(g);
+}
+
 /// Replays first run, obeying fuzzlog1.c.  Returns the accumulated parameter
 /// values.
 vector<int> second_run() {
-  A a;
   gen g("fuzzlog1", "fuzzlog2");
-  ramfuzz::rfA::control rf(g, a);
-  for (int i = 0; i < mspins; ++i)
-    rf.f0();
-  return a.vi;
+  return spin(g);
 }
 
 using positions = vector<pair<streamoff, streamoff>>;
