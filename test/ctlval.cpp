@@ -76,9 +76,19 @@ positions value_positions(const vector<size_t> &subs) {
   return pos;
 }
 
+/// Creates a random set of valid value subscripts using RamFuzz runtime.  Logs
+/// values in log.
+vector<size_t> rnd_subs(const string &log) {
+  gen g(log);
+  vector<size_t> subs;
+  for (int i = 0; i < g.between(0, mspins); ++i)
+    subs.push_back(i);
+  return subs;
+}
+
 int main() {
-  const vector<size_t> to_skip = {3};
   const auto r1 = first_run();
+  const auto to_skip = rnd_subs("to-skip");
   {
     ofstream ctl("fuzzlog1.c");
     for (auto p : value_positions(to_skip))
