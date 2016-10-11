@@ -1,0 +1,5 @@
+RamFuzz runtime library: classes and functions used to generate random parameter
+values, log them, replay them, and mutate them.  Referenced extensively by
+ramfuzz-generated test code, but also usable directly.  The user should #include
+ramfuzz-rt.hpp and compile ramfuzz-rt.cpp in their project.  Read ramfuzz-rt.hpp
+first.
