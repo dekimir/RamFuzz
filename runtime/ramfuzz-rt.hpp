@@ -79,7 +79,7 @@ public:
       : runmode(replay), olog(ologname), olog_index(ologname + ".i"),
         ilog(ilogname), ilog_ctl(ilogname + ".c"), to_skip(ilog_ctl) {}
 
-  /// Returns an unconstrained random value of type T, inclusive, logs it, and
+  /// Returns an unconstrained random value of numeric type T, logs it, and
   /// indexes it.  When replaying the log, this value could be modified without
   /// affecting the replay of the rest of the log.
   template <typename T> T any() {
