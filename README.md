@@ -6,7 +6,7 @@ This allows a combination of two testing techniques so powerful they have been [
 
 RamFuzz also includes a tool that can generate random objects of any class.  It works by reading the class source code and generating from it test code that creates an instance via a randomly chosen constructor, then proceeds to invoke a random sequence of instance methods with randomly generated arguments.  The resulting object can then be used in property testing of methods that take it as a parameter.  The generated code can also be manually adapted to itself become property tests.
 
-RamFuzz currently supports C++ (with some limitations that we're working to remove -- please see "Known limitations" below).  It is provided under the Apache 2.0 license.
+RamFuzz currently supports C++ (with some limitations that we're working to remove -- please see "Known Limitations" below).  It is provided under the Apache 2.0 license.
 
 ## How to Use the Mutation Functionality
 
