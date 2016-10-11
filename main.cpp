@@ -12,6 +12,45 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+
+/// This file contains the main() function for the ramfuzz executable, the
+/// RamFuzz code generator.  This executable scans C++ files for class
+/// declarations and produces test code that can create random objects of these
+/// classes.  The invocation syntax is
+///
+/// ramfuzz <input file> ... [-- <clang option> ...]
+///
+/// On success, it outputs two files: fuzz.hpp and fuzz.cpp.  They contain the
+/// generated test code.  Users can #include fuzz.hpp to get the requisite
+/// declarations and compile fuzz.cpp to get an object file with the
+/// definitions.  The generator assumes the input files are #includable headers,
+/// and fuzz.hpp #includes each of the input files to access the class
+/// declarations in the generated code.
+///
+/// After the "--" argument, ramfuzz takes clang options necessary to parse the
+/// input files.  These typically include -I and -std.  (TODO: why is "--" even
+/// necessary?  We should be able to take these options directly.)
+///
+/// For every class in an input file (but not in other headers #included from
+/// input files), it generates a _control class_ in the ramfuzz namespace.  The
+/// control class is in charge of creating an instance of the class under test
+/// and invoking its methods with random parameter values.  The control class is
+/// named to encode the fully qualified name of the class under test.  For
+/// example, if the class under test is a::b::C, then the control class will be
+/// named ramfuzz::rfa_b_C::control.  See test/namespace.cpp for real-life
+/// examples.
+///
+/// The control class has one method for each public non-static method of the
+/// class under test.  The control method, when invoked, generates random
+/// arguments and invokes the corresponding method under test.  Control methods
+/// take no arguments, as they are self-contained and generate parameter values
+/// internally.  The control class also has a constructor that constructs the
+/// object under test using any one of its public constructors.  So a random
+/// object under test may be obtained by constructing the control class and then
+/// randomly invoking its methods to exercise the under-test instance.  This is
+/// called spinning the method roulette.  See the function spin_roulette() in
+/// runtime/ramfuzz-rt.hpp for an example of this process.
+
 #include <iostream>
 #include <system_error>
 
