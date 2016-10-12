@@ -39,7 +39,7 @@ int main() {
 
 ## How to Use the Code Generator
 
-The `bin/ramfuzz` executable (in LLVM build, see "How to Build" below) generates test code from C++ headers declaring the classes under test.  Instructions for its use are in [main.cpp](main.cpp).
+The `bin/ramfuzz` executable (in LLVM build, see "How to Build" below) generates test code from C++ headers declaring the classes under test.  Instructions for its use are in [main.cpp](main.cpp).  You can see examples in the [test](test) directory, where each `.hpp` file is processed by `bin/ramfuzz` and the result linked with the eponymous `.cpp` file during testing.
 
 ### Known Limitations
 
