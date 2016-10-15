@@ -58,6 +58,7 @@ public:
     prtpol.Bool = 1;
     prtpol.SuppressUnwrittenScope = true;
     prtpol.SuppressTagKeyword = true;
+    prtpol.SuppressScope = false;
   }
 
   /// Match callback.
@@ -186,6 +187,29 @@ string control(const CXXRecordDecl *cls, const PrintingPolicy &prtpol) {
   return ctl.str();
 }
 
+/// A streaming adapter for QualType.  Prints C++ code that compiles correctly
+/// in the RamFuzz context (unlike Clang's TypePrinter:
+/// https://github.com/dekimir/RamFuzz/issues/1)
+class rfstream {
+public:
+  rfstream(const QualType &ty, const PrintingPolicy &prtpol)
+      : ty(ty), prtpol(prtpol) {}
+
+  friend raw_ostream &operator<<(raw_ostream &os, const rfstream &thiz) {
+    if (auto el = dyn_cast<ElaboratedType>(thiz.ty.getTypePtr())) {
+      if (auto qual = el->getQualifier())
+        qual->print(os, thiz.prtpol);
+      el->getNamedType().print(os, thiz.prtpol);
+    } else
+      thiz.ty.print(os, thiz.prtpol);
+    return os;
+  }
+
+private:
+  const QualType &ty;
+  const PrintingPolicy &prtpol;
+};
+
 /// Given a (possibly qualified) class name, returns its constructor's name.
 const char *ctrname(const string &cls) {
   const auto found = cls.rfind("::");
@@ -205,19 +229,20 @@ void RamFuzz::gen_concrete_impl(const CXXRecordDecl *C, const ASTContext &ctx) {
       const auto bg = M->param_begin(), en = M->param_end();
       const auto mcom = [bg](decltype(bg) &P) { return P == bg ? "" : ", "; };
       if (M->isPure()) {
-        outh << "    " << M->getReturnType().stream(prtpol) << " " << *M << "(";
-        outc << M->getReturnType().stream(prtpol) << " " << ns
+        outh << "    " << rfstream(M->getReturnType(), prtpol) << " " << *M
+             << "(";
+        outc << rfstream(M->getReturnType(), prtpol) << " " << ns
              << "::control::concrete_impl::" << *M << "(";
         for (auto P = bg; P != en; ++P) {
-          outh << mcom(P) << (*P)->getType().stream(prtpol);
-          outc << mcom(P) << (*P)->getType().stream(prtpol);
+          outh << mcom(P) << rfstream((*P)->getType(), prtpol);
+          outc << mcom(P) << rfstream((*P)->getType(), prtpol);
         }
         outh << ") " << (M->isConst() ? "const " : "") << "override;\n";
         outc << ") " << (M->isConst() ? "const " : "") << "{\n";
         auto rety =
             M->getReturnType().getDesugaredType(ctx).getLocalUnqualifiedType();
         if (rety->isScalarType()) {
-          outc << "  return g.any<" << rety.stream(prtpol) << ">();\n";
+          outc << "  return g.any<" << rfstream(rety, prtpol) << ">();\n";
         } else if (const auto retcls = rety->getAsCXXRecordDecl()) {
           gen_object(retcls, "rfctl",
                      Twine(ns) + "::concrete_impl::" + M->getName(),
@@ -229,7 +254,8 @@ void RamFuzz::gen_concrete_impl(const CXXRecordDecl *C, const ASTContext &ctx) {
       } else if (isa<CXXConstructorDecl>(M) && M->getAccess() != AS_private) {
         outh << "    concrete_impl(runtime::gen& g";
         for (auto P = bg; P != en; ++P)
-          outh << ", " << (*P)->getType().stream(prtpol) << " p" << P - bg + 1;
+          outh << ", " << rfstream((*P)->getType(), prtpol) << " p"
+               << P - bg + 1;
         C->printQualifiedName(outh << ") : ::");
         outh << "(";
         for (auto P = bg; P != en; ++P)

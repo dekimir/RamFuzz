@@ -13,14 +13,17 @@
 // limitations under the License.
 
 #include <vector>
-using std::vector;
 
 namespace NS {
+struct Element {
+  void e() {}
+};
 class A {
 public:
   int sum = 3;
-  A(const vector<double> &) {}
-  virtual vector<unsigned> f(const vector<bool> *) = 0;
+  A(const std::vector<double> &) {}
+  virtual std::vector<unsigned> f(const std::vector<bool> *) = 0;
+  virtual void gg(std::vector<Element>) = 0;
 };
 }
 
