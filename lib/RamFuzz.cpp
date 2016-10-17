@@ -206,10 +206,13 @@ public:
       el->desugar().print(os, thiz.prtpol);
     } else if (thiz.ty->isReferenceType()) {
       os << rfstream(thiz.ty.getNonReferenceType(), thiz.prtpol) << '&';
+      // TODO: handle lvalue references.
     } else if (thiz.ty->isPointerType()) {
       os << rfstream(thiz.ty->getPointeeType(), thiz.prtpol) << '*';
     } else
       thiz.ty.print(os, thiz.prtpol);
+    // TODO: make this fully equivalent to TypePrinter, handling all possible
+    // types or cleverly deferring to it.
     return os;
   }
 
