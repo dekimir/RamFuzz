@@ -23,7 +23,12 @@ public:
   int sum = 3;
   A(const std::vector<double> &) {}
   virtual std::vector<unsigned> f(const std::vector<bool> *) = 0;
-  virtual void gg(std::vector<Element>) = 0;
+  virtual void g1(std::vector<Element>) = 0;
+  virtual void g2(const std::vector<Element>) = 0;
+  virtual void g3(std::vector<Element> &) = 0;
+  virtual void g4(const std::vector<Element> &) = 0;
+  virtual void g5(std::vector<Element> *) = 0;
+  virtual void g6(const std::vector<Element> *) = 0;
 };
 }
 

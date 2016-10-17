@@ -196,10 +196,18 @@ public:
       : ty(ty), prtpol(prtpol) {}
 
   friend raw_ostream &operator<<(raw_ostream &os, const rfstream &thiz) {
-    if (auto el = dyn_cast<ElaboratedType>(thiz.ty.getTypePtr())) {
+    if (auto el = thiz.ty->getAs<ElaboratedType>()) {
+      if (thiz.ty.isLocalConstQualified())
+        os << "const ";
+      if (thiz.ty.isLocalVolatileQualified())
+        os << "volatile ";
       if (auto qual = el->getQualifier())
         qual->print(os, thiz.prtpol);
-      el->getNamedType().print(os, thiz.prtpol);
+      el->desugar().print(os, thiz.prtpol);
+    } else if (thiz.ty->isReferenceType()) {
+      os << rfstream(thiz.ty.getNonReferenceType(), thiz.prtpol) << '&';
+    } else if (thiz.ty->isPointerType()) {
+      os << rfstream(thiz.ty->getPointeeType(), thiz.prtpol) << '*';
     } else
       thiz.ty.print(os, thiz.prtpol);
     return os;
