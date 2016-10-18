@@ -240,13 +240,13 @@ void RamFuzz::gen_concrete_impl(const CXXRecordDecl *C, const ASTContext &ctx) {
       const auto bg = M->param_begin(), en = M->param_end();
       const auto mcom = [bg](decltype(bg) &P) { return P == bg ? "" : ", "; };
       if (M->isPure()) {
-        outh << "    " << rfstream(M->getReturnType(), prtpol) << " " << *M
-             << "(";
-        outc << rfstream(M->getReturnType(), prtpol) << " " << ns
-             << "::control::concrete_impl::" << *M << "(";
+        auto Mrty = rfstream(M->getReturnType(), prtpol);
+        outh << "    " << Mrty << " " << *M << "(";
+        outc << Mrty << " " << ns << "::control::concrete_impl::" << *M << "(";
         for (auto P = bg; P != en; ++P) {
-          outh << mcom(P) << rfstream((*P)->getType(), prtpol);
-          outc << mcom(P) << rfstream((*P)->getType(), prtpol);
+          auto Pty = rfstream((*P)->getType(), prtpol);
+          outh << mcom(P) << Pty;
+          outc << mcom(P) << Pty;
         }
         outh << ") " << (M->isConst() ? "const " : "") << "override;\n";
         outc << ") " << (M->isConst() ? "const " : "") << "{\n";
