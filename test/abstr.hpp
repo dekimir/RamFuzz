@@ -32,7 +32,7 @@ private:
 
 struct B {
   int sum = 4000;
-  virtual float f(bool) = 0;
+  virtual float g(bool) = 0;
 };
 
 class C {

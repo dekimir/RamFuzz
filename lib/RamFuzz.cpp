@@ -105,6 +105,7 @@ private:
   /// instance varname.
   void gen_object(const CXXRecordDecl *cls, ///< Class under test.
                   const Twine &varname,     ///< Name of the generated variable.
+                  const char *genname, ///< Name of the runtime::gen member.
                   const Twine &loc,    ///< Code location for logging purposes.
                   const Twine &failval ///< Value to return in early exit.
                   );
@@ -235,7 +236,7 @@ void RamFuzz::gen_concrete_impl(const CXXRecordDecl *C, const ASTContext &ctx) {
     const auto ns = control_namespace(cls);
     outh << "  struct concrete_impl : public ::" << cls;
     outh << " {\n";
-    outh << "    runtime::gen& g;\n";
+    outh << "    runtime::gen& ramfuzzgenuniquename;\n";
     for (auto M : C->methods()) {
       const auto bg = M->param_begin(), en = M->param_end();
       const auto mcom = [bg](decltype(bg) &P) { return P == bg ? "" : ", "; };
@@ -253,9 +254,10 @@ void RamFuzz::gen_concrete_impl(const CXXRecordDecl *C, const ASTContext &ctx) {
         auto rety =
             M->getReturnType().getDesugaredType(ctx).getLocalUnqualifiedType();
         if (rety->isScalarType()) {
-          outc << "  return g.any<" << rfstream(rety, prtpol) << ">();\n";
+          outc << "  return ramfuzzgenuniquename.any<" << rfstream(rety, prtpol)
+               << ">();\n";
         } else if (const auto retcls = rety->getAsCXXRecordDecl()) {
-          gen_object(retcls, "rfctl",
+          gen_object(retcls, "rfctl", "ramfuzzgenuniquename",
                      Twine(ns) + "::concrete_impl::" + M->getName(),
                      "rfctl.obj");
           outc << "  return rfctl.obj;\n";
@@ -263,7 +265,7 @@ void RamFuzz::gen_concrete_impl(const CXXRecordDecl *C, const ASTContext &ctx) {
         // TODO: handle other types.
         outc << "}\n";
       } else if (isa<CXXConstructorDecl>(M) && M->getAccess() != AS_private) {
-        outh << "    concrete_impl(runtime::gen& g";
+        outh << "    concrete_impl(runtime::gen& ramfuzzgenuniquename";
         for (auto P = bg; P != en; ++P)
           outh << ", " << rfstream((*P)->getType(), prtpol) << " p"
                << P - bg + 1;
@@ -271,11 +273,13 @@ void RamFuzz::gen_concrete_impl(const CXXRecordDecl *C, const ASTContext &ctx) {
         outh << "(";
         for (auto P = bg; P != en; ++P)
           outh << mcom(P) << "p" << P - bg + 1;
-        outh << "), g(g) {}\n";
+        outh << "), ramfuzzgenuniquename(ramfuzzgenuniquename) {}\n";
       }
     }
-    if (C->needsImplicitDefaultConstructor())
-      outh << "    concrete_impl(runtime::gen& g) : g(g) {}\n";
+    if (C->needsImplicitDefaultConstructor()) {
+      outh << "    concrete_impl(runtime::gen& ramfuzzgenuniquename)\n";
+      outh << "      : ramfuzzgenuniquename(ramfuzzgenuniquename) {}\n";
+    }
     outh << "  };\n";
   }
 }
@@ -334,11 +338,12 @@ void RamFuzz::early_exit(const Twine &loc, const Twine &failval,
 }
 
 void RamFuzz::gen_object(const CXXRecordDecl *cls, const Twine &varname,
-                         const Twine &loc, const Twine &failval) {
+                         const char *genname, const Twine &loc,
+                         const Twine &failval) {
   prtpol.SuppressTagKeyword = true;
   const auto ctl = control(cls, prtpol);
   outc << "  " << ctl << " " << varname << " = runtime::spin_roulette<" << ctl
-       << ">(g);\n";
+       << ">(" << genname << ");\n";
   outc << "  if (!" << varname << ") {\n";
   early_exit(loc, failval, Twine("failed ") + varname + " constructor");
   outc << "  }\n";
@@ -370,7 +375,7 @@ void RamFuzz::gen_method(const Twine &rfname, const CXXMethodDecl *M,
            << " = g.any<" << vartype.stream(prtpol) << ">();\n";
     } else if (const auto varcls = vartype->getAsCXXRecordDecl()) {
       const auto rfvar = Twine("rfram") + Twine(ramcount);
-      gen_object(varcls, rfvar, rfname,
+      gen_object(varcls, rfvar, "g", rfname,
                  isa<CXXConstructorDecl>(M) ? "nullptr" : "");
       outc << "  auto& ram" << ramcount << " = " << rfvar << ".obj;\n";
     }
