@@ -44,9 +44,12 @@ The `bin/ramfuzz` executable (in LLVM build, see "How to Build" below) generates
 ### Known Limitations
 
 C++ is a huge language, so the code generator is a work in progress.  Although improvements are made constantly, it currently can't handle the following important categories:
-- templates
+- most template code
 - STL containers other than `vector`
+- array arguments
 - pure virtual methods that return a reference or a pointer (though other aspects of abstract base classes are supported)
+
+These limitations will typically manifest themselves as ill-formed C++ on the output.
 
 It is also worth noting that the random objects produced by the generated code are unconstrained in any way, so they may not adhere to the requirements of code under test.  This may be fine for some tests, but others will likely require some manual adaptation of the generated code.
 
