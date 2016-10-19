@@ -188,6 +188,9 @@ string control(const CXXRecordDecl *cls, const PrintingPolicy &prtpol) {
   return ctl.str();
 }
 
+class rfstream;
+raw_ostream &operator<<(raw_ostream &, const rfstream &);
+
 /// A streaming adapter for QualType.  Prints C++ code that compiles correctly
 /// in the RamFuzz context (unlike Clang's TypePrinter:
 /// https://github.com/dekimir/RamFuzz/issues/1)
@@ -196,31 +199,75 @@ public:
   rfstream(const QualType &ty, const PrintingPolicy &prtpol)
       : ty(ty), prtpol(prtpol) {}
 
-  friend raw_ostream &operator<<(raw_ostream &os, const rfstream &thiz) {
-    if (auto el = thiz.ty->getAs<ElaboratedType>()) {
-      if (thiz.ty.isLocalConstQualified())
+  void print(raw_ostream &os) const {
+    if (auto el = ty->getAs<ElaboratedType>()) {
+      if (ty.isLocalConstQualified())
         os << "const ";
-      if (thiz.ty.isLocalVolatileQualified())
+      if (ty.isLocalVolatileQualified())
         os << "volatile ";
       if (auto qual = el->getQualifier())
-        qual->print(os, thiz.prtpol);
-      el->desugar().print(os, thiz.prtpol);
-    } else if (thiz.ty->isReferenceType()) {
-      os << rfstream(thiz.ty.getNonReferenceType(), thiz.prtpol) << '&';
+        print(os, *qual);
+      os << rfstream(el->desugar(), prtpol);
+    } else if (auto spec = ty->getAs<TemplateSpecializationType>()) {
+      spec->getTemplateName().print(os, prtpol);
+      bool first = true;
+      for (auto arg : spec->template_arguments()) {
+        os << (first ? '<' : ',') << ' '; // Space after < avoids <:.
+        if (arg.getKind() == TemplateArgument::Type)
+          os << rfstream(arg.getAsType(), prtpol);
+        else
+          arg.print(prtpol, os);
+        first = false;
+      }
+      os << '>';
+    } else if (ty->isReferenceType()) {
+      os << rfstream(ty.getNonReferenceType(), prtpol) << '&';
       // TODO: handle lvalue references.
-    } else if (thiz.ty->isPointerType()) {
-      os << rfstream(thiz.ty->getPointeeType(), thiz.prtpol) << '*';
+    } else if (ty->isPointerType()) {
+      os << rfstream(ty->getPointeeType(), prtpol) << '*';
     } else
-      thiz.ty.print(os, thiz.prtpol);
+      ty.print(os, prtpol);
     // TODO: make this fully equivalent to TypePrinter, handling all possible
     // types or cleverly deferring to it.
-    return os;
+  }
+
+  void print(raw_ostream &os, const NestedNameSpecifier &qual) const {
+    if (qual.getPrefix())
+      qual.getPrefix()->print(os, prtpol);
+    switch (qual.getKind()) {
+    case NestedNameSpecifier::Identifier:
+      os << qual.getAsIdentifier()->getName();
+      break;
+    case NestedNameSpecifier::Namespace:
+      if (qual.getAsNamespace()->isAnonymousNamespace())
+        return;
+      os << qual.getAsNamespace()->getName();
+      break;
+    case NestedNameSpecifier::NamespaceAlias:
+      os << qual.getAsNamespaceAlias()->getName();
+      break;
+    case NestedNameSpecifier::Global:
+      break;
+    case NestedNameSpecifier::TypeSpecWithTemplate:
+      os << "template "; // Fallthrough!
+    case NestedNameSpecifier::TypeSpec:
+      os << rfstream(QualType(qual.getAsType(), 0), prtpol);
+      break;
+    default:
+      break;
+    }
+    os << "::";
   }
 
 private:
   const QualType &ty;
   const PrintingPolicy &prtpol;
 };
+
+raw_ostream &operator<<(raw_ostream &os, const rfstream &thiz) {
+  thiz.print(os);
+  return os;
+}
 
 /// Given a (possibly qualified) class name, returns its constructor's name.
 const char *ctrname(const string &cls) {
@@ -340,14 +387,12 @@ void RamFuzz::early_exit(const Twine &loc, const Twine &failval,
 void RamFuzz::gen_object(const CXXRecordDecl *cls, const Twine &varname,
                          const char *genname, const Twine &loc,
                          const Twine &failval) {
-  prtpol.SuppressTagKeyword = true;
   const auto ctl = control(cls, prtpol);
   outc << "  " << ctl << " " << varname << " = runtime::spin_roulette<" << ctl
        << ">(" << genname << ");\n";
   outc << "  if (!" << varname << ") {\n";
   early_exit(loc, failval, Twine("failed ") + varname + " constructor");
   outc << "  }\n";
-  prtpol.SuppressTagKeyword = false;
 }
 
 void RamFuzz::gen_method(const Twine &rfname, const CXXMethodDecl *M,

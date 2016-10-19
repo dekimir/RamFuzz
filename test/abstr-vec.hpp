@@ -18,6 +18,9 @@ namespace NS {
 struct Element {
   void e() {}
 };
+struct S {
+  typedef int I;
+};
 class A {
 public:
   int sum = 3;
@@ -29,6 +32,8 @@ public:
   virtual void g4(const std::vector<Element> &) = 0;
   virtual void g5(std::vector<Element> *) = 0;
   virtual void g6(const std::vector<Element> *) = 0;
+  virtual S::I h1(std::vector<S::I>&) = 0;
+  S::I h2(std::vector<S::I>&) { return 123; }
 };
 }
 
