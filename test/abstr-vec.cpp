@@ -23,3 +23,7 @@ int main() {
 }
 
 unsigned ::ramfuzz::runtime::spinlimit = 3;
+
+template <> NS::ST<int> ramfuzz::runtime::gen::any<NS::ST<int>>() {
+  return NS::ST<int>{any<int>()};
+}

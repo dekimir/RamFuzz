@@ -18,9 +18,13 @@ namespace NS {
 struct Element {
   void e() {}
 };
+
 struct S {
   typedef int I;
 };
+
+template <typename T> struct ST { T t; };
+
 class A {
 public:
   int sum = 3;
@@ -32,8 +36,9 @@ public:
   virtual void g4(const std::vector<Element> &) = 0;
   virtual void g5(std::vector<Element> *) = 0;
   virtual void g6(const std::vector<Element> *) = 0;
-  virtual S::I h1(std::vector<S::I>&) = 0;
-  S::I h2(std::vector<S::I>&) { return 123; }
+  virtual S::I h1(std::vector<S::I> &) = 0;
+  S::I h2(std::vector<S::I> &) { return 123; }
+  virtual void f1(std::vector<ST<int>>) = 0;
 };
 }
 
@@ -42,3 +47,6 @@ public:
   int sum = 33;
   void g(const NS::A &a) { sum -= a.sum; }
 };
+
+#include "ramfuzz-rt.hpp"
+template <> NS::ST<int> ramfuzz::runtime::gen::any<NS::ST<int>>();

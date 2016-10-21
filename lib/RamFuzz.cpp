@@ -193,7 +193,7 @@ raw_ostream &operator<<(raw_ostream &, const rfstream &);
 
 /// A streaming adapter for QualType.  Prints C++ code that compiles correctly
 /// in the RamFuzz context (unlike Clang's TypePrinter:
-/// https://github.com/dekimir/RamFuzz/issues/1)
+/// https://github.com/dekimir/RamFuzz/issues/1).
 class rfstream {
 public:
   rfstream(const QualType &ty, const PrintingPolicy &prtpol)
@@ -205,11 +205,9 @@ public:
         os << "const ";
       if (ty.isLocalVolatileQualified())
         os << "volatile ";
-      if (auto qual = el->getQualifier())
-        print(os, *qual);
       os << rfstream(el->desugar(), prtpol);
     } else if (auto spec = ty->getAs<TemplateSpecializationType>()) {
-      spec->getTemplateName().print(os, prtpol);
+      print(os, spec->getTemplateName());
       bool first = true;
       for (auto arg : spec->template_arguments()) {
         os << (first ? '<' : ',') << ' '; // Space after < avoids <:.
@@ -220,6 +218,8 @@ public:
         first = false;
       }
       os << '>';
+    } else if (auto td = ty->getAs<TypedefType>()) {
+      td->getDecl()->printQualifiedName(os, prtpol);
     } else if (ty->isReferenceType()) {
       os << rfstream(ty.getNonReferenceType(), prtpol) << '&';
       // TODO: handle lvalue references.
@@ -229,6 +229,13 @@ public:
       ty.print(os, prtpol);
     // TODO: make this fully equivalent to TypePrinter, handling all possible
     // types or cleverly deferring to it.
+  }
+
+  void print(raw_ostream &os, const TemplateName &name) const {
+    if (auto decl = name.getAsTemplateDecl())
+      decl->printQualifiedName(os, prtpol);
+    else
+      name.print(os, prtpol);
   }
 
   void print(raw_ostream &os, const NestedNameSpecifier &qual) const {
@@ -316,7 +323,7 @@ void RamFuzz::gen_concrete_impl(const CXXRecordDecl *C, const ASTContext &ctx) {
         for (auto P = bg; P != en; ++P)
           outh << ", " << rfstream((*P)->getType(), prtpol) << " p"
                << P - bg + 1;
-        C->printQualifiedName(outh << ") : ::");
+        C->printQualifiedName(outh << ") \n      : ");
         outh << "(";
         for (auto P = bg; P != en; ++P)
           outh << mcom(P) << "p" << P - bg + 1;
