@@ -12,17 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 /// This file contains the main() function for the ramfuzz executable, the
 /// RamFuzz code generator.  This executable scans C++ files for class
 /// declarations and produces test code that can create random objects of these
 /// classes.  The invocation syntax is
 ///
-/// ramfuzz <input file> ... [-- <clang option> ...]
+/// ramfuzz <input file> ... -- [<clang option> ...]
 ///
 /// On success, it outputs two files: fuzz.hpp and fuzz.cpp.  They contain the
-/// generated test code.  Users can #include fuzz.hpp to get the requisite
-/// declarations and compile fuzz.cpp to get an object file with the
+/// generated test code.  Users #include fuzz.hpp to get the requisite
+/// declarations; they compile fuzz.cpp to get an object file with the
 /// definitions.  The generator assumes the input files are #includable headers,
 /// and fuzz.hpp #includes each of the input files to access the class
 /// declarations in the generated code.
@@ -50,6 +49,28 @@
 /// randomly invoking its methods to exercise the under-test instance.  This is
 /// called spinning the method roulette.  See the function spin_roulette() in
 /// runtime/ramfuzz-rt.hpp for an example of this process.
+///
+/// Exit code is 0 on success, 1 on a Clang-reported error, and 2 if more input
+/// is needed to generate full testing code.  For explanation of 2, consider
+/// this code on input:
+///
+/// class Foo;
+/// struct Bar { void process_foo(Foo& foo); };
+///
+/// Upon seeing the process_foo() declaration, ramfuzz will generate code to
+/// exercise this method with a random Foo value.  But that code will reference
+/// Foo's control class ramfuzz::rfFoo::control.  If ramfuzz doesn't see Foo's
+/// definition, its control class will never get generated, so Bar's control
+/// will fail to compile with an error like "use of undeclared identifier
+/// 'rfFoo'".  Since ramfuzz keeps track of whether Foo's control is generated
+/// or not, it can detect this situation and return the exit code 2 to warn the
+/// user that the generated code is incomplete.  In that case, ramfuzz will also
+/// print to standard error a list of classes whose controls are missing.
+///
+/// Keep in mind that ramfuzz only generates code for its input files and not
+/// for other files #included from them.  It is thus possible to get exit status
+/// 2 if Foo's definition exists but is #included.  The remedy is to add Foo's
+/// header to the list of ramfuzz input files.
 
 #include <iostream>
 #include <system_error>
@@ -80,9 +101,12 @@ static OptionCategory MyToolCategory("ramfuzz options");
 static extrahelp CommonHelp(CommonOptionsParser::HelpMessage);
 
 static extrahelp RamFuzzHelp(R"(
-Generates C++ source code that randomly invokes public code from the input
-files.  This is useful for unit tests that leverage fuzzing to exercise the code
-under test in unexpected ways.  Parameter fuzzing = ramfuzz.
+Generates test code that creates random instances of classes defined in input
+files.  This is useful for unit tests that wish to fuzz parameter values for
+code under test.  Parameter fuzzing = ramfuzz.
+
+Outputs fuzz.hpp and fuzz.cpp with the declarations and definitions of test
+code.
 )");
 
 int main(int argc, const char **argv) {
@@ -101,5 +125,5 @@ int main(int argc, const char **argv) {
     return 1;
   }
   outc << "#include \"fuzz.hpp\"\n";
-  return ramfuzz(Tool, sources, outh, outc);
+  return ramfuzz(Tool, sources, outh, outc, llvm::errs());
 }

@@ -14,7 +14,9 @@
 
 #include "RamFuzz.hpp"
 
+#include <iterator>
 #include <memory>
+#include <set>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -33,6 +35,8 @@ using clang::tooling::newFrontendActionFactory;
 using llvm::SmallBitVector;
 using llvm::raw_ostream;
 using llvm::raw_string_ostream;
+using std::inserter;
+using std::set;
 using std::string;
 using std::unique_ptr;
 using std::unordered_map;
@@ -65,6 +69,11 @@ public:
   void run(const MatchFinder::MatchResult &Result) override;
 
   FrontendActionFactory &getActionFactory() { return *AF; }
+
+  /// Calculates which classes under test need their RamFuzz control but don't
+  /// have it yet.  This happens when a control class is referenced in RamFuzz
+  /// output code, but its generation hasn't been triggered.
+  vector<string> missingClasses();
 
 private:
   /// If C is abstract, generates an inner class that's a concrete subclass of
@@ -132,6 +141,14 @@ private:
 
   /// Policy for printing to outh and outc.
   PrintingPolicy prtpol;
+
+  /// Qualified names of classes under test that were referenced in generated
+  /// code.
+  set<string> referenced_classes;
+
+  /// Qualified names of classes under test whose control classes have been
+  /// generated.
+  set<string> processed_classes;
 };
 
 /// Valid identifier from a CXXMethodDecl name.
@@ -284,6 +301,14 @@ const char *ctrname(const string &cls) {
 
 } // anonymous namespace
 
+vector<string> RamFuzz::missingClasses() {
+  vector<string> diff;
+  set_difference(referenced_classes.cbegin(), referenced_classes.cend(),
+                 processed_classes.cbegin(), processed_classes.cend(),
+                 inserter(diff, diff.begin()));
+  return diff;
+}
+
 void RamFuzz::gen_concrete_impl(const CXXRecordDecl *C, const ASTContext &ctx) {
   if (C->isAbstract()) {
     const auto cls = C->getQualifiedNameAsString();
@@ -397,6 +422,8 @@ void RamFuzz::gen_object(const CXXRecordDecl *cls, const Twine &varname,
   const auto ctl = control(cls, prtpol);
   outc << "  " << ctl << " " << varname << " = runtime::spin_roulette<" << ctl
        << ">(" << genname << ");\n";
+  if (!cls->isInStdNamespace())
+    referenced_classes.insert(cls->getQualifiedNameAsString());
   outc << "  if (!" << varname << ") {\n";
   early_exit(loc, failval, Twine("failed ") + varname + " constructor");
   outc << "  }\n";
@@ -526,6 +553,7 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
          << "::control>(*this);\n";
     outc << "  if (ctl) obj = ctl.obj;\n";
     outc << "}\n\n";
+    processed_classes.insert(cls);
   }
 }
 
@@ -538,7 +566,7 @@ string ramfuzz(const string &code) {
 }
 
 int ramfuzz(ClangTool &tool, const vector<string> &sources, raw_ostream &outh,
-            raw_ostream &outc) {
+            raw_ostream &outc, raw_ostream &errs) {
   outh << "#include <memory>\n";
   for (const auto &f : sources)
     outh << "#include \"" << f << "\"\n";
@@ -551,8 +579,19 @@ int ramfuzz(ClangTool &tool, const vector<string> &sources, raw_ostream &outh,
 namespace ramfuzz {
 
 )";
-  const int runres = tool.run(&RamFuzz(outh, outc).getActionFactory());
+  RamFuzz rf(outh, outc);
+  const int run_error = tool.run(&rf.getActionFactory());
   outc << "} // namespace ramfuzz\n";
   outh << "} // namespace ramfuzz\n";
-  return runres;
+  if (run_error)
+    return 1;
+  const auto missing = rf.missingClasses();
+  if (!missing.empty()) {
+    errs << "RamFuzz code will likely not compile, because the following "
+            "required classes \nwere not processed:\n";
+    for (const auto cls : missing)
+      errs << cls << '\n';
+    return 2;
+  }
+  return 0;
 }

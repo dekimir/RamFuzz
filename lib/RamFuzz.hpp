@@ -32,5 +32,6 @@ int ramfuzz(
     const std::vector<std::string>
         &sources,            ///< Names of source files that tool will process.
     llvm::raw_ostream &outh, ///< Where to output generated declarations.
-    llvm::raw_ostream &outc  ///< Where to output generated code.
+    llvm::raw_ostream &outc, ///< Where to output generated code.
+    llvm::raw_ostream &errs  ///< Where to output errors.
     );
