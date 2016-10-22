@@ -27,8 +27,11 @@
 /// declarations in the generated code.
 ///
 /// After the "--" argument, ramfuzz takes clang options necessary to parse the
-/// input files.  These typically include -I and -std.  (TODO: why is "--" even
-/// necessary?  We should be able to take these options directly.)
+/// input files.  These typically include -I, -std, and -xc++ (to force .h files
+/// to be treated as C++ instead of C).
+///
+/// (TODO: why is "--" necessary?  We should be able to take all relevant
+/// options directly.)
 ///
 /// For every class in an input file (but not in other headers #included from
 /// input files), it generates a _control class_ in the ramfuzz namespace.  The
