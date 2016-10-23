@@ -218,12 +218,10 @@ public:
 
   void print(raw_ostream &os) const {
     if (auto el = ty->getAs<ElaboratedType>()) {
-      if (ty.isLocalConstQualified())
-        os << "const ";
-      if (ty.isLocalVolatileQualified())
-        os << "volatile ";
+      print_cv(os);
       os << rfstream(el->desugar(), prtpol);
     } else if (auto spec = ty->getAs<TemplateSpecializationType>()) {
+      print_cv(os);
       print(os, spec->getTemplateName());
       bool first = true;
       for (auto arg : spec->template_arguments()) {
@@ -246,6 +244,13 @@ public:
       ty.print(os, prtpol);
     // TODO: make this fully equivalent to TypePrinter, handling all possible
     // types or cleverly deferring to it.
+  }
+
+  void print_cv(raw_ostream &os) const {
+    if (ty.isLocalConstQualified())
+      os << "const ";
+    if (ty.isLocalVolatileQualified())
+      os << "volatile ";
   }
 
   void print(raw_ostream &os, const TemplateName &name) const {

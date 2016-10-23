@@ -42,10 +42,17 @@ public:
 };
 }
 
+using std::vector;
+class B {
+public:
+  int m = 1;
+  virtual int s(const vector<int> &) = 0;
+};
+
 class C {
 public:
   int sum = 33;
-  void g(const NS::A &a) { sum -= a.sum; }
+  void g(const NS::A &a, B& b) { sum -= a.sum * b.m; }
 };
 
 #include "ramfuzz-rt.hpp"
