@@ -370,7 +370,7 @@ void RamFuzz::gen_concrete_impl(const CXXRecordDecl *C, const ASTContext &ctx) {
 
 void RamFuzz::gen_croulette(const string &cls, unsigned size) {
   const auto ns = control_namespace(cls);
-  outh << "  using cptr = ::" << cls << "* (control::*)();\n";
+  outh << "  using cptr = " << cls << "* (control::*)();\n";
   outh << "  static constexpr unsigned ccount = " << size << ";\n";
   outh << "  static const cptr croulette[ccount];\n";
 
@@ -494,7 +494,7 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
             "constructors may use it.\n";
     outh << "  // Owns internally created objects. Must precede obj "
             "declaration.\n";
-    outh << "  ::std::unique_ptr<::" << cls << "> pobj;\n";
+    outh << "  std::unique_ptr<" << cls << "> pobj;\n";
     // Call depth should be made atomic when we start supporting multi-threaded
     // fuzzing.  Holding off for now because we expect to get a lot of mileage
     // out of multi-process fuzzing (running multiple fuzzing executables, each
@@ -504,11 +504,11 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
     outh << "  static unsigned calldepth;\n";
     outc << "unsigned " << ns << "::control::calldepth = 0;\n\n";
     outh << "  static const unsigned depthlimit = "
-            "::ramfuzz::runtime::depthlimit;\n";
+            "ramfuzz::runtime::depthlimit;\n";
     gen_concrete_impl(C, *Result.Context);
     outh << " public:\n";
-    outh << "  ::" << cls << "& obj; // Object under test.\n";
-    outh << "  control(runtime::gen& g, ::" << cls
+    outh << "  " << cls << "& obj; // Object under test.\n";
+    outh << "  control(runtime::gen& g, " << cls
          << "& obj) : g(g), obj(obj) {} // Object already created by caller.\n";
     outh << "  // True if obj was successfully internally created.\n";
     outh << "  operator bool() const { return bool(pobj); }\n";
@@ -520,8 +520,8 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
         continue;
       const string name = valident(M->getNameAsString());
       if (isa<CXXConstructorDecl>(M)) {
-        outh << "  ::" << cls << "* ";
-        outc << "::" << cls << "* ";
+        outh << "  " << cls << "* ";
+        outc << cls << "* ";
         ctrs = true;
       } else {
         outh << "  void ";
@@ -539,7 +539,7 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
       if (C->isAbstract())
         outh << "concrete_impl(g)";
       else
-        outh << "::" << cls << "()";
+        outh << cls << "()";
       outh << "; }\n";
       ctrs = true;
     }
