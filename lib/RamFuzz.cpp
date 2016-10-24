@@ -304,6 +304,28 @@ const char *ctrname(const string &cls) {
   return &cls[found == string::npos ? 0 : found + 2];
 }
 
+/// True iff C is visible outside all its parent contexts.
+bool globally_visible(const CXXRecordDecl *C) {
+  if (!C || !C->getIdentifier())
+    // Anonymous classes may technically be visible, but only through tricks
+    // like decltype.  Skip until there's a compelling use-case.
+    return false;
+  const auto acc = C->getAccess();
+  if (acc == AS_private || acc == AS_protected)
+    return false;
+  const DeclContext *ctx = C->getLookupParent();
+  while (!isa<TranslationUnitDecl>(ctx)) {
+    if (auto ns = dyn_cast<NamespaceDecl>(ctx)) {
+      if (ns->isAnonymousNamespace())
+        return false;
+      ctx = ns->getLookupParent();
+      continue;
+    } else
+      return globally_visible(dyn_cast<CXXRecordDecl>(ctx));
+  }
+  return true;
+}
+
 } // anonymous namespace
 
 vector<string> RamFuzz::missingClasses() {
@@ -485,6 +507,8 @@ void RamFuzz::gen_method(const Twine &rfname, const CXXMethodDecl *M,
 
 void RamFuzz::run(const MatchFinder::MatchResult &Result) {
   if (const auto *C = Result.Nodes.getNodeAs<CXXRecordDecl>("class")) {
+    if (!globally_visible(C))
+      return;
     const string cls = C->getQualifiedNameAsString();
     const string ns = control_namespace(cls);
     outh << "namespace " << ns << " {\n";
