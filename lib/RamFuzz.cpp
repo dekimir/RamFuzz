@@ -507,7 +507,8 @@ void RamFuzz::gen_method(const Twine &rfname, const CXXMethodDecl *M,
 
 void RamFuzz::run(const MatchFinder::MatchResult &Result) {
   if (const auto *C = Result.Nodes.getNodeAs<CXXRecordDecl>("class")) {
-    if (!globally_visible(C) || C->getDescribedClassTemplate())
+    if (!globally_visible(C) || C->getDescribedClassTemplate() ||
+        isa<ClassTemplateSpecializationDecl>(C))
       return;
     const string cls = C->getQualifiedNameAsString();
     const string ns = control_namespace(cls);

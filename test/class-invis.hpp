@@ -30,8 +30,9 @@ class A {
 public:
   int sum = 0;
   A() { sum += 10; }
+  TA2<double> ta2;
 
-  struct A3 {
+  class A3 {
   private:
     struct A4 {
       struct A5 {
@@ -45,6 +46,9 @@ public:
         };
       };
     };
+
+  public:
+    A4::A5::TA6<float> ta6;
   };
 
   class A7 {
@@ -81,6 +85,8 @@ public:
 };
 } // namespace NS3
 } // anonymous namespace
+TC<int> tc;
+NS3::TC2<bool> tc2;
 } // namespace NS2
 } // namespace NS1
 
