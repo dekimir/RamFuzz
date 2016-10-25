@@ -256,7 +256,7 @@ private:
   runtime::gen &g;
 
 public:
-  ::std::vector<Tp, Alloc> obj;
+  std::vector<Tp, Alloc> obj;
   control(runtime::gen &g, unsigned) : g(g) {
     runtime::gen::region reg(g);
     obj.resize(reg.between(0u, 1000u));
@@ -276,5 +276,35 @@ public:
 template <typename Tp, typename Alloc>
 const typename rfstd_vector::control<Tp, Alloc>::mptr
     rfstd_vector::control<Tp, Alloc>::control::mroulette[] = {};
+
+namespace rfstd_basic_string {
+template <class CharT, class Traits, class Allocator> class control {
+private:
+  // Declare first to initialize early; constructors may use it.
+  runtime::gen &g;
+
+public:
+  std::basic_string<CharT, Traits, Allocator> obj;
+  control(runtime::gen &g, unsigned) : g(g) {
+    runtime::gen::region reg(g);
+    obj.resize(reg.between(1u, 1000u));
+    for (int i = 0; i < obj.size() - 1; ++i)
+      obj[i] = g.between<CharT>(1, std::numeric_limits<CharT>::max());
+    obj.back() = CharT(0);
+  }
+  operator bool() const { return true; }
+
+  using mptr = void (control::*)();
+  static constexpr unsigned mcount = 0;
+  static const mptr mroulette[mcount];
+
+  static constexpr unsigned ccount = 1;
+};
+} // namespace rfstd_basic_string
+
+template <class CharT, class Traits, class Allocator>
+const typename rfstd_basic_string::control<CharT, Traits, Allocator>::mptr
+    rfstd_basic_string::control<CharT, Traits,
+                                Allocator>::control::mroulette[] = {};
 
 } // namespace ramfuzz
