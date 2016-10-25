@@ -22,6 +22,10 @@ class A {
   public:
     int foo(char) { return 0; }
   };
+  template <typename T> class TA2 {
+  public:
+    T foo(char) { return 0; }
+  };
 
 public:
   int sum = 0;
@@ -34,6 +38,10 @@ public:
         class A6 {
         public:
           int foo(char) { return 1; }
+        };
+        template <typename T> class TA6 {
+        public:
+          T foo(char) { return 1; }
         };
       };
     };
@@ -58,10 +66,18 @@ class C {
 public:
   void f1(bool) {}
 };
+template <typename T> class TC {
+public:
+  void f1(T) {}
+};
 namespace NS3 {
 class C2 {
 public:
   void g1(bool) {}
+};
+template <typename T> class TC2 {
+public:
+  void g1(T) {}
 };
 } // namespace NS3
 } // anonymous namespace
