@@ -340,7 +340,7 @@ void RamFuzz::gen_concrete_impl(const CXXRecordDecl *C, const ASTContext &ctx) {
   if (C->isAbstract()) {
     const auto cls = C->getQualifiedNameAsString();
     const auto ns = control_namespace(cls);
-    outh << "  struct concrete_impl : public ::" << cls;
+    outh << "  struct concrete_impl : public " << cls;
     outh << " {\n";
     outh << "    runtime::gen& ramfuzzgenuniquename;\n";
     for (auto M : C->methods()) {
@@ -492,7 +492,7 @@ void RamFuzz::gen_method(const Twine &rfname, const CXXMethodDecl *M,
     if (M->getParent()->isAbstract())
       outc << "concrete_impl(g" << (ramcount ? ", " : "");
     else {
-      M->getParent()->printQualifiedName(outc << "::");
+      M->getParent()->printQualifiedName(outc);
       outc << "(";
     }
   } else
@@ -559,7 +559,7 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
     }
     if (C->needsImplicitDefaultConstructor()) {
       const auto name = ctrname(cls);
-      outh << "  ::" << cls << "* ";
+      outh << "  " << cls << "* ";
       outh << name << namecount[name]++ << "() { return new ";
       if (C->isAbstract())
         outh << "concrete_impl(g)";
@@ -575,9 +575,9 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
     }
     outh << "};\n";
     outh << "}; // namespace " << ns << "\n";
-    outh << "template <> void runtime::gen::set_any<::" << cls << ">(::" << cls
+    outh << "template <> void runtime::gen::set_any<" << cls << ">(" << cls
          << "&);\n";
-    outc << "template <> void runtime::gen::set_any<::" << cls << ">(::" << cls
+    outc << "template <> void runtime::gen::set_any<" << cls << ">(" << cls
          << "&obj) {\n";
     outc << "  auto ctl = runtime::spin_roulette<" << ns
          << "::control>(*this);\n";
