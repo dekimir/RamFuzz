@@ -125,6 +125,10 @@ private:
   void gen_method(const Twine &rfname, ///< Fully qualified RamFuzz method name.
                   const CXXMethodDecl *M, const ASTContext &ctx);
 
+  /// Generates the declaration and definition of the runtime::gen::set_any
+  /// specialization for class cls in namespace ns.
+  void gen_set_any(const string &cls, const string &ns);
+
   /// Where to output generated declarations (typically a header file).
   raw_ostream &outh;
 
@@ -505,6 +509,17 @@ void RamFuzz::gen_method(const Twine &rfname, const CXXMethodDecl *M,
   outc << "}\n\n";
 }
 
+void RamFuzz::gen_set_any(const string &cls, const string &ns) {
+  outh << "template <> void runtime::gen::set_any<" << cls << ">(" << cls
+       << "&);\n";
+  outc << "template <> void runtime::gen::set_any<" << cls << ">(" << cls
+       << "&obj) {\n";
+  outc << "  auto ctl = runtime::spin_roulette<" << ns
+       << "::control>(*this);\n";
+  outc << "  assign(ctl, obj);\n";
+  outc << "}\n";
+}
+
 void RamFuzz::run(const MatchFinder::MatchResult &Result) {
   if (const auto *C = Result.Nodes.getNodeAs<CXXRecordDecl>("class")) {
     if (!globally_visible(C) || C->getDescribedClassTemplate() ||
@@ -541,7 +556,7 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
     bool ctrs = false;
     for (auto M : C->methods()) {
       if (isa<CXXDestructorDecl>(M) || M->getAccess() != AS_public ||
-          !M->isInstance())
+          !M->isInstance() || M->isDeleted())
         continue;
       const string name = valident(M->getNameAsString());
       if (isa<CXXConstructorDecl>(M)) {
@@ -575,14 +590,8 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
     }
     outh << "};\n";
     outh << "}; // namespace " << ns << "\n";
-    outh << "template <> void runtime::gen::set_any<" << cls << ">(" << cls
-         << "&);\n";
-    outc << "template <> void runtime::gen::set_any<" << cls << ">(" << cls
-         << "&obj) {\n";
-    outc << "  auto ctl = runtime::spin_roulette<" << ns
-         << "::control>(*this);\n";
-    outc << "  if (ctl) obj = ctl.obj;\n";
-    outc << "}\n\n";
+    gen_set_any(cls, ns);
+    outc << "\n";
     processed_classes.insert(cls);
   }
 }

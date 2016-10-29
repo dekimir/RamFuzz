@@ -22,6 +22,7 @@
 #include <ostream>
 #include <random>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -103,6 +104,27 @@ public:
 
   /// Bool vector overload of set_any().
   void set_any(std::vector<bool>::reference obj);
+
+  /// Assigns ctl.obj to obj if ctl is valid and obj is assignable.  Useful for
+  /// implementing set_any for a class that has a RamFuzz control: you
+  /// spin_roulette(), then feed the result to this method.
+  template <typename RamFuzzControl,
+            typename std::enable_if<
+                std::is_copy_assignable<decltype(RamFuzzControl::obj)>::value,
+                int>::type = 0>
+  void assign(RamFuzzControl &ctl, decltype(RamFuzzControl::obj) obj) {
+    if (ctl)
+      obj = ctl.obj;
+  }
+
+  /// Overload of assign() for when obj isn't assignable.  Does nothing at
+  /// runtime, but allows \c assign(ctl,obj) to always compile correctly,
+  /// whether obj is assignable or not.
+  template <typename RamFuzzControl,
+            typename std::enable_if<
+                !std::is_copy_assignable<decltype(RamFuzzControl::obj)>::value,
+                int>::type = 0>
+  void assign(RamFuzzControl &ctl, decltype(RamFuzzControl::obj) obj) {}
 
   friend class region;
   /// RAII for region (a continuous subset of the log that can be replaced by a
