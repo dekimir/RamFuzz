@@ -451,7 +451,7 @@ void RamFuzz::gen_object(const CXXRecordDecl *cls, const Twine &varname,
                          const char *genname, const Twine &loc,
                          const Twine &failval) {
   const auto ctl = control(cls, prtpol);
-  outc << "  " << ctl << " " << varname << " = runtime::spin_roulette<" << ctl
+  outc << "  auto " << varname << " = runtime::spin_roulette<" << ctl
        << ">(" << genname << ");\n";
   if (!cls->isInStdNamespace())
     referenced_classes.insert(cls->getQualifiedNameAsString());
