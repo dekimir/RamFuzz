@@ -21,9 +21,17 @@ public:
   A &operator=(const A &) = delete;
 };
 
+// Some of B's methods are implicitly deleted because of A.
 class B {
 public:
   B() : a(0){};
   A a;
   int sum = 42;
+};
+
+// Some of C's methods are implicitly deleted because of const members.
+class C {
+public:
+  C() = default;
+  const int sum = 43;
 };

@@ -19,7 +19,10 @@ int main() {
   ramfuzz::rfB::control rb(g, ramfuzz::rfB::control::ccount - 1);
   for (auto m : rb.mroulette)
     (rb.*m)();
-  return rb.obj.sum != 42;
+  ramfuzz::rfC::control rc(g, ramfuzz::rfC::control::ccount - 1);
+  for (auto m : rc.mroulette)
+    (rc.*m)();
+  return rb.obj.sum != 42 || rc.obj.sum != 43;
 }
 
 unsigned ::ramfuzz::runtime::spinlimit = 3;
