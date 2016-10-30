@@ -451,8 +451,8 @@ void RamFuzz::gen_object(const CXXRecordDecl *cls, const Twine &varname,
                          const char *genname, const Twine &loc,
                          const Twine &failval) {
   const auto ctl = control(cls, prtpol);
-  outc << "  auto " << varname << " = runtime::spin_roulette<" << ctl
-       << ">(" << genname << ");\n";
+  outc << "  auto " << varname << " = runtime::spin_roulette<" << ctl << ">("
+       << genname << ");\n";
   if (!cls->isInStdNamespace())
     referenced_classes.insert(cls->getQualifiedNameAsString());
   outc << "  if (!" << varname << ") {\n";
@@ -488,6 +488,12 @@ void RamFuzz::gen_method(const Twine &rfname, const CXXMethodDecl *M,
       gen_object(varcls, rfvar, "g", rfname,
                  isa<CXXConstructorDecl>(M) ? "nullptr" : "");
       outc << "  auto& ram" << ramcount << " = " << rfvar << ".obj;\n";
+    } else if (vartype->isVoidType()) {
+      assert(isptr[ramcount]); // Must've been a void*.
+      outc << "  auto rfram" << ramcount
+           << " = runtime::spin_roulette<rfstd_vector::control<char>>(g);\n";
+      outc << "  void* ram" << ramcount << " = rfram" << ramcount
+           << ".obj.data();\n";
     }
   }
   if (isa<CXXConstructorDecl>(M)) {
