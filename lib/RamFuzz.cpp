@@ -478,7 +478,9 @@ void RamFuzz::gen_method(const Twine &rfname, const CXXMethodDecl *M,
                        .getLocalUnqualifiedType();
     if (vartype->isPointerType()) {
       isptr.set(ramcount);
-      vartype = vartype->getPointeeType();
+      vartype = vartype->getPointeeType()
+                    .getDesugaredType(ctx)
+                    .getLocalUnqualifiedType();
     }
     if (vartype->isScalarType()) {
       outc << "  " << vartype.stream(prtpol) << " ram" << ramcount
