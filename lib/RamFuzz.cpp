@@ -80,6 +80,11 @@ private:
   /// C.
   void gen_concrete_impl(const CXXRecordDecl *C, const ASTContext &ctx);
 
+  /// Generates concrete methods of C's concrete_impl class -- one for each pure
+  /// method of C and its transitive bases.
+  void gen_concrete_methods(const CXXRecordDecl *C, const ASTContext &ctx,
+                            const string &ns);
+
   /// Generates the declaration and definition of member croulette.
   void gen_croulette(
       const string &cls, ///< Fully qualified name of class under test.
@@ -340,6 +345,42 @@ vector<string> RamFuzz::missingClasses() {
   return diff;
 }
 
+void RamFuzz::gen_concrete_methods(const CXXRecordDecl *C,
+                                   const ASTContext &ctx, const string &ns) {
+  if (!C)
+    return;
+  for (auto M : C->methods()) {
+    if (M->isPure()) {
+      const auto bg = M->param_begin(), en = M->param_end();
+      const auto mcom = [bg](decltype(bg) &P) { return P == bg ? "" : ", "; };
+      auto Mrty = rfstream(M->getReturnType(), prtpol);
+      outh << "    " << Mrty << " " << *M << "(";
+      outc << Mrty << " " << ns << "::control::concrete_impl::" << *M << "(";
+      for (auto P = bg; P != en; ++P) {
+        auto Pty = rfstream((*P)->getType(), prtpol);
+        outh << mcom(P) << Pty;
+        outc << mcom(P) << Pty;
+      }
+      outh << ") " << (M->isConst() ? "const " : "") << "override;\n";
+      outc << ") " << (M->isConst() ? "const " : "") << "{\n";
+      auto rety =
+          M->getReturnType().getDesugaredType(ctx).getLocalUnqualifiedType();
+      if (rety->isScalarType()) {
+        outc << "  return ramfuzzgenuniquename.any<" << rfstream(rety, prtpol)
+             << ">();\n";
+      } else if (const auto retcls = rety->getAsCXXRecordDecl()) {
+        gen_object(retcls, "rfctl", "ramfuzzgenuniquename",
+                   Twine(ns) + "::concrete_impl::" + M->getName(), "rfctl.obj");
+        outc << "  return rfctl.obj;\n";
+      }
+      // TODO: handle other types.
+      outc << "}\n";
+    }
+  }
+  for (const auto &base : C->bases())
+    gen_concrete_methods(base.getType()->getAsCXXRecordDecl(), ctx, ns);
+}
+
 void RamFuzz::gen_concrete_impl(const CXXRecordDecl *C, const ASTContext &ctx) {
   if (C->isAbstract()) {
     const auto cls = C->getQualifiedNameAsString();
@@ -347,35 +388,11 @@ void RamFuzz::gen_concrete_impl(const CXXRecordDecl *C, const ASTContext &ctx) {
     outh << "  struct concrete_impl : public " << cls;
     outh << " {\n";
     outh << "    runtime::gen& ramfuzzgenuniquename;\n";
-    for (auto M : C->methods()) {
-      const auto bg = M->param_begin(), en = M->param_end();
-      const auto mcom = [bg](decltype(bg) &P) { return P == bg ? "" : ", "; };
-      if (M->isPure()) {
-        auto Mrty = rfstream(M->getReturnType(), prtpol);
-        outh << "    " << Mrty << " " << *M << "(";
-        outc << Mrty << " " << ns << "::control::concrete_impl::" << *M << "(";
-        for (auto P = bg; P != en; ++P) {
-          auto Pty = rfstream((*P)->getType(), prtpol);
-          outh << mcom(P) << Pty;
-          outc << mcom(P) << Pty;
-        }
-        outh << ") " << (M->isConst() ? "const " : "") << "override;\n";
-        outc << ") " << (M->isConst() ? "const " : "") << "{\n";
-        auto rety =
-            M->getReturnType().getDesugaredType(ctx).getLocalUnqualifiedType();
-        if (rety->isScalarType()) {
-          outc << "  return ramfuzzgenuniquename.any<" << rfstream(rety, prtpol)
-               << ">();\n";
-        } else if (const auto retcls = rety->getAsCXXRecordDecl()) {
-          gen_object(retcls, "rfctl", "ramfuzzgenuniquename",
-                     Twine(ns) + "::concrete_impl::" + M->getName(),
-                     "rfctl.obj");
-          outc << "  return rfctl.obj;\n";
-        }
-        // TODO: handle other types.
-        outc << "}\n";
-      } else if (isa<CXXConstructorDecl>(M) && M->getAccess() != AS_private) {
+    for (const auto M : C->ctors()) {
+      if (M->getAccess() != AS_private) {
         outh << "    concrete_impl(runtime::gen& ramfuzzgenuniquename";
+        const auto bg = M->param_begin(), en = M->param_end();
+        const auto mcom = [bg](decltype(bg) &P) { return P == bg ? "" : ", "; };
         for (auto P = bg; P != en; ++P)
           outh << ", " << rfstream((*P)->getType(), prtpol) << " p"
                << P - bg + 1;
@@ -390,6 +407,7 @@ void RamFuzz::gen_concrete_impl(const CXXRecordDecl *C, const ASTContext &ctx) {
       outh << "    concrete_impl(runtime::gen& ramfuzzgenuniquename)\n";
       outh << "      : ramfuzzgenuniquename(ramfuzzgenuniquename) {}\n";
     }
+    gen_concrete_methods(C, ctx, ns);
     outh << "  };\n";
   }
 }
