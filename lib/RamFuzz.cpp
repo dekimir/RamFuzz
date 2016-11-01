@@ -42,6 +42,13 @@ using std::unique_ptr;
 using std::unordered_map;
 using std::vector;
 
+namespace clang {
+// So we can compare SmallVectors of QualType.
+bool operator<(const QualType a, const QualType b) {
+  return a.getAsOpaquePtr() < b.getAsOpaquePtr();
+}
+} // namespace clang
+
 namespace {
 
 auto ClassMatcher =
@@ -49,6 +56,30 @@ auto ClassMatcher =
                   unless(hasAncestor(namespaceDecl(isAnonymous()))),
                   hasDescendant(cxxMethodDecl(isPublic())))
         .bind("class");
+
+/// Holds a method's name and signature.  Useful for comparing methods in a
+/// subclass with its super class to find overrides and covariants.
+struct MethodNameAndSignature {
+  using Types = SmallVector<QualType, 8>;
+  StringRef name;
+  Types params;
+  MethodNameAndSignature(const CXXMethodDecl &M)
+      : name(M.getName()), params(GetTypes(M.parameters())) {}
+  bool operator<(const MethodNameAndSignature &that) const {
+    if (this->name == that.name)
+      return this->params < that.params;
+    else
+      return this->name < that.name;
+  }
+
+private:
+  Types GetTypes(ArrayRef<ParmVarDecl *> params) {
+    Types ts;
+    for (auto p : params)
+      ts.push_back(p->getOriginalType());
+    return ts;
+  }
+};
 
 /// Generates ramfuzz code into an ostream.  The user can feed a RamFuzz
 /// instance to a custom MatchFinder, or simply getActionFactory() and run it in
@@ -81,9 +112,11 @@ private:
   void gen_concrete_impl(const CXXRecordDecl *C, const ASTContext &ctx);
 
   /// Generates concrete methods of C's concrete_impl class -- one for each pure
-  /// method of C and its transitive bases.
+  /// method of C and its transitive bases.  Skips any methods present in
+  /// to_skip.  Extends to_skip with generated methods.
   void gen_concrete_methods(const CXXRecordDecl *C, const ASTContext &ctx,
-                            const string &ns);
+                            const string &ns,
+                            set<MethodNameAndSignature> &to_skip);
 
   /// Generates the declaration and definition of member croulette.
   void gen_croulette(
@@ -346,11 +379,13 @@ vector<string> RamFuzz::missingClasses() {
 }
 
 void RamFuzz::gen_concrete_methods(const CXXRecordDecl *C,
-                                   const ASTContext &ctx, const string &ns) {
+                                   const ASTContext &ctx, const string &ns,
+                                   set<MethodNameAndSignature> &to_skip) {
   if (!C)
     return;
   for (auto M : C->methods()) {
-    if (M->isPure()) {
+    if (M->isPure() && !to_skip.count(MethodNameAndSignature(*M))) {
+      to_skip.insert(*M);
       const auto bg = M->param_begin(), en = M->param_end();
       const auto mcom = [bg](decltype(bg) &P) { return P == bg ? "" : ", "; };
       auto Mrty = rfstream(M->getReturnType(), prtpol);
@@ -378,7 +413,8 @@ void RamFuzz::gen_concrete_methods(const CXXRecordDecl *C,
     }
   }
   for (const auto &base : C->bases())
-    gen_concrete_methods(base.getType()->getAsCXXRecordDecl(), ctx, ns);
+    gen_concrete_methods(base.getType()->getAsCXXRecordDecl(), ctx, ns,
+                         to_skip);
 }
 
 void RamFuzz::gen_concrete_impl(const CXXRecordDecl *C, const ASTContext &ctx) {
@@ -407,7 +443,8 @@ void RamFuzz::gen_concrete_impl(const CXXRecordDecl *C, const ASTContext &ctx) {
       outh << "    concrete_impl(runtime::gen& ramfuzzgenuniquename)\n";
       outh << "      : ramfuzzgenuniquename(ramfuzzgenuniquename) {}\n";
     }
-    gen_concrete_methods(C, ctx, ns);
+    set<MethodNameAndSignature> skip_nothing;
+    gen_concrete_methods(C, ctx, ns, skip_nothing);
     outh << "  };\n";
   }
 }
