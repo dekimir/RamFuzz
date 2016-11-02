@@ -64,7 +64,7 @@ struct MethodNameAndSignature {
   StringRef name;
   Types params;
   MethodNameAndSignature(const CXXMethodDecl &M)
-      : name(M.getName()), params(GetTypes(M.parameters())) {}
+      : name(M.getName()), params(getTypes(M.parameters())) {}
   bool operator<(const MethodNameAndSignature &that) const {
     if (this->name == that.name)
       return this->params < that.params;
@@ -73,7 +73,7 @@ struct MethodNameAndSignature {
   }
 
 private:
-  Types GetTypes(ArrayRef<ParmVarDecl *> params) {
+  Types getTypes(ArrayRef<ParmVarDecl *> params) {
     Types ts;
     for (auto p : params)
       ts.push_back(p->getOriginalType());
