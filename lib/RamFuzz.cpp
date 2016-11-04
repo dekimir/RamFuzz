@@ -419,7 +419,19 @@ void RamFuzz::gen_concrete_methods(const CXXRecordDecl *C,
       outc << ") " << (M->isConst() ? "const " : "") << "{\n";
       auto rety =
           M->getReturnType().getDesugaredType(ctx).getLocalUnqualifiedType();
-      if (rety->isScalarType()) {
+      if (rety->isPointerType()) {
+        const auto pty = rety->getPointeeType();
+        if (pty->isScalarType()) {
+          const auto s = pty.stream(prtpol);
+          outc << "  return new " << s << "(ramfuzzgenuniquename.any<" << s
+               << ">());\n";
+        } else if (const auto ptcls = pty->getAsCXXRecordDecl()) {
+          gen_object(ptcls, "rfctl", "ramfuzzgenuniquename",
+                     Twine(ns) + "::concrete_impl::" + M->getName(), "nullptr");
+          outc << "  return rfctl.release();\n";
+        } else
+          assert(0 && "TODO: handle other types.");
+      } else if (rety->isScalarType()) {
         outc << "  return ramfuzzgenuniquename.any<" << rfstream(rety, prtpol)
              << ">();\n";
       } else if (const auto retcls = rety->getAsCXXRecordDecl()) {
@@ -639,6 +651,9 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
          << "& obj) : g(g), obj(obj) {} // Object already created by caller.\n";
     outh << "  // True if obj was successfully internally created.\n";
     outh << "  operator bool() const { return bool(pobj); }\n";
+    outh << "  // Releases internally generated object and returns its address "
+            "\n  // (or null if externally generated).\n";
+    outh << "  " << cls << "* release() { return pobj.release(); }\n";
     unordered_map<string, unsigned> namecount;
     bool ctrs = false;
     for (auto M : C->methods()) {
