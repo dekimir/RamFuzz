@@ -18,6 +18,7 @@
 #include <memory>
 #include <set>
 #include <string>
+#include <tuple>
 #include <unordered_map>
 #include <vector>
 
@@ -36,8 +37,11 @@ using llvm::SmallBitVector;
 using llvm::raw_ostream;
 using llvm::raw_string_ostream;
 using std::inserter;
+using std::make_tuple;
 using std::set;
 using std::string;
+using std::tie;
+using std::tuple;
 using std::unique_ptr;
 using std::unordered_map;
 using std::vector;
@@ -368,6 +372,21 @@ bool globally_visible(const CXXRecordDecl *C) {
   return true;
 }
 
+/// Returns ty's pointee (and if that's a pointer, its pointee, and so on
+/// recursively), as well as the depth level of that recursion.
+tuple<QualType, unsigned> ultimate_pointee(QualType ty, const ASTContext &ctx) {
+  ty = ty.getNonReferenceType().getDesugaredType(ctx);
+  unsigned indir_cnt = 0;
+  while (ty->isPointerType()) {
+    ty = ty->getPointeeType()
+             .getNonReferenceType()
+             .getDesugaredType(ctx)
+             .getLocalUnqualifiedType();
+    ++indir_cnt;
+  }
+  return make_tuple(ty, indir_cnt);
+}
+
 } // anonymous namespace
 
 vector<string> RamFuzz::missingClasses() {
@@ -522,7 +541,7 @@ void RamFuzz::gen_method(const Twine &rfname, const CXXMethodDecl *M,
   early_exit(rfname, isa<CXXConstructorDecl>(M) ? "nullptr" : "",
              "call depth limit");
   outc << "  }\n";
-  SmallBitVector isptr(M->param_size() + 1);
+  SmallVector<unsigned, 8> ptrcnt(M->param_size() + 1);
   auto ramcount = 0u;
   for (const auto &ram : M->parameters()) {
     ramcount++;
@@ -531,12 +550,7 @@ void RamFuzz::gen_method(const Twine &rfname, const CXXMethodDecl *M,
                        .getNonReferenceType()
                        .getDesugaredType(ctx)
                        .getLocalUnqualifiedType();
-    if (vartype->isPointerType()) {
-      isptr.set(ramcount);
-      vartype = vartype->getPointeeType()
-                    .getDesugaredType(ctx)
-                    .getLocalUnqualifiedType();
-    }
+    tie(vartype, ptrcnt[ramcount]) = ultimate_pointee(vartype, ctx);
     if (vartype->isScalarType()) {
       outc << "  " << vartype.stream(prtpol) << " ram" << ramcount
            << " = g.any<" << vartype.stream(prtpol) << ">();\n";
@@ -546,11 +560,18 @@ void RamFuzz::gen_method(const Twine &rfname, const CXXMethodDecl *M,
                  isa<CXXConstructorDecl>(M) ? "nullptr" : "");
       outc << "  auto& ram" << ramcount << " = " << rfvar << ".obj;\n";
     } else if (vartype->isVoidType()) {
-      assert(isptr[ramcount]); // Must've been a void*.
+      assert(ptrcnt[ramcount]); // Must've been a void*.
       outc << "  auto rfram" << ramcount
            << " = runtime::spin_roulette<rfstd_vector::control<char>>(g);\n";
       outc << "  void* ram" << ramcount << " = rfram" << ramcount
            << ".obj.data();\n";
+    }
+    for (auto i = 0u; i < ptrcnt[ramcount]; ++i) {
+      outc << "  auto ram" << ramcount << "p" << i << " = std::addressof(ram"
+           << ramcount;
+      if (i)
+        outc << "p" << i - 1;
+      outc << ");\n";
     }
   }
   if (isa<CXXConstructorDecl>(M)) {
@@ -564,8 +585,11 @@ void RamFuzz::gen_method(const Twine &rfname, const CXXMethodDecl *M,
     }
   } else
     outc << "  obj." << *M << "(";
-  for (auto i = 1u; i <= ramcount; ++i)
-    outc << (i == 1 ? "" : ", ") << (isptr[i] ? "&" : "") << "ram" << i;
+  for (auto i = 1u; i <= ramcount; ++i) {
+    outc << (i == 1 ? "" : ", ") << "ram" << i;
+    if (ptrcnt[i])
+      outc << "p" << ptrcnt[i] - 1;
+  }
   outc << ");\n";
   if (!isa<CXXConstructorDecl>(M))
     outc << "  --calldepth;\n";

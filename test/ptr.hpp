@@ -22,4 +22,5 @@ class B {
 public:
   int sum = 0;
   void f(int *p, A *a) { sum += bool(p) * a->num; }
+  void g(double ***&p) {}
 };
