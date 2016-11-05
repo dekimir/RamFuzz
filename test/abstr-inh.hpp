@@ -20,12 +20,14 @@ public:
 
 protected:
   virtual int f2(unsigned) = 0;
+  virtual A1* f3() = 0;
 };
 
 class B1 : public A1 {
 public:
   virtual float g1(bool) = 0;
   virtual int f2(unsigned) = 0;
+  virtual B1* f3() = 0;
 };
 
 class C1 : public B1 {
