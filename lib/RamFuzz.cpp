@@ -438,8 +438,8 @@ void RamFuzz::gen_concrete_methods(const CXXRecordDecl *C,
         gen_object(retcls, "rfctl", "ramfuzzgenuniquename",
                    Twine(ns) + "::concrete_impl::" + M->getName(), "rfctl.obj");
         outc << "  return rfctl.obj;\n";
-      }
-      // TODO: handle other types.
+      } else
+        assert(rety->isVoidType() && "TODO: handle other types.");
       outc << "}\n";
     }
   }
