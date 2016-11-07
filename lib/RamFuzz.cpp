@@ -378,10 +378,7 @@ tuple<QualType, unsigned> ultimate_pointee(QualType ty, const ASTContext &ctx) {
   ty = ty.getNonReferenceType().getDesugaredType(ctx);
   unsigned indir_cnt = 0;
   while (ty->isPointerType()) {
-    ty = ty->getPointeeType()
-             .getNonReferenceType()
-             .getDesugaredType(ctx)
-             .getLocalUnqualifiedType();
+    ty = ty->getPointeeType().getNonReferenceType().getDesugaredType(ctx);
     ++indir_cnt;
   }
   return make_tuple(ty, indir_cnt);
@@ -595,7 +592,8 @@ void RamFuzz::gen_method(const Twine &rfname, const CXXMethodDecl *M,
       assert(ptrcnt[ramcount]); // Must've been a void*.
       outc << "  auto rfram" << ramcount
            << " = runtime::spin_roulette<rfstd_vector::control<char>>(g);\n";
-      outc << "  void* ram" << ramcount << " = rfram" << ramcount
+      outc << "  " << (vartype.isLocalConstQualified() ? "const " : "")
+           << "void* ram" << ramcount << " = rfram" << ramcount
            << ".obj.data();\n";
       // Because the ram variable is already a pointer, one less indirection is
       // needed below.

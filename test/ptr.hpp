@@ -23,5 +23,9 @@ public:
   int sum = 0;
   void f(int *p, A *a) { sum += bool(p) * a->num; }
   void g(double ***&p) {}
-  void h(void **p) {}
+  void h1(void **p) {}
+  void h2(const void **p) {}
+  void h3(const void *const *p) {}
+  void i1(const void *p) {}
+  void i2(const int *p) {}
 };
