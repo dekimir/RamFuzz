@@ -429,6 +429,11 @@ void RamFuzz::gen_concrete_methods(const CXXRecordDecl *C,
           gen_object(ptcls, "rfctl", "ramfuzzgenuniquename",
                      Twine(ns) + "::concrete_impl::" + M->getName(), "nullptr");
           outc << "  return rfctl.release();\n";
+        } else if (pty->isVoidType()) {
+          outc << "  auto rfctl = "
+                  "runtime::spin_roulette<rfstd_vector::control<char>>("
+                  "ramfuzzgenuniquename);\n";
+          outc << "  return rfctl.obj.data();\n";
         } else
           assert(0 && "TODO: handle other types.");
       } else if (rety->isReferenceType()) {

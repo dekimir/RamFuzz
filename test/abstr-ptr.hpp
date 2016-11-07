@@ -18,6 +18,7 @@ class A {
 public:
   virtual int *f1(unsigned) = 0;
   virtual A *f2() = 0;
+  virtual void *f3() = 0;
   int sum = 11;
 };
 
