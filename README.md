@@ -45,7 +45,7 @@ The `bin/ramfuzz` executable (in LLVM build, see "How to Build" below) generates
 
 C++ is a huge language, so the code generator is a work in progress.  Although improvements are made constantly, it currently can't handle the following important categories:
 - most template code
-- STL containers other than `vector`
+- STL containers other than `vector` and `string`
 - array arguments
 - pure virtual methods that return a reference or a pointer (though other aspects of abstract base classes are supported)
 
