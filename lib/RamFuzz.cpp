@@ -431,6 +431,21 @@ void RamFuzz::gen_concrete_methods(const CXXRecordDecl *C,
           outc << "  return rfctl.release();\n";
         } else
           assert(0 && "TODO: handle other types.");
+      } else if (rety->isReferenceType()) {
+        const auto deref = rety.getNonReferenceType();
+        if (const auto retcls = deref->getAsCXXRecordDecl()) {
+          outc << "  static std::unique_ptr<" << rfstream(deref, prtpol)
+               << "> global;\n";
+          outc << "  // Spin roulette locally, since it can call us "
+                  "recursively.\n";
+          gen_object(retcls, "local", "ramfuzzgenuniquename",
+                     Twine(ns) + "::concrete_impl::" + M->getName(),
+                     "local.obj");
+          outc << "  // Transfer to global avoids dangling reference.\n";
+          outc << "  global.reset(local.release());\n";
+          outc << "  return *global;\n";
+        } else
+          assert(0 && "TODO: handle other types.");
       } else if (rety->isScalarType()) {
         outc << "  return ramfuzzgenuniquename.any<" << rfstream(rety, prtpol)
              << ">();\n";
