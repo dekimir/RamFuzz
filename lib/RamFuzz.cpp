@@ -597,6 +597,9 @@ void RamFuzz::gen_method(const Twine &rfname, const CXXMethodDecl *M,
            << " = runtime::spin_roulette<rfstd_vector::control<char>>(g);\n";
       outc << "  void* ram" << ramcount << " = rfram" << ramcount
            << ".obj.data();\n";
+      // Because the ram variable is already a pointer, one less indirection is
+      // needed below.
+      ptrcnt[ramcount]--;
     }
     for (auto i = 0u; i < ptrcnt[ramcount]; ++i) {
       outc << "  auto ram" << ramcount << "p" << i << " = std::addressof(ram"
