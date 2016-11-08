@@ -21,6 +21,7 @@
 #include <limits>
 #include <ostream>
 #include <random>
+#include <sstream>
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -339,5 +340,22 @@ template <class CharT, class Traits, class Allocator>
 const typename rfstd_basic_string::control<CharT, Traits, Allocator>::mptr
     rfstd_basic_string::control<CharT, Traits,
                                 Allocator>::control::mroulette[] = {};
+
+namespace rfstd_basic_istream {
+template <class CharT, class Traits = std::char_traits<CharT>> class control {
+  // Declare first to initialize early; constructors may use it.
+  runtime::gen &g;
+  rfstd_basic_string::control<CharT, Traits, std::allocator<CharT>> strctl;
+
+public:
+  std::basic_istringstream<CharT, Traits> obj;
+  control(runtime::gen &g, unsigned) : g(g), strctl(g, 0), obj(strctl.obj) {}
+  operator bool() const { return true; }
+  using mptr = void (control::*)();
+  static constexpr unsigned mcount = 0;
+  static const mptr mroulette[mcount];
+  static constexpr unsigned ccount = 1;
+};
+} // namespace rfstd_basic_istream
 
 } // namespace ramfuzz
