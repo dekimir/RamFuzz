@@ -457,7 +457,7 @@ void RamFuzz::gen_concrete_methods(const CXXRecordDecl *C,
         outc << "  return rfctl.obj;\n";
       } else
         assert(rety->isVoidType() && "TODO: handle other types.");
-      outc << "}\n";
+      outc << "}\n\n";
     }
   }
   for (const auto &base : C->bases())
