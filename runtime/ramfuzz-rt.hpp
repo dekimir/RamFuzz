@@ -358,4 +358,16 @@ public:
 };
 } // namespace rfstd_basic_istream
 
+namespace rfstd_basic_ostream {
+template <class CharT, class Traits = std::char_traits<CharT>> struct control {
+  std::basic_ostringstream<CharT, Traits> obj;
+  control(runtime::gen &g, unsigned) {}
+  operator bool() const { return true; }
+  using mptr = void (control::*)();
+  static constexpr unsigned mcount = 0;
+  static const mptr mroulette[mcount];
+  static constexpr unsigned ccount = 1;
+};
+} // namespace rfstd_basic_ostream
+
 } // namespace ramfuzz

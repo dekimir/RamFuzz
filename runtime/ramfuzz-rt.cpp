@@ -86,6 +86,12 @@ template <> char gen::uniform_random<char>(char lo, char hi) {
   return ibetween(lo, hi, rgen);
 }
 
+template <>
+unsigned char gen::uniform_random<unsigned char>(unsigned char lo,
+                                                 unsigned char hi) {
+  return ibetween(lo, hi, rgen);
+}
+
 gen::skip::skip(istream &str) : valid(false) {
   if (!(str >> start_))
     return;
