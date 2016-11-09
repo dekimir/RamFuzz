@@ -441,8 +441,7 @@ void RamFuzz::gen_concrete_methods(const CXXRecordDecl *C,
           outc << "  // Spin roulette locally, since it can call us "
                   "recursively.\n";
           gen_object(retcls, "local", "ramfuzzgenuniquename",
-                     Twine(ns) + "::concrete_impl::" + M->getName(),
-                     "local.obj");
+                     Twine(ns) + "::concrete_impl::" + M->getName(), "*global");
           outc << "  // Transfer to global avoids dangling reference.\n";
           outc << "  global.reset(local.release());\n";
           outc << "  return *global;\n";
