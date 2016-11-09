@@ -327,11 +327,12 @@ public:
     obj.back() = CharT(0);
   }
   operator bool() const { return true; }
-
+  std::basic_string<CharT, Traits, Allocator> *release() {
+    return new std::basic_string<CharT, Traits, Allocator>(obj);
+  }
   using mptr = void (control::*)();
   static constexpr unsigned mcount = 0;
   static const mptr mroulette[mcount];
-
   static constexpr unsigned ccount = 1;
 };
 } // namespace rfstd_basic_string
