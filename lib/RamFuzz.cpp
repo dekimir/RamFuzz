@@ -712,7 +712,8 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
     }
     outh << "};\n";
     outh << "}; // namespace " << ns << "\n";
-    gen_set_any(cls, ns);
+    if (ctrs)
+      gen_set_any(cls, ns);
     outc << "\n";
     processed_classes.insert(cls);
   }
