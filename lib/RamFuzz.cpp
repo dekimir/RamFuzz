@@ -543,8 +543,8 @@ void RamFuzz::gen_int_ctr(const string &ns) {
 
 void RamFuzz::early_exit(const Twine &loc, const Twine &failval,
                          const Twine &reason) {
-  outc << "    ::std::cout << \"" << loc << " exiting early due to " << reason
-       << "\" << ::std::endl;\n";
+  outc << "    std::cout << \"" << loc << " exiting early due to " << reason
+       << "\" << std::endl;\n";
   outc << "    --calldepth;\n";
   outc << "    return " << failval << ";\n";
 }
