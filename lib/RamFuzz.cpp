@@ -709,6 +709,9 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
     if (ctrs) {
       gen_int_ctr(ns);
       gen_croulette(cls, namecount[C->getNameAsString()]);
+    } else {
+      outh << "  // No public constructors; user should implement this:\n";
+      outh << "  static control make(runtime::gen& g);\n";
     }
     outh << "};\n";
     outh << "}; // namespace " << ns << "\n";

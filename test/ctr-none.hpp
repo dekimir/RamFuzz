@@ -14,8 +14,16 @@
 
 class B {
 public:
-  B() = delete;
-  B(const B&) = delete;
+  B(const B &) = delete;
+  static B *create() { return new B; }
   int sum = 2;
   void f(int i) { sum += 7; }
+
+private:
+  B() = default;
+};
+
+class C {
+public:
+  void f(B *) {}
 };

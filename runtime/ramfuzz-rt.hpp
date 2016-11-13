@@ -243,14 +243,28 @@ extern unsigned spinlimit;
 /// value or the depthlimit member of any RamFuzz class.
 constexpr unsigned depthlimit = 20;
 
-/// Creates a RamFuzz control instance using a random spin of croulette,
-/// followed by a random number of random spins of mroulette, if mroulette is
-/// not empty.
+/// Constructs a RamFuzz control instance by randomly spinning croulette.  Only
+/// valid if croulette exists (ie, the class under test has public
+/// constructors).
+template <typename ramfuzz_control, int enable_if = ramfuzz_control::ccount>
+ramfuzz_control construct(ramfuzz::runtime::gen &g) {
+  return ramfuzz_control(g, g.between(0u, ramfuzz_control::ccount - 1));
+}
+
+/// Constructs a RamFuzz control instance by invoking control::make().  Only
+/// valid if make() exists (ie, the class under test has no public
+/// constructors).
+template <typename ramfuzz_control,
+          ramfuzz_control (*makefun)(runtime::gen &) = &ramfuzz_control::make>
+ramfuzz_control construct(ramfuzz::runtime::gen &g) {
+  return makefun(g);
+}
+
+/// Creates a RamFuzz control instance and randomly spins its mroulette.
 template <typename ramfuzz_control>
 ramfuzz_control spin_roulette(ramfuzz::runtime::gen &g) {
   gen::region reg(g);
-  const auto ctr = g.between(0u, ramfuzz_control::ccount - 1);
-  ramfuzz_control ctl(g, ctr);
+  auto ctl = construct<ramfuzz_control>(g);
   if (!ctl)
     return ctl;
   if (ramfuzz_control::mcount) {

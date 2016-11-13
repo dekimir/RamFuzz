@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <memory>
+
 #include "fuzz.hpp"
 
 /// Tests that correct code is generated when the class under test has no public
@@ -19,7 +21,14 @@
 
 int main() {
   // The control class must exist, but it can't be constructed.
-  ramfuzz::rfB::control *ctl; 
+  ramfuzz::rfB::control *ctl;
+}
+
+ramfuzz::rfB::control ramfuzz::rfB::control::make(ramfuzz::runtime::gen &g) {
+  std::unique_ptr<B> b(B::create());
+  control c(g, *b);
+  c.pobj = std::move(b);
+  return c;
 }
 
 unsigned ::ramfuzz::runtime::spinlimit = 3;
