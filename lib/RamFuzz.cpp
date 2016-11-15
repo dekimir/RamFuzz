@@ -25,7 +25,6 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Tooling/Tooling.h"
-#include "llvm/ADT/SmallPtrSet.h"
 
 using namespace clang;
 using namespace ast_matchers;
@@ -33,7 +32,6 @@ using namespace ast_matchers;
 using clang::tooling::ClangTool;
 using clang::tooling::FrontendActionFactory;
 using clang::tooling::newFrontendActionFactory;
-using llvm::SmallPtrSet;
 using llvm::raw_ostream;
 using llvm::raw_string_ostream;
 using std::inserter;
@@ -199,8 +197,9 @@ private:
   /// generated.
   set<string> processed_classes;
 
-  /// Enum types for which parameters have been generated.
-  SmallPtrSet<EnumDecl *, 32> referenced_enums;
+  /// Enum types for which parameters have been generated.  Maps the enum name
+  /// to its values.
+  unordered_map<string, vector<string>> referenced_enums;
 };
 
 /// Valid identifier from a CXXMethodDecl name.
@@ -604,8 +603,12 @@ void RamFuzz::gen_method(const Twine &rfname, const CXXMethodDecl *M,
       // needed below.
       ptrcnt[ramcount]--;
     }
-    if (const auto et = vartype->getAs<EnumType>())
-      referenced_enums.insert(et->getDecl());
+    if (const auto et = vartype->getAs<EnumType>()) {
+      const auto decl = et->getDecl();
+      const string name = decl->getQualifiedNameAsString();
+      for (const auto c : decl->enumerators())
+        referenced_enums[name].push_back(c->getQualifiedNameAsString());
+    }
     for (auto i = 0u; i < ptrcnt[ramcount]; ++i) {
       outc << "  auto ram" << ramcount << "p" << i << " = std::addressof(ram"
            << ramcount;
@@ -732,15 +735,14 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
 
 void RamFuzz::finish() {
   for (auto e : referenced_enums) {
-    const string type = e->getQualifiedNameAsString();
-    outh << "template<> " << type << " ramfuzz::runtime::gen::any<" << type
-         << ">();\n";
-    outc << "template<> " << type << " ramfuzz::runtime::gen::any<" << type
-         << ">() {\n";
-    outc << "  static " << type << " a[] = {\n    ";
+    outh << "template<> " << e.first << " ramfuzz::runtime::gen::any<"
+         << e.first << ">();\n";
+    outc << "template<> " << e.first << " ramfuzz::runtime::gen::any<"
+         << e.first << ">() {\n";
+    outc << "  static " << e.first << " a[] = {\n    ";
     int comma = 0;
-    for (const auto &n : e->enumerators())
-      outc << (comma++ ? "," : "") << n->getName();
+    for (const auto &n : e.second)
+      outc << (comma++ ? "," : "") << n;
     outc << "  };\n";
     outc
         << "  return a[between(std::size_t(0), sizeof(a)/sizeof(a[0]) - 1)];\n";

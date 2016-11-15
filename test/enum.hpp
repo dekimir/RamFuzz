@@ -14,8 +14,13 @@
 
 enum E { e1 = 100, e2 = 200 };
 
+namespace NS {
+enum D { d1 = -999999, d2, d3 };
+}
+
 class B {
 public:
   int sum = 411;
   void f(E e) { sum += e / 300; }
+  int g(NS::D d) { return d; }
 };
