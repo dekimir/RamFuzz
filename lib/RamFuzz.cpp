@@ -25,7 +25,7 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Tooling/Tooling.h"
-#include "llvm/ADT/SmallBitVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 
 using namespace clang;
 using namespace ast_matchers;
@@ -33,7 +33,7 @@ using namespace ast_matchers;
 using clang::tooling::ClangTool;
 using clang::tooling::FrontendActionFactory;
 using clang::tooling::newFrontendActionFactory;
-using llvm::SmallBitVector;
+using llvm::SmallPtrSet;
 using llvm::raw_ostream;
 using llvm::raw_string_ostream;
 using std::inserter;
@@ -87,7 +87,7 @@ private:
 
 /// Generates ramfuzz code into an ostream.  The user can feed a RamFuzz
 /// instance to a custom MatchFinder, or simply getActionFactory() and run it in
-/// a ClangTool.
+/// a ClangTool.  Afterwards, the user must call finish().
 class RamFuzz : public MatchFinder::MatchCallback {
 public:
   RamFuzz(raw_ostream &outh, raw_ostream &outc)
@@ -109,6 +109,9 @@ public:
   /// have it yet.  This happens when a control class is referenced in RamFuzz
   /// output code, but its generation hasn't been triggered.
   vector<string> missingClasses();
+
+  /// Emits aditional code required for correct compilation.
+  void finish();
 
 private:
   /// If C is abstract, generates an inner class that's a concrete subclass of
@@ -195,6 +198,9 @@ private:
   /// Qualified names of classes under test whose control classes have been
   /// generated.
   set<string> processed_classes;
+
+  /// Enum types for which parameters have been generated.
+  SmallPtrSet<EnumDecl *, 32> referenced_enums;
 };
 
 /// Valid identifier from a CXXMethodDecl name.
@@ -598,6 +604,8 @@ void RamFuzz::gen_method(const Twine &rfname, const CXXMethodDecl *M,
       // needed below.
       ptrcnt[ramcount]--;
     }
+    if (const auto et = vartype->getAs<EnumType>())
+      referenced_enums.insert(et->getDecl());
     for (auto i = 0u; i < ptrcnt[ramcount]; ++i) {
       outc << "  auto ram" << ramcount << "p" << i << " = std::addressof(ram"
            << ramcount;
@@ -722,6 +730,24 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
   }
 }
 
+void RamFuzz::finish() {
+  for (auto e : referenced_enums) {
+    const string type = e->getQualifiedNameAsString();
+    outh << "template<> " << type << " ramfuzz::runtime::gen::any<" << type
+         << ">();\n";
+    outc << "template<> " << type << " ramfuzz::runtime::gen::any<" << type
+         << ">() {\n";
+    outc << "  static " << type << " a[] = {\n    ";
+    int comma = 0;
+    for (const auto &n : e->enumerators())
+      outc << (comma++ ? "," : "") << n->getName();
+    outc << "  };\n";
+    outc
+        << "  return a[between(std::size_t(0), sizeof(a)/sizeof(a[0]) - 1)];\n";
+    outc << "}\n";
+  }
+}
+
 string ramfuzz(const string &code) {
   string hpp, cpp;
   raw_string_ostream ostrh(hpp), ostrc(cpp);
@@ -746,6 +772,7 @@ namespace ramfuzz {
 )";
   RamFuzz rf(outh, outc);
   const int run_error = tool.run(&rf.getActionFactory());
+  rf.finish();
   outc << "} // namespace ramfuzz\n";
   outh << "} // namespace ramfuzz\n";
   if (run_error)
