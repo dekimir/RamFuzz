@@ -24,3 +24,12 @@ public:
   void f(E e) { sum += e / 300; }
   int g(NS::D d) { return d; }
 };
+
+enum F { f1, f2 };
+enum G { g1 };
+
+class C {
+public:
+  virtual F f() = 0;
+  virtual G *g() = 0;
+};

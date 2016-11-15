@@ -116,6 +116,9 @@ private:
   /// C.
   void gen_concrete_impl(const CXXRecordDecl *C, const ASTContext &ctx);
 
+  /// If ty is an enum, adds it to referenced_enums.
+  void register_enum(const Type &ty);
+
   /// Generates concrete methods of C's concrete_impl class -- one for each pure
   /// method of C and its transitive bases.  Skips any methods present in
   /// to_skip.  Extends to_skip with generated methods.
@@ -399,6 +402,15 @@ vector<string> RamFuzz::missingClasses() {
   return diff;
 }
 
+void RamFuzz::register_enum(const Type &ty) {
+  if (const auto et = ty.getAs<EnumType>()) {
+    const auto decl = et->getDecl();
+    const string name = decl->getQualifiedNameAsString();
+    for (const auto c : decl->enumerators())
+      referenced_enums[name].push_back(c->getQualifiedNameAsString());
+  }
+}
+
 void RamFuzz::gen_concrete_methods(const CXXRecordDecl *C,
                                    const ASTContext &ctx, const string &ns,
                                    set<MethodNameAndSignature> &to_skip) {
@@ -427,6 +439,7 @@ void RamFuzz::gen_concrete_methods(const CXXRecordDecl *C,
           const auto s = pty.stream(prtpol);
           outc << "  return new " << s << "(ramfuzzgenuniquename.any<" << s
                << ">());\n";
+          register_enum(*pty);
         } else if (const auto ptcls = pty->getAsCXXRecordDecl()) {
           gen_object(ptcls, "rfctl", "ramfuzzgenuniquename",
                      Twine(ns) + "::concrete_impl::" + M->getName(), "nullptr");
@@ -455,6 +468,7 @@ void RamFuzz::gen_concrete_methods(const CXXRecordDecl *C,
       } else if (rety->isScalarType()) {
         outc << "  return ramfuzzgenuniquename.any<" << rfstream(rety, prtpol)
              << ">();\n";
+        register_enum(*rety);
       } else if (const auto retcls = rety->getAsCXXRecordDecl()) {
         gen_object(retcls, "rfctl", "ramfuzzgenuniquename",
                    Twine(ns) + "::concrete_impl::" + M->getName(), "rfctl.obj");
@@ -587,6 +601,7 @@ void RamFuzz::gen_method(const Twine &rfname, const CXXMethodDecl *M,
     if (vartype->isScalarType()) {
       outc << "  " << vartype.stream(prtpol) << " ram" << ramcount
            << " = g.any<" << vartype.stream(prtpol) << ">();\n";
+      register_enum(*vartype);
     } else if (const auto varcls = vartype->getAsCXXRecordDecl()) {
       const auto rfvar = Twine("rfram") + Twine(ramcount);
       gen_object(varcls, rfvar, "g", rfname,
@@ -602,12 +617,6 @@ void RamFuzz::gen_method(const Twine &rfname, const CXXMethodDecl *M,
       // Because the ram variable is already a pointer, one less indirection is
       // needed below.
       ptrcnt[ramcount]--;
-    }
-    if (const auto et = vartype->getAs<EnumType>()) {
-      const auto decl = et->getDecl();
-      const string name = decl->getQualifiedNameAsString();
-      for (const auto c : decl->enumerators())
-        referenced_enums[name].push_back(c->getQualifiedNameAsString());
     }
     for (auto i = 0u; i < ptrcnt[ramcount]; ++i) {
       outc << "  auto ram" << ramcount << "p" << i << " = std::addressof(ram"
