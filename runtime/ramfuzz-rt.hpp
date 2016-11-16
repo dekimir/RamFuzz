@@ -14,6 +14,7 @@
 
 #pragma once
 
+#include <algorithm>
 #include <cstdint>
 #include <cstdlib>
 #include <exception>
@@ -102,6 +103,15 @@ public:
   /// Sets obj to any().  Specialized in RamFuzz-generated code for classes
   /// under test.
   template <typename T> void set_any(T &obj) { obj = any<T>(); }
+
+  /// Pointer overload of set_any().
+  template <typename T> void set_any(T *&obj) {
+    obj = new T;
+    set_any(*obj);
+  }
+
+  /// void* overload of set_any().
+  inline void set_any(void *&obj); // Defined below.
 
   /// Bool vector overload of set_any().
   void set_any(std::vector<bool>::reference obj);
@@ -305,12 +315,21 @@ private:
 
 public:
   std::vector<Tp, Alloc> obj;
+
   control(runtime::gen &g, unsigned) : g(g) {
     runtime::gen::region reg(g);
     obj.resize(reg.between(0u, 1000u));
     for (int i = 0; i < obj.size(); ++i)
       g.set_any(obj[i]);
   }
+
+  Tp *release() {
+    const auto sz = obj.size();
+    Tp *cp = new Tp[sz];
+    std::copy(obj.cbegin(), obj.cend(), cp);
+    return cp;
+  }
+
   operator bool() const { return true; }
 
   using mptr = void (control::*)();
@@ -384,5 +403,12 @@ template <class CharT, class Traits = std::char_traits<CharT>> struct control {
   static constexpr unsigned ccount = 1;
 };
 } // namespace rfstd_basic_ostream
+
+namespace runtime {
+// Must be defined after rfstd_vector.
+inline void gen::set_any(void *&obj) {
+  obj = rfstd_vector::control<char>(*this, 0).release();
+}
+} // namespace runtime
 
 } // namespace ramfuzz
