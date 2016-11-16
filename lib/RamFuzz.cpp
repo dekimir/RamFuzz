@@ -656,6 +656,15 @@ void RamFuzz::gen_set_any(const string &cls, const string &ns) {
        << "::control>(*this);\n";
   outc << "  assign(ctl, obj);\n";
   outc << "}\n";
+
+  outh << "template <> void runtime::gen::set_any<" << cls << ">(" << cls
+       << "*&);\n";
+  outc << "template <> void runtime::gen::set_any<" << cls << ">(" << cls
+       << "*&ptr) {\n";
+  outc << "  auto ctl = runtime::spin_roulette<" << ns
+       << "::control>(*this);\n";
+  outc << "  ptr = ctl.release();\n";
+  outc << "}\n";
 }
 
 void RamFuzz::run(const MatchFinder::MatchResult &Result) {

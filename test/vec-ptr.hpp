@@ -14,16 +14,25 @@
 
 #include <vector>
 namespace ns1 {
-
 class A {
 public:
   int f() const { return 10; }
 };
+} // namespace ns1
+
+namespace ns2 {
+class Abst {
+public:
+  virtual void f() = 0;
+};
+} // namespace ns2
+
+using ns2::Abst;
 
 class B {
 public:
   int sum = 5;
-  void f1(const std::vector<A *> &v) {
+  void f1(const std::vector<ns1::A *> &v) {
     if (!v.empty())
       sum = v[0]->f() / 2;
   }
@@ -34,6 +43,5 @@ public:
       sum -= *v[0];
   }
   void f3(const std::vector<void *> &v) {}
+  void f4(const std::vector<Abst *> &v) {}
 };
-
-} // namespace ns1

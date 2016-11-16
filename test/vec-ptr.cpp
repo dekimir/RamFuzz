@@ -16,6 +16,6 @@
 using namespace ramfuzz::runtime;
 int main() {
   gen g;
-  return spin_roulette<ramfuzz::rfns1_B::control>(g).obj.sum != 5;
+  return spin_roulette<ramfuzz::rfB::control>(g).obj.sum != 5;
 }
 unsigned ::ramfuzz::runtime::spinlimit = 3;
