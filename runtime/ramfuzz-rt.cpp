@@ -52,6 +52,8 @@ template <typename RealT> RealT rbetween(RealT lo, RealT hi, ranlux24 &gen) {
 namespace ramfuzz {
 namespace runtime {
 
+void gen::set_any(std::vector<bool>::reference obj) { obj = any<bool>(); }
+
 template <> bool gen::uniform_random<bool>(bool lo, bool hi) {
   return ibetween(lo, hi, rgen);
 }
@@ -64,13 +66,29 @@ template <> float gen::uniform_random<float>(float lo, float hi) {
   return rbetween(lo, hi, rgen);
 }
 
-void gen::set_any(std::vector<bool>::reference obj) { obj = any<bool>(); }
+// Depending on your C++ implementation, some of the below definitions may have
+// to be commented out or uncommented.  Implementations typically define certain
+// integer types to be identical (eg, size_t and unsigned long), so you can't
+// keep both definitions.  The code below compiles successfully with MacOS
+// clang; that requires commenting out some integer types that are identical to
+// uncommented ones.  But your implementation may differ.
+//
+// If you get an error like "redefinition of uniform_random" for a type, just
+// comment out that type's definition.  If, OTOH, you get an error like
+// "undefined symbol uniform_random" for a type, then uncomment that type's
+// definition.
 
-template <> int gen::uniform_random<int>(int lo, int hi) {
+template <> short gen::uniform_random<short>(short lo, short hi) {
   return ibetween(lo, hi, rgen);
 }
 
-template <> size_t gen::uniform_random<size_t>(size_t lo, size_t hi) {
+template <>
+unsigned short gen::uniform_random<unsigned short>(unsigned short lo,
+                                                   unsigned short hi) {
+  return ibetween(lo, hi, rgen);
+}
+
+template <> int gen::uniform_random<int>(int lo, int hi) {
   return ibetween(lo, hi, rgen);
 }
 
@@ -78,10 +96,36 @@ template <> unsigned gen::uniform_random<unsigned>(unsigned lo, unsigned hi) {
   return ibetween(lo, hi, rgen);
 }
 
-template <> int64_t gen::uniform_random<int64_t>(int64_t lo, int64_t hi) {
+template <> long gen::uniform_random<long>(long lo, long hi) {
   return ibetween(lo, hi, rgen);
 }
 
+template <>
+unsigned long gen::uniform_random<unsigned long>(unsigned long lo,
+                                                 unsigned long hi) {
+  return ibetween(lo, hi, rgen);
+}
+
+template <>
+long long gen::uniform_random<long long>(long long lo, long long hi) {
+  return ibetween(lo, hi, rgen);
+}
+
+template <>
+unsigned long long
+gen::uniform_random<unsigned long long>(unsigned long long lo,
+                                        unsigned long long hi) {
+  return ibetween(lo, hi, rgen);
+}
+/*
+template <> size_t gen::uniform_random<size_t>(size_t lo, size_t hi) {
+  return ibetween(lo, hi, rgen);
+}
+
+template <> int64_t gen::uniform_random<int64_t>(int64_t lo, int64_t hi) {
+  return ibetween(lo, hi, rgen);
+}
+*/
 template <> char gen::uniform_random<char>(char lo, char hi) {
   return ibetween(lo, hi, rgen);
 }
