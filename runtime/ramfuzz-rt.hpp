@@ -375,6 +375,8 @@ const typename rfstd_basic_string::control<CharT, Traits, Allocator>::mptr
     rfstd_basic_string::control<CharT, Traits,
                                 Allocator>::control::mroulette[] = {};
 
+template <> void runtime::gen::set_any<std::string>(std::string &obj);
+
 namespace rfstd_basic_istream {
 template <class CharT, class Traits = std::char_traits<CharT>> class control {
   // Declare first to initialize early; constructors may use it.

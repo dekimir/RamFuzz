@@ -20,4 +20,7 @@
 struct A {
   std::vector<std::string> v;
   void f(const std::string s) { v.push_back(s); }
+  void f(std::vector<std::string> &r) {
+    v.insert(v.end(), r.cbegin(), r.cend());
+  }
 };

@@ -54,6 +54,13 @@ namespace runtime {
 
 void gen::set_any(std::vector<bool>::reference obj) { obj = any<bool>(); }
 
+template <> void runtime::gen::set_any<std::string>(std::string &obj) {
+  rfstd_basic_string::control<std::string::value_type, std::string::traits_type,
+                              std::string::allocator_type>
+      ctl(*this, 0);
+  obj = ctl.obj;
+}
+
 template <> bool gen::uniform_random<bool>(bool lo, bool hi) {
   return ibetween(lo, hi, rgen);
 }
