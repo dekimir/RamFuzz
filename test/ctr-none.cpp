@@ -31,4 +31,6 @@ ramfuzz::rfB::control ramfuzz::rfB::control::make(ramfuzz::runtime::gen &g) {
   return c;
 }
 
+template <> void ramfuzz::runtime::gen::set_any<B>(B *&pb) { pb = nullptr; }
+
 unsigned ::ramfuzz::runtime::spinlimit = 3;

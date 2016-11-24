@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <vector>
+
 class B {
 public:
   B(const B &) = delete;
@@ -26,4 +28,5 @@ private:
 class C {
 public:
   void f(B *) {}
+  void f(std::vector<B *>) {}
 };

@@ -175,6 +175,11 @@ private:
   /// specialization for class cls in namespace ns.
   void gen_set_any(const string &cls, const string &ns);
 
+  /// Generates only the declaration of the runtime::gen::set_any specialization
+  /// for class cls in namespace ns, with a comment saying the user should
+  /// provide the definition.
+  void gen_set_any_decl(const string &cls);
+
   /// Where to output generated declarations (typically a header file).
   raw_ostream &outh;
 
@@ -676,6 +681,17 @@ void RamFuzz::gen_set_any(const string &cls, const string &ns) {
   outc << "}\n";
 }
 
+void RamFuzz::gen_set_any_decl(const string &cls) {
+  outh << "// User must provide definitions, as " << cls
+       << " has no public constructors.\n";
+  outh << "template <> void runtime::gen::set_any<" << cls << ">(" << cls
+       << "&);\n";
+  outh << "template <> void runtime::gen::set_any<" << cls << ">(" << cls
+       << "*&);\n";
+  outh << "template <> void runtime::gen::set_any<" << cls << ">(const " << cls
+       << "*&);\n";
+}
+
 void RamFuzz::run(const MatchFinder::MatchResult &Result) {
   if (const auto *C = Result.Nodes.getNodeAs<CXXRecordDecl>("class")) {
     if (!globally_visible(C) || C->getDescribedClassTemplate() ||
@@ -754,6 +770,8 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
     outh << "}; // namespace " << ns << "\n";
     if (ctrs)
       gen_set_any(cls, ns);
+    else
+      gen_set_any_decl(cls);
     outc << "\n";
     processed_classes.insert(cls);
   }
