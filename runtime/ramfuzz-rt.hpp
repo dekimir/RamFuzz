@@ -110,6 +110,11 @@ public:
     set_any(*obj);
   }
 
+  /// Const pointer overload of set_any().
+  template <typename T> void set_any(const T *&obj) {
+    obj = new T(any<T>());
+  }
+
   /// void* overload of set_any().
   inline void set_any(void *&obj); // Defined below.
 
