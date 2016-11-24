@@ -45,4 +45,5 @@ public:
   void f3(const std::vector<void *> &v) {}
   void f4(const std::vector<Abst *> &v) {}
   void f5(const std::vector<const int *> &v) {}
+  void f6(std::vector<const ns1::A *> v) {}
 };
