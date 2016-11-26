@@ -82,6 +82,31 @@ public:
       : runmode(replay), olog(ologname), olog_index(ologname + ".i"),
         ilog(ilogname), ilog_ctl(ilogname + ".c"), to_skip(ilog_ctl) {}
 
+  /// Interprets kth command-line argument.  If the argument exists (ie, k <
+  /// argc), values will be replayed from file named argv[k], controlled by
+  /// argv[k]+"c", logged in argv[k]+"+", and indexed in argv[k]+"+.i".  If the
+  /// argument doesn't exist, values will be generated, logged in "fuzzlog", and
+  /// indexed in "fuzzlog.i".
+  ///
+  /// This makes it convenient for main(argc, argv) to invoke gen(argc, argv),
+  /// yielding a program that either generates its values (if no command-line
+  /// arguments) or replays the log file named by its first argument.
+  gen(int argc, const char *const *argv, size_t k = 1) {
+    if (k < argc && argv[k]) {
+      runmode = replay;
+      const std::string argstr(argv[k]);
+      ilog.open(argstr);
+      ilog_ctl.open(argstr + ".c");
+      to_skip = skip(ilog_ctl);
+      olog.open(argstr + "+");
+      olog_index.open(argstr + "+.i");
+    } else {
+      runmode = generate;
+      olog.open("fuzzlog");
+      olog_index.open("fuzzlog.i");
+    }
+  }
+
   /// Returns an unconstrained random value of numeric type T, logs it, and
   /// indexes it.  When replaying the log, this value could be modified without
   /// affecting the replay of the rest of the log.

@@ -14,8 +14,8 @@
 
 #include "fuzz.hpp"
 
-int main() {
-  ramfuzz::runtime::gen g;
+int main(int argc, char* argv[]) {
+  ramfuzz::runtime::gen g(argc, argv);
   B b;
   ramfuzz::rfB::control rf(g, b);
   for (auto m : rf.mroulette)

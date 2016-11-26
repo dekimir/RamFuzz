@@ -16,8 +16,8 @@
 
 using namespace ramfuzz;
 
-int main() {
-  runtime::gen g;
+int main(int argc, char* argv[]) {
+  runtime::gen g(argc, argv);
   rfC::control rc(g, 0);
   rc.g0();
   return rc.obj.sum != 50;

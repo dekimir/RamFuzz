@@ -14,8 +14,8 @@
 
 #include "fuzz.hpp"
 using namespace ramfuzz::runtime;
-int main() {
-  gen g;
+int main(int argc, char* argv[]) {
+  gen g(argc, argv);
   return spin_roulette<ramfuzz::rfB::control>(g).obj.sum != 5;
 }
 unsigned ::ramfuzz::runtime::spinlimit = 3;
