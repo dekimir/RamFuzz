@@ -73,14 +73,11 @@ class gen {
 public:
   /// Values will be generated and logged in ologname (with index in
   /// ologname.i).
-  gen(const std::string &ologname = "fuzzlog")
-      : runmode(generate), olog(ologname), olog_index(ologname + ".i") {}
+  gen(const std::string &ologname = "fuzzlog");
 
   /// Values will be replayed from ilogname (controlled by ilogname.c) and
   /// logged into ologname.
-  gen(const std::string &ilogname, const std::string &ologname)
-      : runmode(replay), olog(ologname), olog_index(ologname + ".i"),
-        ilog(ilogname), ilog_ctl(ilogname + ".c"), to_skip(ilog_ctl) {}
+  gen(const std::string &ilogname, const std::string &ologname);
 
   /// Interprets kth command-line argument.  If the argument exists (ie, k <
   /// argc), values will be replayed from file named argv[k], controlled by
@@ -91,21 +88,7 @@ public:
   /// This makes it convenient for main(argc, argv) to invoke gen(argc, argv),
   /// yielding a program that either generates its values (if no command-line
   /// arguments) or replays the log file named by its first argument.
-  gen(int argc, const char *const *argv, size_t k = 1) {
-    if (k < argc && argv[k]) {
-      runmode = replay;
-      const std::string argstr(argv[k]);
-      ilog.open(argstr);
-      ilog_ctl.open(argstr + ".c");
-      to_skip = skip(ilog_ctl);
-      olog.open(argstr + "+");
-      olog_index.open(argstr + "+.i");
-    } else {
-      runmode = generate;
-      olog.open("fuzzlog");
-      olog_index.open("fuzzlog.i");
-    }
-  }
+  gen(int argc, const char *const *argv, size_t k = 1);
 
   /// Returns an unconstrained random value of numeric type T, logs it, and
   /// indexes it.  When replaying the log, this value could be modified without

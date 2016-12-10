@@ -52,11 +52,34 @@ template <typename RealT> RealT rbetween(RealT lo, RealT hi, ranlux24 &gen) {
 namespace ramfuzz {
 namespace runtime {
 
+gen::gen(const string &ologname)
+    : runmode(generate), olog(ologname), olog_index(ologname + ".i") {}
+
+gen::gen(const string &ilogname, const string &ologname)
+    : runmode(replay), olog(ologname), olog_index(ologname + ".i"),
+      ilog(ilogname), ilog_ctl(ilogname + ".c"), to_skip(ilog_ctl) {}
+
+gen::gen(int argc, const char *const *argv, size_t k) {
+  if (k < argc && argv[k]) {
+    runmode = replay;
+    const string argstr(argv[k]);
+    ilog.open(argstr);
+    ilog_ctl.open(argstr + ".c");
+    to_skip = skip(ilog_ctl);
+    olog.open(argstr + "+");
+    olog_index.open(argstr + "+.i");
+  } else {
+    runmode = generate;
+    olog.open("fuzzlog");
+    olog_index.open("fuzzlog.i");
+  }
+}
+
 void gen::set_any(std::vector<bool>::reference obj) { obj = any<bool>(); }
 
-template <> void runtime::gen::set_any<std::string>(std::string &obj) {
-  rfstd_basic_string::control<std::string::value_type, std::string::traits_type,
-                              std::string::allocator_type>
+template <> void runtime::gen::set_any<string>(string &obj) {
+  rfstd_basic_string::control<string::value_type, string::traits_type,
+                              string::allocator_type>
       ctl(*this, 0);
   obj = ctl.obj;
 }
