@@ -419,6 +419,10 @@ public:
 };
 } // namespace rfstd_basic_istream
 
+template <typename Tp, typename Alloc>
+const typename rfstd_basic_istream::control<Tp, Alloc>::mptr
+    rfstd_basic_istream::control<Tp, Alloc>::control::mroulette[] = {};
+
 namespace rfstd_basic_ostream {
 template <class CharT, class Traits = std::char_traits<CharT>> struct control {
   std::basic_ostringstream<CharT, Traits> obj;
@@ -430,6 +434,10 @@ template <class CharT, class Traits = std::char_traits<CharT>> struct control {
   static constexpr unsigned ccount = 1;
 };
 } // namespace rfstd_basic_ostream
+
+template <typename Tp, typename Alloc>
+const typename rfstd_basic_ostream::control<Tp, Alloc>::mptr
+    rfstd_basic_ostream::control<Tp, Alloc>::control::mroulette[] = {};
 
 namespace runtime {
 // Must be defined after rfstd_vector.
