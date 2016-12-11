@@ -53,25 +53,47 @@ namespace ramfuzz {
 namespace runtime {
 
 gen::gen(const string &ologname)
-    : runmode(generate), olog(ologname), olog_index(ologname + ".i") {}
+    : runmode(generate), olog(ologname), olog_index(ologname + ".i") {
+  if (!olog)
+    throw file_error("Cannot open " + ologname);
+  if (!olog_index)
+    throw file_error("Cannot open " + ologname + ".i");
+}
 
 gen::gen(const string &ilogname, const string &ologname)
     : runmode(replay), olog(ologname), olog_index(ologname + ".i"),
-      ilog(ilogname), ilog_ctl(ilogname + ".c"), to_skip(ilog_ctl) {}
+      ilog(ilogname), ilog_ctl(ilogname + ".c"), to_skip(ilog_ctl) {
+  if (!olog)
+    throw file_error("Cannot open " + ologname);
+  if (!olog_index)
+    throw file_error("Cannot open " + ologname + ".i");
+  if (!ilog)
+    throw file_error("Cannot open " + ilogname);
+}
 
 gen::gen(int argc, const char *const *argv, size_t k) {
   if (k < argc && argv[k]) {
     runmode = replay;
     const string argstr(argv[k]);
     ilog.open(argstr);
+    if (!ilog)
+      throw file_error("Cannot open " + argstr);
     ilog_ctl.open(argstr + ".c");
     to_skip = skip(ilog_ctl);
     olog.open(argstr + "+");
+    if (!olog)
+      throw file_error("Cannot open " + argstr + "+");
     olog_index.open(argstr + "+.i");
+    if (!olog_index)
+      throw file_error("Cannot open " + argstr + "+.i");
   } else {
     runmode = generate;
     olog.open("fuzzlog");
+    if (!olog)
+      throw file_error("Cannot open fuzzlog");
     olog_index.open("fuzzlog.i");
+    if (!olog_index)
+      throw file_error("Cannot open fuzzlog.i");
   }
 }
 

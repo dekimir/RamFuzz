@@ -31,6 +31,12 @@
 namespace ramfuzz {
 namespace runtime {
 
+/// Exception thrown when there's a file-access error.
+struct file_error : public std::runtime_error {
+  explicit file_error(const std::string &s) : runtime_error(s) {}
+  explicit file_error(const char *s) : runtime_error(s) {}
+};
+
 /// Generates values for RamFuzz code.  Can be used in the "generate" or
 /// "replay" mode.  In "generate" mode, values are created at random and logged.
 /// In "replay" mode, values are read from a previously generated log.  This
