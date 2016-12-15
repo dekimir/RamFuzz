@@ -1,0 +1,2 @@
+add_unittest(check-ramfuzz RamFuzzTests InheritanceTest.cpp)
+target_link_libraries(RamFuzzTests clangRamFuzz)

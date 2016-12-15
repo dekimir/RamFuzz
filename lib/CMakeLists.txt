@@ -1,4 +1,6 @@
 add_clang_library(clangRamFuzz ${ENABLE_SHARED} ${ENABLE_STATIC}
+  Inheritance.hpp
+  Inheritance.cpp
   RamFuzz.hpp
   RamFuzz.cpp
   DEPENDS clang-headers
