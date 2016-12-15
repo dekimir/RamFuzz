@@ -14,12 +14,36 @@
 
 #include "gtest/gtest.h"
 
+#include <map>
+#include <set>
+#include <string>
+
 #include "ramfuzz/lib/Inheritance.hpp"
-#include "clang/Tooling/Tooling.h"
 
 namespace {
-using clang::tooling::runToolOnCode;
-using ramfuzz::findInheriance;
 
-TEST(InheritanceTest, Empty) { EXPECT_TRUE(findInheriance("").empty()); }
+using namespace std;
+using namespace testing;
+using ramfuzz::findInheritance;
+
+/// Returns success if findInheritance(code) equals expected, modulo ordering.
+/// Otherwise, returns failure with an explanation.
+AssertionResult hasInheritance(const string &code,
+                               const map<string, set<string>> &expected) {
+  const auto inh = findInheritance(code);
+  if (inh.size() != expected.size()) {
+    return AssertionFailure() << "expected " << expected.size()
+                              << " elements, got " << inh.size();
+  }
+  return AssertionSuccess();
+}
+
+TEST(InheritanceTest, Empty) { EXPECT_TRUE(hasInheritance("", {})); }
+
+TEST(InheritanceTest, OneClass) {
+  EXPECT_TRUE(hasInheritance("class A{};", {{"A", {}}}));
+  EXPECT_TRUE(
+      hasInheritance("class DifferentName{};", {{"DifferentName", {}}}));
+}
+
 } // anonymous namespace

@@ -23,9 +23,9 @@
 namespace ramfuzz {
 /// Maps a class to all subclasses that inherit from it directly.
 using Inheritance =
-    llvm::DenseMap<clang::CXXRecordDecl *,
-                   llvm::SmallPtrSet<clang::CXXRecordDecl *, 4>>;
+    llvm::DenseMap<const clang::CXXRecordDecl *,
+                   llvm::SmallPtrSet<const clang::CXXRecordDecl *, 4>>;
 
 /// Calculates inheritance among classes in code.
-Inheritance findInheriance(const llvm::Twine &code);
+Inheritance findInheritance(const llvm::Twine &code);
 }
