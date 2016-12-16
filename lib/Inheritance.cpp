@@ -49,7 +49,14 @@ public:
   /// Match callback.  Expects Result to have a binding for "class".
   void run(const MatchFinder::MatchResult &Result) override {
     if (const auto *C = Result.Nodes.getNodeAs<CXXRecordDecl>("class"))
-      inh[C] = {};
+      for (const auto &base : C->bases())
+        if (base.getAccessSpecifier() == AS_public) {
+          const auto decl = dyn_cast<CXXRecordDecl>(base.getType()
+                                                        ->castAs<RecordType>()
+                                                        ->getDecl()
+                                                        ->getCanonicalDecl());
+          inh[decl].insert(C);
+        }
   }
 
   FrontendActionFactory &getActionFactory() { return *AF; }
