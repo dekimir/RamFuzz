@@ -97,4 +97,22 @@ TEST(InheritanceTest, NonPublic) {
       "class A1 {}; class A2 {}; class B1 : private A1, protected A2 {};", {}));
 }
 
+// Regressions only below this point.
+
+TEST(InheritanceTest, Regression1) {
+  // This once triggered the assertion "queried property of class with no
+  // definition".
+  EXPECT_TRUE(
+      hasInheritance("template <class T> class init {};"
+                     "template <class T> struct vector { vector(init<T>); };"
+                     "struct A {vector<int> vi; };",
+                     {}));
+}
+
+TEST(InheritanceTest, Regression2) {
+  // This once triggered the assertion "cast<Ty>() argument of incompatible
+  // type!"
+  EXPECT_TRUE(hasInheritance("template <class T> struct A : public T {};", {}));
+}
+
 } // anonymous namespace

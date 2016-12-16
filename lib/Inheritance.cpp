@@ -29,8 +29,8 @@ using namespace tooling;
 using ramfuzz::Inheritance;
 
 auto ClassMatcher =
-    cxxRecordDecl(unless(hasAncestor(namespaceDecl(isAnonymous()))),
-                  unless(isImplicit()))
+    cxxRecordDecl(isDefinition(),
+                  unless(hasAncestor(namespaceDecl(isAnonymous()))))
         .bind("class");
 
 /// Builds up an Inheritance object from MatchFinder matches, which must bind a
@@ -51,11 +51,9 @@ public:
     if (const auto *C = Result.Nodes.getNodeAs<CXXRecordDecl>("class"))
       for (const auto &base : C->bases())
         if (base.getAccessSpecifier() == AS_public) {
-          const auto decl = dyn_cast<CXXRecordDecl>(base.getType()
-                                                        ->castAs<RecordType>()
-                                                        ->getDecl()
-                                                        ->getCanonicalDecl());
-          inh[decl].insert(C);
+          if (const auto recty = dyn_cast<RecordType>(base.getType()))
+            inh[dyn_cast<CXXRecordDecl>(recty->getDecl()->getCanonicalDecl())]
+                .insert(C);
         }
   }
 
@@ -79,9 +77,17 @@ private:
 } // anonymous namespace
 
 namespace ramfuzz {
+
 Inheritance findInheritance(const llvm::Twine &code) {
-  InheritanceBuilder tracker;
-  clang::tooling::runToolOnCode(tracker.getActionFactory().create(), code);
-  return tracker.getInheritance();
+  InheritanceBuilder builder;
+  clang::tooling::runToolOnCode(builder.getActionFactory().create(), code);
+  return builder.getInheritance();
 }
+
+Inheritance findInheritance(clang::tooling::ClangTool &tool) {
+  InheritanceBuilder builder;
+  tool.run(&builder.getActionFactory());
+  return builder.getInheritance();
+}
+
 } // namespace ramfuzz

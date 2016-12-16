@@ -21,13 +21,14 @@
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Support/raw_ostream.h"
 
+namespace ramfuzz {
 /// Returns RamFuzz tests for code.  On failure, returns "fail".
-std::string ramfuzz(const std::string &code);
+std::string genTests(const std::string &code);
 
 /// Runs RamFuzz action in a ClangTool.
 ///
 /// @return the result of tool.run().
-int ramfuzz(
+int genTests(
     clang::tooling::ClangTool &tool, ///< Tool to run.
     const std::vector<std::string>
         &sources,            ///< Names of source files that tool will process.
@@ -35,3 +36,4 @@ int ramfuzz(
     llvm::raw_ostream &outc, ///< Where to output generated code.
     llvm::raw_ostream &errs  ///< Where to output errors.
     );
+} // anonymous namespace

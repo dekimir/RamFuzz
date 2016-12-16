@@ -128,5 +128,5 @@ int main(int argc, const char **argv) {
     return 1;
   }
   outc << "#include \"fuzz.hpp\"\n";
-  return ramfuzz(Tool, sources, outh, outc, llvm::errs());
+  return ramfuzz::genTests(Tool, sources, outh, outc, llvm::errs());
 }

@@ -22,27 +22,20 @@
 #include <unordered_map>
 #include <vector>
 
+#include "Inheritance.hpp"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Tooling/Tooling.h"
 
+using namespace std;
+
 using namespace clang;
 using namespace ast_matchers;
+using namespace tooling;
 
-using clang::tooling::ClangTool;
-using clang::tooling::FrontendActionFactory;
-using clang::tooling::newFrontendActionFactory;
 using llvm::raw_ostream;
 using llvm::raw_string_ostream;
-using std::inserter;
-using std::make_tuple;
-using std::set;
-using std::string;
-using std::tie;
-using std::tuple;
-using std::unique_ptr;
-using std::unordered_map;
-using std::vector;
+using ramfuzz::Inheritance;
 
 namespace clang {
 // So we can compare SmallVectors of QualType.
@@ -88,8 +81,8 @@ private:
 /// a ClangTool.  Afterwards, the user must call finish().
 class RamFuzz : public MatchFinder::MatchCallback {
 public:
-  RamFuzz(raw_ostream &outh, raw_ostream &outc)
-      : outh(outh), outc(outc), prtpol((LangOptions())) {
+  RamFuzz(raw_ostream &outh, raw_ostream &outc, Inheritance inh)
+      : outh(outh), outc(outc), prtpol((LangOptions())), inheritance(inh) {
     MF.addMatcher(ClassMatcher, this);
     AF = newFrontendActionFactory(&MF);
     prtpol.Bool = 1;
@@ -208,6 +201,9 @@ private:
   /// Enum types for which parameters have been generated.  Maps the enum name
   /// to its values.
   unordered_map<string, vector<string>> referenced_enums;
+
+  /// Inheritance info for classes of all parameters in the code under test.
+  ramfuzz::Inheritance inheritance;
 };
 
 /// Valid identifier from a CXXMethodDecl name.
@@ -794,16 +790,19 @@ void RamFuzz::finish() {
   }
 }
 
-string ramfuzz(const string &code) {
+namespace ramfuzz {
+
+string genTests(const string &code) {
   string hpp, cpp;
   raw_string_ostream ostrh(hpp), ostrc(cpp);
+  Inheritance inh = findInheritance(code);
   bool success = clang::tooling::runToolOnCode(
-      RamFuzz(ostrh, ostrc).getActionFactory().create(), code);
+      RamFuzz(ostrh, ostrc, inh).getActionFactory().create(), code);
   return success ? ostrh.str() + ostrc.str() : "fail";
 }
 
-int ramfuzz(ClangTool &tool, const vector<string> &sources, raw_ostream &outh,
-            raw_ostream &outc, raw_ostream &errs) {
+int genTests(ClangTool &tool, const vector<string> &sources, raw_ostream &outh,
+             raw_ostream &outc, raw_ostream &errs) {
   outh << "#include <memory>\n";
   for (const auto &f : sources)
     outh << "#include \"" << f << "\"\n";
@@ -816,7 +815,7 @@ int ramfuzz(ClangTool &tool, const vector<string> &sources, raw_ostream &outh,
 namespace ramfuzz {
 
 )";
-  RamFuzz rf(outh, outc);
+  RamFuzz rf(outh, outc, findInheritance(tool));
   const int run_error = tool.run(&rf.getActionFactory());
   rf.finish();
   outc << "} // namespace ramfuzz\n";
@@ -833,3 +832,5 @@ namespace ramfuzz {
   }
   return 0;
 }
+
+} // namespace ramfuzz
