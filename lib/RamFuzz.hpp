@@ -22,9 +22,6 @@
 #include "llvm/Support/raw_ostream.h"
 
 namespace ramfuzz {
-/// Returns RamFuzz tests for code.  On failure, returns "fail".
-std::string genTests(const std::string &code);
-
 /// Runs RamFuzz action in a ClangTool.
 ///
 /// @return the result of tool.run().

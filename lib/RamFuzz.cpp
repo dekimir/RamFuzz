@@ -81,8 +81,9 @@ private:
 /// a ClangTool.  Afterwards, the user must call finish().
 class RamFuzz : public MatchFinder::MatchCallback {
 public:
-  RamFuzz(raw_ostream &outh, raw_ostream &outc, Inheritance inh)
-      : outh(outh), outc(outc), prtpol((LangOptions())), inheritance(inh) {
+  /// Prepares for emitting RamFuzz code into outh and outc.
+  RamFuzz(raw_ostream &outh, raw_ostream &outc)
+      : outh(outh), outc(outc), prtpol((LangOptions())) {
     MF.addMatcher(ClassMatcher, this);
     AF = newFrontendActionFactory(&MF);
     prtpol.Bool = 1;
@@ -102,7 +103,7 @@ public:
   vector<string> missingClasses();
 
   /// Emits aditional code required for correct compilation.
-  void finish();
+  void finish(const Inheritance &);
 
 private:
   /// If C is abstract, generates an inner class that's a concrete subclass of
@@ -201,9 +202,6 @@ private:
   /// Enum types for which parameters have been generated.  Maps the enum name
   /// to its values.
   unordered_map<string, vector<string>> referenced_enums;
-
-  /// Inheritance info for classes of all parameters in the code under test.
-  ramfuzz::Inheritance inheritance;
 };
 
 /// Valid identifier from a CXXMethodDecl name.
@@ -773,7 +771,7 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
   }
 }
 
-void RamFuzz::finish() {
+void RamFuzz::finish(const Inheritance &inh) {
   for (auto e : referenced_enums) {
     outh << "template<> " << e.first << " ramfuzz::runtime::gen::any<"
          << e.first << ">();\n";
@@ -792,15 +790,6 @@ void RamFuzz::finish() {
 
 namespace ramfuzz {
 
-string genTests(const string &code) {
-  string hpp, cpp;
-  raw_string_ostream ostrh(hpp), ostrc(cpp);
-  Inheritance inh = findInheritance(code);
-  bool success = clang::tooling::runToolOnCode(
-      RamFuzz(ostrh, ostrc, inh).getActionFactory().create(), code);
-  return success ? ostrh.str() + ostrc.str() : "fail";
-}
-
 int genTests(ClangTool &tool, const vector<string> &sources, raw_ostream &outh,
              raw_ostream &outc, raw_ostream &errs) {
   outh << "#include <memory>\n";
@@ -815,9 +804,9 @@ int genTests(ClangTool &tool, const vector<string> &sources, raw_ostream &outh,
 namespace ramfuzz {
 
 )";
-  RamFuzz rf(outh, outc, findInheritance(tool));
+  RamFuzz rf(outh, outc);
   const int run_error = tool.run(&rf.getActionFactory());
-  rf.finish();
+  rf.finish(Inheritance());
   outc << "} // namespace ramfuzz\n";
   outh << "} // namespace ramfuzz\n";
   if (run_error)

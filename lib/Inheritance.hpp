@@ -28,7 +28,4 @@ using Inheritance =
 
 /// Calculates inheritance among classes in code.
 Inheritance findInheritance(const llvm::Twine &code);
-
-/// Calculates inheritance among classes in tool.
-Inheritance findInheritance(clang::tooling::ClangTool &tool);
 }
