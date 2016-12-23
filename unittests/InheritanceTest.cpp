@@ -15,8 +15,6 @@
 #include "gtest/gtest.h"
 
 #include <algorithm>
-#include <map>
-#include <set>
 #include <string>
 
 #include "ramfuzz/lib/Inheritance.hpp"
@@ -25,19 +23,20 @@ namespace {
 
 using namespace std;
 using namespace testing;
+using ramfuzz::Inheritance;
 using ramfuzz::findInheritance;
 
 /// Returns success if findInheritance(code) equals expected, modulo ordering.
 /// Otherwise, returns failure with an explanation.
 AssertionResult hasInheritance(const string &code,
-                               const map<string, set<string>> &expected) {
+                               const Inheritance &expected) {
   const auto inh = findInheritance(code);
   if (inh.size() != expected.size()) {
     return AssertionFailure() << "expected " << expected.size()
                               << " elements, got " << inh.size();
   }
   for (const auto &entry : inh) {
-    const auto clsname = entry.first->getNameAsString();
+    const auto clsname = entry.first();
     const auto found = expected.find(clsname);
     if (found == expected.end())
       return AssertionFailure() << "unexpected base class " << clsname;
@@ -47,11 +46,10 @@ AssertionResult hasInheritance(const string &code,
       return AssertionFailure() << "expected " << expected_subclasses.size()
                                 << " subclasses for base class " << clsname
                                 << ", got " << actual_subclasses.size();
-    for (const auto subcls : actual_subclasses)
-      if (!expected_subclasses.count(subcls->getNameAsString()))
-        return AssertionFailure() << "unexpected subclass "
-                                  << subcls->getNameAsString() << " of class "
-                                  << clsname;
+    for (const auto &subcls : actual_subclasses)
+      if (!expected_subclasses.count(subcls.first()))
+        return AssertionFailure() << "unexpected subclass " << subcls.first()
+                                  << " of class " << clsname;
   }
   return AssertionSuccess();
 }

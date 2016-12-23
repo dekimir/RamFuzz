@@ -14,17 +14,15 @@
 
 #pragma once
 
-#include "clang/AST/DeclCXX.h"
 #include "clang/Tooling/Tooling.h"
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
 
 namespace ramfuzz {
-/// Maps a class to all subclasses that inherit from it directly.
-using Inheritance =
-    llvm::DenseMap<const clang::CXXRecordDecl *,
-                   llvm::SmallPtrSet<const clang::CXXRecordDecl *, 4>>;
+/// Maps a class to all subclasses that inherit from it directly.  Classes are
+/// represented by their fully qualified names.
+using Inheritance = llvm::StringMap<llvm::StringSet<>>;
 
 /// Calculates inheritance among classes in code.
 Inheritance findInheritance(const llvm::Twine &code);

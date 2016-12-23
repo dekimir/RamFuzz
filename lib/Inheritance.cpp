@@ -52,8 +52,10 @@ public:
       for (const auto &base : C->bases())
         if (base.getAccessSpecifier() == AS_public) {
           if (const auto recty = dyn_cast<RecordType>(base.getType()))
-            inh[dyn_cast<CXXRecordDecl>(recty->getDecl()->getCanonicalDecl())]
-                .insert(C);
+            inh[recty->getDecl()
+                    ->getCanonicalDecl()
+                    ->getQualifiedNameAsString()]
+                .insert(C->getQualifiedNameAsString());
         }
   }
 
