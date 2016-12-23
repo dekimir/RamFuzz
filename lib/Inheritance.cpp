@@ -14,85 +14,42 @@
 
 #include "Inheritance.hpp"
 
-#include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Tooling/Tooling.h"
-
-namespace {
 
 using namespace std;
 
 using namespace clang;
 using namespace ast_matchers;
 using namespace tooling;
-// using namespace llvm;
-
-using ramfuzz::Inheritance;
-
-auto ClassMatcher =
-    cxxRecordDecl(isDefinition(),
-                  unless(hasAncestor(namespaceDecl(isAnonymous()))))
-        .bind("class");
-
-/// Builds up an Inheritance object from MatchFinder matches, which must bind a
-/// CXXRecordDecl* to "class".
-///
-/// The user can feed an InheritanceBuilder instance to a custom MatchFinder, or
-/// simply getActionFactory() and run it in a ClangTool (this will process all
-/// classes outside anonymous namespaces).
-class InheritanceBuilder : public MatchFinder::MatchCallback {
-public:
-  InheritanceBuilder() {
-    MF.addMatcher(ClassMatcher, this);
-    AF = newFrontendActionFactory(&MF);
-  }
-
-  /// Match callback.  Expects Result to have a binding for "class".
-  void run(const MatchFinder::MatchResult &Result) override {
-    if (const auto *C = Result.Nodes.getNodeAs<CXXRecordDecl>("class"))
-      for (const auto &base : C->bases())
-        if (base.getAccessSpecifier() == AS_public) {
-          PrintingPolicy prtpol((LangOptions()));
-          prtpol.SuppressTagKeyword = true;
-          prtpol.SuppressScope = false;
-          inh[base.getType()
-                  .getDesugaredType(*Result.Context)
-                  .getAsString(prtpol)]
-              .insert(C->getQualifiedNameAsString());
-        }
-  }
-
-  FrontendActionFactory &getActionFactory() { return *AF; }
-
-  const Inheritance &getInheritance() { return inh; }
-
-private:
-  /// A FrontendActionFactory to run MF.  Owned by *this because it
-  /// requires live MF to remain valid.
-  unique_ptr<FrontendActionFactory> AF;
-
-  /// A MatchFinder to run *this on ClassMatcher.  Owned by *this
-  /// because it's only valid while *this is alive.
-  MatchFinder MF;
-
-  /// Result being built.
-  Inheritance inh;
-};
-
-} // anonymous namespace
 
 namespace ramfuzz {
 
-Inheritance findInheritance(const llvm::Twine &code) {
-  InheritanceBuilder builder;
-  clang::tooling::runToolOnCode(builder.getActionFactory().create(), code);
-  return builder.getInheritance();
+void InheritanceBuilder::tackOnto(clang::ast_matchers::MatchFinder &MF) {
+  MF.addMatcher(cxxRecordDecl(isDefinition(),
+                              unless(hasAncestor(namespaceDecl(isAnonymous()))))
+                    .bind("class"),
+                this);
 }
 
-Inheritance findInheritance(clang::tooling::ClangTool &tool) {
-  InheritanceBuilder builder;
-  tool.run(&builder.getActionFactory());
-  return builder.getInheritance();
+void InheritanceBuilder::run(const MatchFinder::MatchResult &Result) {
+  if (const auto *C = Result.Nodes.getNodeAs<CXXRecordDecl>("class"))
+    for (const auto &base : C->bases())
+      if (base.getAccessSpecifier() == AS_public) {
+        PrintingPolicy prtpol((LangOptions()));
+        prtpol.SuppressTagKeyword = true;
+        prtpol.SuppressScope = false;
+        inh[base.getType()
+                .getDesugaredType(*Result.Context)
+                .getAsString(prtpol)]
+            .insert(C->getQualifiedNameAsString());
+      }
+}
+
+void InheritanceBuilder::process(const llvm::Twine &Code) {
+  MatchFinder MF;
+  tackOnto(MF);
+  runToolOnCode(newFrontendActionFactory(&MF)->create(), Code);
 }
 
 } // namespace ramfuzz

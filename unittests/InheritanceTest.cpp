@@ -24,13 +24,14 @@ namespace {
 using namespace std;
 using namespace testing;
 using ramfuzz::Inheritance;
-using ramfuzz::findInheritance;
+using ramfuzz::InheritanceBuilder;
 
 /// Returns success if findInheritance(code) equals expected, modulo ordering.
 /// Otherwise, returns failure with an explanation.
 AssertionResult hasInheritance(const string &code,
                                const Inheritance &expected) {
-  const auto inh = findInheritance(code);
+  InheritanceBuilder builder(code);
+  const auto &inh = builder.getInheritance();
   if (inh.size() != expected.size()) {
     return AssertionFailure() << "expected " << expected.size()
                               << " elements, got " << inh.size();

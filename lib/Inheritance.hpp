@@ -14,16 +14,42 @@
 
 #pragma once
 
-#include "clang/Tooling/Tooling.h"
+#include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
 
 namespace ramfuzz {
+
 /// Maps a class to all subclasses that inherit from it directly.  Classes are
 /// represented by their fully qualified names.
 using Inheritance = llvm::StringMap<llvm::StringSet<>>;
 
-/// Calculates inheritance among classes in code.
-Inheritance findInheritance(const llvm::Twine &code);
-}
+/// Builds up an Inheritance object by analyzing all non-anonymous classes in
+/// some source code.  Can be used standalone via process() or within an
+/// existing ClangTool via tackOnto().
+class InheritanceBuilder
+    : public clang::ast_matchers::MatchFinder::MatchCallback {
+public:
+  /// Adds to MF a matcher that will build inheritance (capturing *this).
+  void tackOnto(clang::ast_matchers::MatchFinder &MF);
+
+  /// Adds inheritance among classes in Code to *this.
+  void process(const llvm::Twine &Code);
+
+  /// Convenience constructor directly from Code.
+  InheritanceBuilder(const llvm::Twine &Code) { process(Code); }
+
+  /// Match callback.  Expects Result to have a CXXRecordDecl* binding for
+  /// "class".
+  void
+  run(const clang::ast_matchers::MatchFinder::MatchResult &Result) override;
+
+  const Inheritance &getInheritance() { return inh; }
+
+private:
+  /// Result being built.
+  Inheritance inh;
+};
+
+} // namespace ramfuzz
