@@ -95,6 +95,14 @@ TEST(InheritanceTest, NonPublic) {
       "class A1 {}; class A2 {}; class B1 : private A1, protected A2 {};", {}));
 }
 
+TEST(InheritanceTest, Namespace) {
+  EXPECT_TRUE(hasInheritance(
+      "namespace a1 {class A{};}"
+      "namespace a2 {class A{}; class B : public A, public a1::A {};}"
+      "namespace b1 {class B : public a1::A {};}",
+      {{"a1::A", {"a2::B", "b1::B"}}, {"a2::A", {"a2::B"}}}));
+}
+
 // Regressions only below this point.
 
 TEST(InheritanceTest, Regression1) {
@@ -110,7 +118,8 @@ TEST(InheritanceTest, Regression1) {
 TEST(InheritanceTest, Regression2) {
   // This once triggered the assertion "cast<Ty>() argument of incompatible
   // type!"
-  EXPECT_TRUE(hasInheritance("template <class T> struct A : public T {};", {}));
+  EXPECT_TRUE(hasInheritance("template <class T> struct A : public T {};",
+                             {{"T", {"A"}}}));
 }
 
 } // anonymous namespace

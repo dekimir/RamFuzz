@@ -25,6 +25,7 @@ using namespace std;
 using namespace clang;
 using namespace ast_matchers;
 using namespace tooling;
+// using namespace llvm;
 
 using ramfuzz::Inheritance;
 
@@ -51,11 +52,11 @@ public:
     if (const auto *C = Result.Nodes.getNodeAs<CXXRecordDecl>("class"))
       for (const auto &base : C->bases())
         if (base.getAccessSpecifier() == AS_public) {
-          if (const auto recty = dyn_cast<RecordType>(base.getType()))
-            inh[recty->getDecl()
-                    ->getCanonicalDecl()
-                    ->getQualifiedNameAsString()]
-                .insert(C->getQualifiedNameAsString());
+          PrintingPolicy prtpol((LangOptions()));
+          prtpol.SuppressTagKeyword = true;
+          prtpol.SuppressScope = false;
+          inh[base.getType().getAsString(prtpol)].insert(
+              C->getQualifiedNameAsString());
         }
   }
 
