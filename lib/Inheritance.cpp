@@ -55,8 +55,10 @@ public:
           PrintingPolicy prtpol((LangOptions()));
           prtpol.SuppressTagKeyword = true;
           prtpol.SuppressScope = false;
-          inh[base.getType().getAsString(prtpol)].insert(
-              C->getQualifiedNameAsString());
+          inh[base.getType()
+                  .getDesugaredType(*Result.Context)
+                  .getAsString(prtpol)]
+              .insert(C->getQualifiedNameAsString());
         }
   }
 

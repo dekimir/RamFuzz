@@ -103,6 +103,16 @@ TEST(InheritanceTest, Namespace) {
       {{"a1::A", {"a2::B", "b1::B"}}, {"a2::A", {"a2::B"}}}));
 }
 
+TEST(InheritanceTest, Typedef) {
+  EXPECT_TRUE(hasInheritance("class A{}; typedef A A2; class B: public A2 {};",
+                             {{"A", {"B"}}}));
+}
+
+TEST(InheritanceTest, TypeAlias) {
+  EXPECT_TRUE(hasInheritance("class A{}; using A2=A; class B: public A2 {};",
+                             {{"A", {"B"}}}));
+}
+
 // Regressions only below this point.
 
 TEST(InheritanceTest, Regression1) {
