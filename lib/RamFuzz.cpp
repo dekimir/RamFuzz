@@ -46,12 +46,6 @@ bool operator<(const QualType a, const QualType b) {
 
 namespace {
 
-auto ClassMatcher =
-    cxxRecordDecl(isExpansionInMainFile(),
-                  unless(hasAncestor(namespaceDecl(isAnonymous()))),
-                  hasDescendant(cxxMethodDecl(isPublic())))
-        .bind("class");
-
 /// Holds a method's name and signature.  Useful for comparing methods in a
 /// subclass with its super class to find overrides and covariants.
 struct MethodNameAndSignature {
@@ -76,26 +70,26 @@ private:
   }
 };
 
-/// Generates ramfuzz code into an ostream.  The user can feed a RamFuzz
-/// instance to a custom MatchFinder, or simply getActionFactory() and run it in
-/// a ClangTool.  Afterwards, the user must call finish().
+/// Generates RamFuzz code into an ostream.  The user can tack a RamFuzz
+/// instance onto a MatchFinder for running it via a frontend action.  After the
+/// frontend action completes, the user must call finish().
 class RamFuzz : public MatchFinder::MatchCallback {
 public:
   /// Prepares for emitting RamFuzz code into outh and outc.
   RamFuzz(raw_ostream &outh, raw_ostream &outc)
       : outh(outh), outc(outc), prtpol((LangOptions())) {
-    MF.addMatcher(ClassMatcher, this);
-    AF = newFrontendActionFactory(&MF);
     prtpol.Bool = 1;
     prtpol.SuppressUnwrittenScope = true;
     prtpol.SuppressTagKeyword = true;
     prtpol.SuppressScope = false;
   }
 
-  /// Match callback.
+  /// Match callback.  Expects Result to have a CXXRecordDecl* binding for
+  /// "class".
   void run(const MatchFinder::MatchResult &Result) override;
 
-  FrontendActionFactory &getActionFactory() { return *AF; }
+  /// Adds to MF a matcher that will generate RamFuzz code (capturing *this).
+  void tackOnto(MatchFinder &MF);
 
   /// Calculates which classes under test need their RamFuzz control but don't
   /// have it yet.  This happens when a control class is referenced in RamFuzz
@@ -179,14 +173,6 @@ private:
 
   /// Where to output generated code (typically a C++ source file).
   raw_ostream &outc;
-
-  /// A FrontendActionFactory to run MF.  Owned by *this because it
-  /// requires live MF to remain valid.
-  unique_ptr<FrontendActionFactory> AF;
-
-  /// A MatchFinder to run *this on ClassMatcher.  Owned by *this
-  /// because it's only valid while *this is alive.
-  MatchFinder MF;
 
   /// Policy for printing to outh and outc.
   PrintingPolicy prtpol;
@@ -788,6 +774,15 @@ void RamFuzz::finish(const Inheritance &inh) {
   }
 }
 
+void RamFuzz::tackOnto(MatchFinder &MF) {
+  static const auto matcher =
+      cxxRecordDecl(isExpansionInMainFile(),
+                    unless(hasAncestor(namespaceDecl(isAnonymous()))),
+                    hasDescendant(cxxMethodDecl(isPublic())))
+          .bind("class");
+  MF.addMatcher(matcher, this);
+}
+
 namespace ramfuzz {
 
 int genTests(ClangTool &tool, const vector<string> &sources, raw_ostream &outh,
@@ -804,9 +799,13 @@ int genTests(ClangTool &tool, const vector<string> &sources, raw_ostream &outh,
 namespace ramfuzz {
 
 )";
+  MatchFinder mf;
   RamFuzz rf(outh, outc);
-  const int run_error = tool.run(&rf.getActionFactory());
-  rf.finish(Inheritance());
+  rf.tackOnto(mf);
+  InheritanceBuilder inh;
+  inh.tackOnto(mf);
+  const int run_error = tool.run(newFrontendActionFactory(&mf).get());
+  rf.finish(inh.getInheritance());
   outc << "} // namespace ramfuzz\n";
   outh << "} // namespace ramfuzz\n";
   if (run_error)

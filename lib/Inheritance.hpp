@@ -31,6 +31,8 @@ using Inheritance = llvm::StringMap<llvm::StringSet<>>;
 class InheritanceBuilder
     : public clang::ast_matchers::MatchFinder::MatchCallback {
 public:
+  InheritanceBuilder() = default;
+
   /// Adds to MF a matcher that will build inheritance (capturing *this).
   void tackOnto(clang::ast_matchers::MatchFinder &MF);
 
