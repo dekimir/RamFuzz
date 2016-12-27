@@ -135,6 +135,15 @@ private:
   gen_int_ctr(const string &ns ///< Namespace for the RamFuzz control class.
               );
 
+  /// Generates the declaration of member submakers.
+  void gen_submakers_decl(
+      const string &cls ///< Fully qualified name of class under test.
+      );
+
+  /// Generates the definition of member submakers for each of the classes
+  /// processed so far.
+  void gen_submakers_def(const Inheritance &inh);
+
   /// Generates early exit from RamFuzz method \c name, corresponding to the
   /// method under test \c M.  The exit code prints \c reason as the reason for
   /// exiting early, then returns \c failval.  The exit code is multiple
@@ -544,6 +553,37 @@ void RamFuzz::gen_int_ctr(const string &ns) {
   outc << "  : g(g), pobj((this->*croulette[ctr])()), obj(*pobj) {}\n";
 }
 
+void RamFuzz::gen_submakers_decl(const string &cls) {
+  outh << "  // One element for each direct public subclass, plus one null "
+          "element at the end.\n";
+  outh << "  static " << cls << " *(*submakers[])(runtime::gen &);\n";
+}
+
+void RamFuzz::gen_submakers_def(const Inheritance &inh) {
+  auto next_maker_fn = 0u;
+  for (const auto &cls : processed_classes) {
+    const string ns = control_namespace(cls);
+    const auto found = inh.find(cls);
+    if (found == inh.end() || found->getValue().empty())
+      outc << cls << "*(*" << ns
+           << "::control::submakers[])(runtime::gen&) = { nullptr };\n";
+    else {
+      const auto first_maker_fn = next_maker_fn;
+      outc << "namespace {\n";
+      for (const auto &subcls : found->getValue())
+        outc << cls << "* maker" << next_maker_fn++
+             << "(runtime::gen& g) { return make<"
+             << control_namespace(subcls.first()) << "::control>(g, true); }\n";
+      outc << "} // anonymous namespace\n";
+      outc << cls << "*(*" << ns
+           << "::control::submakers[])(runtime::gen&) = { ";
+      for (auto i = first_maker_fn; i < next_maker_fn; ++i)
+        outc << "maker" << i << ",";
+      outc << "nullptr };\n";
+    }
+  }
+}
+
 void RamFuzz::early_exit(const Twine &loc, const Twine &failval,
                          const Twine &reason) {
   outc << "    std::cout << \"" << loc << " exiting early due to " << reason
@@ -699,6 +739,7 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
             "ramfuzz::runtime::depthlimit;\n";
     gen_concrete_impl(C, *Result.Context);
     outh << " public:\n";
+    outh << "  using user_class = " << cls << ";\n";
     outh << "  " << cls << "& obj; // Object under test.\n";
     outh << "  control(runtime::gen& g, " << cls
          << "& obj) : g(g), obj(obj) {} // Object already created by caller.\n";
@@ -746,6 +787,7 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
       outh << "  // No public constructors; user should implement this:\n";
       outh << "  static control make(runtime::gen& g);\n";
     }
+    gen_submakers_decl(cls);
     outh << "};\n";
     outh << "}; // namespace " << ns << "\n";
     if (ctrs)
@@ -772,6 +814,8 @@ void RamFuzz::finish(const Inheritance &inh) {
         << "  return a[between(std::size_t(0), sizeof(a)/sizeof(a[0]) - 1)];\n";
     outc << "}\n";
   }
+
+  gen_submakers_def(inh);
 }
 
 void RamFuzz::tackOnto(MatchFinder &MF) {

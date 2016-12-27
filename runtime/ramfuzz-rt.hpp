@@ -302,6 +302,26 @@ ramfuzz_control spin_roulette(ramfuzz::runtime::gen &g) {
 
 } // namespace runtime
 
+/// Makes a random value of ramfuzz_control::user_class and returns a pointer to
+/// it.  The value stays alive indefinitely.  If subcl is true, the value may be
+/// an instance of a subclass of ramfuzz_control::user_class; otherwise, it must
+/// be an instance of ramfuzz_control::user_class itself.
+template <typename ramfuzz_control>
+typename ramfuzz_control::user_class *make(runtime::gen &g, bool subcl) {
+  if (subcl && ramfuzz_control::submakers[0]) {
+    return (*ramfuzz_control::submakers[0])(g);
+  }
+  auto ctl = runtime::construct<ramfuzz_control>(g);
+  if (!ctl)
+    return nullptr;
+  if (ctl.mcount) {
+    runtime::gen::region reg(g);
+    for (auto i = 0u; i < reg.between(0u, runtime::spinlimit); ++i)
+      (ctl.*ctl.mroulette[g.between(0u, ctl.mcount - 1)])();
+  }
+  return ctl.release();
+}
+
 namespace rfstd_exception {
 class control {
 private:
