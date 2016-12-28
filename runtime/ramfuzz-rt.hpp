@@ -308,8 +308,9 @@ ramfuzz_control spin_roulette(ramfuzz::runtime::gen &g) {
 /// be an instance of ramfuzz_control::user_class itself.
 template <typename ramfuzz_control>
 typename ramfuzz_control::user_class *make(runtime::gen &g, bool subcl) {
-  if (subcl && ramfuzz_control::submakers[0]) {
-    return (*ramfuzz_control::submakers[0])(g);
+  if (subcl && ramfuzz_control::subcount) {
+    return (*ramfuzz_control::submakers[g.between(
+        size_t{0}, ramfuzz_control::subcount - 1)])(g);
   }
   auto ctl = runtime::construct<ramfuzz_control>(g);
   if (!ctl)

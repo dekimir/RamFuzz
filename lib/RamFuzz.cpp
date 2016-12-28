@@ -142,7 +142,7 @@ private:
 
   /// Generates the definition of member submakers for each of the classes
   /// processed so far.
-  void gen_submakers_def(const Inheritance &inh);
+  void gen_submakers_defs(const Inheritance &inh);
 
   /// Generates early exit from RamFuzz method \c name, corresponding to the
   /// method under test \c M.  The exit code prints \c reason as the reason for
@@ -554,20 +554,23 @@ void RamFuzz::gen_int_ctr(const string &ns) {
 }
 
 void RamFuzz::gen_submakers_decl(const string &cls) {
-  outh << "  // One element for each direct public subclass, plus one null "
-          "element at the end.\n";
+  outh << "  static const size_t subcount; // How many direct public "
+          "subclasses.\n";
+  outh << "  // Maker functions for direct public subclasses (subcount "
+          "elements).\n";
   outh << "  static " << cls << " *(*submakers[])(runtime::gen &);\n";
 }
 
-void RamFuzz::gen_submakers_def(const Inheritance &inh) {
+void RamFuzz::gen_submakers_defs(const Inheritance &inh) {
   auto next_maker_fn = 0u;
   for (const auto &cls : processed_classes) {
     const string ns = control_namespace(cls);
     const auto found = inh.find(cls);
-    if (found == inh.end() || found->getValue().empty())
+    if (found == inh.end() || found->getValue().empty()) {
+      outc << "const size_t " << ns << "::control::subcount = 0;\n";
       outc << cls << "*(*" << ns
-           << "::control::submakers[])(runtime::gen&) = { nullptr };\n";
-    else {
+           << "::control::submakers[])(runtime::gen&) = {};\n";
+    } else {
       const auto first_maker_fn = next_maker_fn;
       outc << "namespace {\n";
       for (const auto &subcls : found->getValue())
@@ -578,8 +581,11 @@ void RamFuzz::gen_submakers_def(const Inheritance &inh) {
       outc << cls << "*(*" << ns
            << "::control::submakers[])(runtime::gen&) = { ";
       for (auto i = first_maker_fn; i < next_maker_fn; ++i)
-        outc << "maker" << i << ",";
-      outc << "nullptr };\n";
+        outc << (i == first_maker_fn ? "" : ",") << "maker" << i;
+      outc << " };\n";
+      outc << "const size_t " << ns
+           << "::control::subcount = " << next_maker_fn - first_maker_fn
+           << ";\n\n";
     }
   }
 }
@@ -815,7 +821,7 @@ void RamFuzz::finish(const Inheritance &inh) {
     outc << "}\n";
   }
 
-  gen_submakers_def(inh);
+  gen_submakers_defs(inh);
 }
 
 void RamFuzz::tackOnto(MatchFinder &MF) {
