@@ -29,6 +29,10 @@
 #include <vector>
 
 namespace ramfuzz {
+
+/// RamFuzz harness for testing C objects.
+template <class C> class harness;
+
 namespace runtime {
 
 /// Exception thrown when there's a file-access error.
@@ -322,6 +326,55 @@ typename ramfuzz_control::user_class *make(runtime::gen &g, bool subcl) {
   }
   return ctl.release();
 }
+
+/// Makes random objects of type T using RamFuzz-generated code.
+template <class T> struct maker {
+  /// Makes a random T if T is a class.
+  static T
+  make(runtime::gen &g,
+       typename std::enable_if<std::is_class<T>::value, int>::type = 0) {
+    harness<T> h(g, g.between(0u, harness<T>::ccount - 1));
+    if (h.mcount) {
+      runtime::gen::region reg(g);
+      for (auto i = 0u; i < reg.between(0u, runtime::spinlimit); ++i)
+        (h.*h.mroulette[g.between(0u, h.mcount - 1)])();
+    }
+    return h.obj;
+  }
+
+  /// Makes a random T if T is a scalar type.
+  static T
+  make(runtime::gen &g,
+       typename std::enable_if<std::is_arithmetic<T>::value, float>::type = 0) {
+    return g.any<T>();
+  }
+};
+
+/// Specialization for dynamically allocated T.
+template <class T> struct maker<T *> {
+  static T *
+  make(runtime::gen &g,
+       typename std::enable_if<std::is_class<T>::value, int>::type = 0) {
+    if (harness<T>::subcount && g.any<float>() > 0.5) {
+      return (*harness<T>::submakers[g.between(size_t{0},
+                                               harness<T>::subcount - 1)])(g);
+    } else {
+      harness<T> h(g, g.between(0u, harness<T>::ccount - 1));
+      if (h.mcount) {
+        runtime::gen::region reg(g);
+        for (auto i = 0u; i < reg.between(0u, runtime::spinlimit); ++i)
+          (h.*h.mroulette[g.between(0u, h.mcount - 1)])();
+      }
+      return h.release();
+    }
+  }
+
+  static T *
+  make(runtime::gen &g,
+       typename std::enable_if<std::is_arithmetic<T>::value, float>::type = 0) {
+    return new T(g.any<T>());
+  }
+};
 
 namespace rfstd_exception {
 class control {
