@@ -165,11 +165,28 @@ private:
                   const Twine &reason   ///< Exit reason, for logging purposes.
                   );
 
-  /// Generates the definition of RamFuzz method named rfname, corresponding to
+  /// True iff M's harness method may recursively call itself.  For example, a
+  /// copy constructor's harness needs to construct another object of the same
+  /// type, which involves a second harness that may itself call the copy
+  /// constructor.  The code will look something like this (assuming class under
+  /// test is named Foo):
+  ///
+  /// Foo* harness<Foo>::Foo123() { return new Foo(*g.make<Foo>()); }
+  ///
+  /// g.make<Foo>() will create a second harness<Foo> object and possibly invoke
+  /// its Foo123() method, so we have the outer Foo123() transitively calling
+  /// the inner one -- recursion.  This may go infinitely deep when the wrong
+  /// random sequence is generated.
+  bool harness_may_recurse(const CXXMethodDecl *M, const ASTContext &ctx);
+
+  /// Generates the definition of harness method named hname, corresponding to
   /// the method under test M.  Assumes that the return type of the generated
   /// method has already been output.
-  void gen_method(const Twine &rfname, ///< Fully qualified RamFuzz method name.
-                  const CXXMethodDecl *M, const ASTContext &ctx);
+  void gen_method(
+      const Twine &hname, ///< Fully qualified harness method name.
+      const CXXMethodDecl *M, const ASTContext &ctx,
+      bool may_recurse ///< True iff generated body may recursively call itself.
+      );
 
   /// Where to output generated declarations (typically a header file).
   raw_ostream &outh;
@@ -531,15 +548,28 @@ void RamFuzz::early_exit(const Twine &loc, const Twine &failval,
   outc << "    return " << failval << ";\n";
 }
 
-void RamFuzz::gen_method(const Twine &rfname, const CXXMethodDecl *M,
-                         const ASTContext &ctx) {
-  outc << rfname << "() {\n";
-  outc << "  if (++calldepth >= depthlimit) {\n";
-  early_exit(rfname, isa<CXXConstructorDecl>(M) ? "nullptr" : "",
-             "call depth limit");
-  outc << "  }\n";
+bool RamFuzz::harness_may_recurse(const CXXMethodDecl *M,
+                                  const ASTContext &ctx) {
+  for (const auto &ram : M->parameters())
+    if (get<0>(ultimate_pointee(ram->getType(), ctx))->isRecordType())
+      // Making a class parameter value invokes other RamFuzz code, which may,
+      // in turn, invoke M again.  So M's harness may recurse.
+      return true;
+  return false;
+}
+
+void RamFuzz::gen_method(const Twine &hname, const CXXMethodDecl *M,
+                         const ASTContext &ctx, bool may_recurse) {
+  outc << hname << "() {\n";
+  if (may_recurse) {
+    outc << "  if (++calldepth >= depthlimit) {\n";
+    early_exit(hname, isa<CXXConstructorDecl>(M) ? "(this->*safectr)()" : "",
+               "call depth limit");
+    outc << "  }\n";
+  }
   if (isa<CXXConstructorDecl>(M)) {
-    outc << "  --calldepth;\n";
+    if (may_recurse)
+      outc << "  --calldepth;\n";
     outc << "  return new ";
     if (M->getParent()->isAbstract())
       outc << "concrete_impl(g" << (M->param_empty() ? "" : ", ");
@@ -569,7 +599,7 @@ void RamFuzz::gen_method(const Twine &rfname, const CXXMethodDecl *M,
     register_enum(*valty);
   }
   outc << ");\n";
-  if (!isa<CXXConstructorDecl>(M))
+  if (!isa<CXXConstructorDecl>(M) && may_recurse)
     outc << "  --calldepth;\n";
   outc << "}\n\n";
 }
@@ -611,6 +641,7 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
     outh << "  " << cls << "* release() { return pobj.release(); }\n";
     unordered_map<string, unsigned> namecount;
     bool ctrs = false;
+    string safectr;
     for (auto M : C->methods()) {
       if (isa<CXXDestructorDecl>(M) || M->getAccess() != AS_public ||
           !M->isInstance() || M->isDeleted())
@@ -625,13 +656,17 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
         outc << "void ";
       }
       outh << name << namecount[name] << "();\n";
+      const bool may_recurse = harness_may_recurse(M, *Result.Context);
       gen_method(Twine("harness<") + cls + ">::" + name +
                      Twine(namecount[name]),
-                 M, *Result.Context);
+                 M, *Result.Context, may_recurse);
+      if (safectr.empty() && !may_recurse && isa<CXXConstructorDecl>(M))
+        safectr = name + to_string(namecount[name]);
       namecount[name]++;
     }
     if (C->needsImplicitDefaultConstructor()) {
       const auto name = ctrname(cls);
+      safectr = name + to_string(namecount[name]);
       outh << "  " << cls << "* ";
       outh << name << namecount[name]++ << "() { return new ";
       if (C->isAbstract())
@@ -645,6 +680,14 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
     if (ctrs) {
       gen_int_ctr(cls);
       gen_croulette(cls, namecount[C->getNameAsString()]);
+      outh << "  // Ctr safe from depthlimit; won't call another harness "
+              "method.\n";
+      outh << "  static constexpr cptr safectr = ";
+      if (safectr.empty())
+        outh << "nullptr";
+      else
+        outh << "&harness::" << safectr;
+      outh << ";\n";
     } else
       outh << "  // No public constructors -- user must provide this:\n";
     outh << "  harness(runtime::gen& g);\n";
