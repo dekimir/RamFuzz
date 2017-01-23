@@ -25,7 +25,7 @@ constexpr int val_in_reg = 3; ///< How many values per region.
 
 vector<int> spin(gen &g) {
   A a;
-  ramfuzz::rfA::control rf(g, a);
+  ramfuzz::harness<A> rf(g, a);
   for (int reg = 0; reg < regcnt; ++reg) {
     gen::region reg_raii(g);
     for (int val = 0; val < val_in_reg; ++val)

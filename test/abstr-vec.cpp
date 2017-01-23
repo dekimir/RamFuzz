@@ -14,16 +14,18 @@
 
 #include "fuzz.hpp"
 
-int main(int argc, char* argv[]) {
-  ramfuzz::runtime::gen g(argc, argv);
-  ramfuzz::rfC::control rc(g, 0);
+using namespace ramfuzz;
+
+int main(int argc, char *argv[]) {
+  runtime::gen g(argc, argv);
+  harness<C> rc(g, 0);
   for (auto m : rc.mroulette)
     (rc.*m)();
   return (rc.obj.sum != 30);
 }
 
-unsigned ::ramfuzz::runtime::spinlimit = 3;
+unsigned runtime::spinlimit = 3;
 
-template <> NS::ST<int> ramfuzz::runtime::gen::any<NS::ST<int>>() {
-  return NS::ST<int>{any<int>()};
+template <> NS::ST<int> *ramfuzz::runtime::gen::make<NS::ST<int>>(int) {
+  return new NS::ST<int>{*make<int>()};
 }

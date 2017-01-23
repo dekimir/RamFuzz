@@ -18,8 +18,8 @@ using namespace ramfuzz::runtime;
 using namespace std;
 
 string run(gen &g) {
-  auto rf1 = spin_roulette<ramfuzz::rfA::control>(g);
-  return rf1 ? rf1.obj.content : string();
+  auto rf1 = g.make<A>();
+  return rf1 ? rf1->content : string();
 }
 
 int main() {

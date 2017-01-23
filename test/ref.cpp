@@ -14,9 +14,9 @@
 
 #include "fuzz.hpp"
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
   ramfuzz::runtime::gen g(argc, argv);
-  ramfuzz::rfA::control ra(g, 0);
+  ramfuzz::harness<A> ra(g, 0);
   for (auto m : ra.mroulette)
     (ra.*m)();
   if (ra.obj.sum != 220)

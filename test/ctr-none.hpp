@@ -29,4 +29,5 @@ class C {
 public:
   void f(B *) {}
   void f(std::vector<B *>) {}
+  const int id = 234;
 };

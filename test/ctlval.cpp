@@ -24,7 +24,7 @@ constexpr int mspins = 10; ///< How many times to spin rfA's roulette.
 
 vector<int> spin(gen &g) {
   A a;
-  ramfuzz::rfA::control rf(g, a);
+  ramfuzz::harness<A> rf(g, a);
   for (int i = 0; i < mspins; ++i)
     rf.f0();
   return a.vi;

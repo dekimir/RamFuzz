@@ -16,7 +16,7 @@
 
 int main(int argc, char* argv[]) {
   ramfuzz::runtime::gen g(argc, argv);
-  ramfuzz::rfB::control rb(g, 0);
+  ramfuzz::harness<B> rb(g, 0);
   for (auto m : rb.mroulette)
     (rb.*m)();
   return rb.obj.sum != 11;
