@@ -18,7 +18,7 @@ using namespace ramfuzz::runtime;
 using namespace std;
 
 vector<string> run(gen &g) {
-  auto rf1 = spin_roulette<ramfuzz::rfA::control>(g);
+  auto rf1 = spin_roulette<ramfuzz::harness<A>>(g);
   return rf1 ? rf1.obj.v : vector<string>();
 }
 

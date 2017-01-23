@@ -16,9 +16,9 @@
 
 using namespace ramfuzz;
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
   runtime::gen g(argc, argv);
-  auto ra = runtime::spin_roulette<rfA::control>(g);
+  auto ra = runtime::spin_roulette<harness<A>>(g);
   return ra.obj.sum != 0;
 }
 

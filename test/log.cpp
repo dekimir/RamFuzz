@@ -16,8 +16,7 @@
 
 #include "fuzz.hpp"
 
-bool operator!=(const ramfuzz::rfA::control &a,
-                const ramfuzz::rfA::control &b) {
+bool operator!=(const ramfuzz::harness<A> &a, const ramfuzz::harness<A> &b) {
   if (!a && !b)
     return false;
   if (bool(a) != bool(b))
@@ -29,9 +28,9 @@ int main() {
   using namespace ramfuzz::runtime;
   using namespace std;
   unique_ptr<gen> g(new gen("fuzzlog1"));
-  auto rf1 = spin_roulette<ramfuzz::rfA::control>(*g);
+  auto rf1 = spin_roulette<ramfuzz::harness<A>>(*g);
   g.reset(new gen("fuzzlog1", "fuzzlog2"));
-  auto rf2 = spin_roulette<ramfuzz::rfA::control>(*g);
+  auto rf2 = spin_roulette<ramfuzz::harness<A>>(*g);
   return rf1 != rf2;
 }
 

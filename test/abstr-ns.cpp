@@ -14,9 +14,9 @@
 
 #include "fuzz.hpp"
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
   ramfuzz::runtime::gen g(argc, argv);
-  ramfuzz::rfC::control rc(g, 0);
+  ramfuzz::harness<C> rc(g, 0);
   for (auto m : rc.mroulette)
     (rc.*m)();
   return (rc.obj.sum != 42);

@@ -22,7 +22,7 @@ using namespace std;
 
 vector<int> run(gen &g) {
   A a;
-  ramfuzz::rfA::control rf(g, a);
+  ramfuzz::harness<A> rf(g, a);
   {
     gen::region r1(g);
     rf.f0(); // vi[0]

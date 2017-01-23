@@ -14,10 +14,10 @@
 
 #include "fuzz.hpp"
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
   ramfuzz::runtime::gen g(argc, argv);
   B b;
-  ramfuzz::rfB::control rf(g, b);
+  ramfuzz::harness<B> rf(g, b);
   for (auto m : rf.mroulette)
     (rf.*m)();
   if (b.sum != 3)

@@ -14,9 +14,9 @@
 
 #include "fuzz.hpp"
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
   ramfuzz::runtime::gen g(argc, argv);
-  ramfuzz::rfB::control rb(g, ramfuzz::rfB::control::ccount - 1);
+  ramfuzz::harness<B> rb(g, ramfuzz::harness<B>::ccount - 1);
   for (auto m : rb.mroulette)
     (rb.*m)();
   return rb.obj.sum != 8;

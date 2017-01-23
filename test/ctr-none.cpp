@@ -19,18 +19,13 @@
 /// Tests that correct code is generated when the class under test has no public
 /// constructors.
 
-int main() {
-  // The control class must exist, but it can't be constructed.
-  ramfuzz::rfB::control *ctl;
+using namespace ramfuzz;
+
+int main(int argc, char *argv[]) {
+  runtime::gen g(argc, argv);
+  return g.make<C>()->id != 234;
 }
 
-ramfuzz::rfB::control ramfuzz::rfB::control::make(ramfuzz::runtime::gen &g) {
-  std::unique_ptr<B> b(B::create());
-  control c(g, *b);
-  c.pobj = std::move(b);
-  return c;
-}
+harness<B>::harness(runtime::gen &g) : g(g), pobj(B::create()), obj(*pobj) {}
 
-template <> void ramfuzz::runtime::gen::set_any<B>(B *&pb) { pb = nullptr; }
-
-unsigned ::ramfuzz::runtime::spinlimit = 3;
+unsigned runtime::spinlimit = 3;

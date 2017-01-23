@@ -18,7 +18,7 @@ using namespace ramfuzz::runtime;
 
 int main() {
   gen g("fuzzlog1");
-  auto a = spin_roulette<ramfuzz::rfA::control>(g);
+  auto a = spin_roulette<ramfuzz::harness<A>>(g);
   return a.obj.t != 8421;
 }
 

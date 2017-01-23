@@ -97,15 +97,6 @@ gen::gen(int argc, const char *const *argv, size_t k) {
   }
 }
 
-void gen::set_any(std::vector<bool>::reference obj) { obj = any<bool>(); }
-
-template <> void runtime::gen::set_any<string>(string &obj) {
-  rfstd_basic_string::control<string::value_type, string::traits_type,
-                              string::allocator_type>
-      ctl(*this, 0);
-  obj = ctl.obj;
-}
-
 template <> bool gen::uniform_random<bool>(bool lo, bool hi) {
   return ibetween(lo, hi, rgen);
 }
@@ -200,9 +191,4 @@ gen::skip::skip(istream &str) : valid(false) {
 }
 
 } // namespace runtime
-
-const rfstd_exception::control::mptr rfstd_exception::control::mroulette[] = {};
-
-rfstd_exception::control::control(runtime::gen &g, unsigned ctr) : g(g) {}
-
 } // namespace ramfuzz

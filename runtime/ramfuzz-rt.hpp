@@ -35,6 +35,10 @@ template <class C> class harness;
 
 namespace runtime {
 
+/// The upper limit on how many times to spin the method roulette in generated
+/// RamFuzz classes.  Should be defined in user's code.
+extern unsigned spinlimit;
+
 /// Exception thrown when there's a file-access error.
 struct file_error : public std::runtime_error {
   explicit file_error(const std::string &s) : runtime_error(s) {}
@@ -103,9 +107,41 @@ public:
   /// Returns an unconstrained random value of numeric type T, logs it, and
   /// indexes it.  When replaying the log, this value could be modified without
   /// affecting the replay of the rest of the log.
-  template <typename T> T any() {
-    return between(std::numeric_limits<T>::min(),
-                   std::numeric_limits<T>::max());
+  template <typename T>
+  T *make(typename std::enable_if<std::is_arithmetic<T>::value ||
+                                      std::is_enum<T>::value,
+                                  float>::type = 0) {
+    return new T(
+        between(std::numeric_limits<T>::min(), std::numeric_limits<T>::max()));
+  }
+
+  // TODO: avoid slicing!
+  template <typename T>
+  T *make(typename std::enable_if<std::is_class<T>::value, int>::type = 0) {
+    if (harness<T>::subcount && *make<float>() > 0.5) {
+      return (
+          *harness<T>::submakers[between(size_t{0}, harness<T>::subcount - 1)])(
+          *this);
+    } else {
+      harness<T> h(*this);
+      if (h.mcount) {
+        runtime::gen::region reg(*this);
+        for (auto i = 0u, e = reg.between(0u, runtime::spinlimit); i < e; ++i)
+          (h.*h.mroulette[between(0u, h.mcount - 1)])();
+      }
+      return h.release();
+    }
+  }
+
+  template <typename T>
+  T *make(typename std::enable_if<std::is_void<T>::value, double>::type = 0) {
+    return new char[between(1, 4196)];
+  }
+
+  template <typename T>
+  T *make(typename std::enable_if<std::is_pointer<T>::value, float>::type = 0) {
+    using pointee = typename std::remove_pointer<T>::type;
+    return new T(make<typename std::remove_cv<pointee>::type>());
   }
 
   /// Returns a random value of type T between lo and hi, inclusive, logs it,
@@ -116,34 +152,6 @@ public:
     T val = gen_or_read(lo, hi);
     olog_index << ' ' << olog.tellp() << '\n';
     return val;
-  }
-
-  /// Sets obj to any().  Specialized in RamFuzz-generated code for classes
-  /// under test.
-  template <typename T> void set_any(T &obj) { obj = any<T>(); }
-
-  /// Pointer overload of set_any().
-  template <typename T> void set_any(T *&obj) { obj = new T(any<T>()); }
-
-  /// Const pointer overload of set_any().
-  template <typename T> void set_any(const T *&obj) { obj = new T(any<T>()); }
-
-  /// void* overload of set_any().
-  inline void set_any(void *&obj); // Defined below.
-
-  /// Bool vector overload of set_any().
-  void set_any(std::vector<bool>::reference obj);
-
-  /// Assigns ctl.obj to obj if ctl is valid and obj is assignable.  Useful for
-  /// implementing set_any for a class that has a RamFuzz control: you
-  /// spin_roulette(), then feed the result to this method.
-  template <typename RamFuzzControl,
-            typename std::enable_if<
-                std::is_copy_assignable<decltype(RamFuzzControl::obj)>::value,
-                int>::type = 0>
-  void assign(RamFuzzControl &ctl, decltype(RamFuzzControl::obj) obj) {
-    if (ctl)
-      obj = ctl.obj;
   }
 
   /// Overload of assign() for when obj isn't assignable.  Does nothing at
@@ -261,10 +269,6 @@ private:
   skip to_skip;
 };
 
-/// The upper limit on how many times to spin the method roulette in generated
-/// RamFuzz classes.  Should be defined in user's code.
-extern unsigned spinlimit;
-
 /// Limit on the call-stack depth in generated RamFuzz methods.  Without such a
 /// limit, infinite recursion is possible for certain code under test (eg,
 /// ClassA::method1(B b) and ClassB::method2(A a)).  The user can modify this
@@ -298,105 +302,32 @@ ramfuzz_control spin_roulette(ramfuzz::runtime::gen &g) {
   if (ramfuzz_control::mcount) {
     const auto mspins = reg.between(0u, ::ramfuzz::runtime::spinlimit);
     for (auto i = 0u; i < mspins; ++i)
-      (ctl.*
-       ctl.mroulette[g.between(0u, ramfuzz_control::control::mcount - 1)])();
+      (ctl.*ctl.mroulette[g.between(0u, ramfuzz_control::mcount - 1)])();
   }
   return ctl;
 }
 
 } // namespace runtime
 
-/// Makes a random value of ramfuzz_control::user_class and returns a pointer to
-/// it.  The value stays alive indefinitely.  If subcl is true, the value may be
-/// an instance of a subclass of ramfuzz_control::user_class; otherwise, it must
-/// be an instance of ramfuzz_control::user_class itself.
-template <typename ramfuzz_control>
-typename ramfuzz_control::user_class *make(runtime::gen &g, bool subcl) {
-  if (subcl && ramfuzz_control::subcount) {
-    return (*ramfuzz_control::submakers[g.between(
-        size_t{0}, ramfuzz_control::subcount - 1)])(g);
-  }
-  auto ctl = runtime::construct<ramfuzz_control>(g);
-  if (!ctl)
-    return nullptr;
-  if (ctl.mcount) {
-    runtime::gen::region reg(g);
-    for (auto i = 0u; i < reg.between(0u, runtime::spinlimit); ++i)
-      (ctl.*ctl.mroulette[g.between(0u, ctl.mcount - 1)])();
-  }
-  return ctl.release();
-}
-
-/// Makes random objects of type T using RamFuzz-generated code.
-template <class T> struct maker {
-  /// Makes a random T if T is a class.
-  static T
-  make(runtime::gen &g,
-       typename std::enable_if<std::is_class<T>::value, int>::type = 0) {
-    harness<T> h(g, g.between(0u, harness<T>::ccount - 1));
-    if (h.mcount) {
-      runtime::gen::region reg(g);
-      for (auto i = 0u; i < reg.between(0u, runtime::spinlimit); ++i)
-        (h.*h.mroulette[g.between(0u, h.mcount - 1)])();
-    }
-    return h.obj;
-  }
-
-  /// Makes a random T if T is a scalar type.
-  static T
-  make(runtime::gen &g,
-       typename std::enable_if<std::is_arithmetic<T>::value, float>::type = 0) {
-    return g.any<T>();
-  }
-};
-
-/// Specialization for dynamically allocated T.
-template <class T> struct maker<T *> {
-  static T *
-  make(runtime::gen &g,
-       typename std::enable_if<std::is_class<T>::value, int>::type = 0) {
-    if (harness<T>::subcount && g.any<float>() > 0.5) {
-      return (*harness<T>::submakers[g.between(size_t{0},
-                                               harness<T>::subcount - 1)])(g);
-    } else {
-      harness<T> h(g, g.between(0u, harness<T>::ccount - 1));
-      if (h.mcount) {
-        runtime::gen::region reg(g);
-        for (auto i = 0u; i < reg.between(0u, runtime::spinlimit); ++i)
-          (h.*h.mroulette[g.between(0u, h.mcount - 1)])();
-      }
-      return h.release();
-    }
-  }
-
-  static T *
-  make(runtime::gen &g,
-       typename std::enable_if<std::is_arithmetic<T>::value, float>::type = 0) {
-    return new T(g.any<T>());
-  }
-};
-
-namespace rfstd_exception {
-class control {
+template <> class harness<std::exception> {
 private:
   // Declare first to initialize early; constructors may use it.
   runtime::gen &g;
 
 public:
-  ::std::exception obj;
-  control(runtime::gen &g, unsigned);
+  std::exception obj;
+  harness(runtime::gen &g) : g(g) {}
+  std::exception *release() { return new std::exception(obj); }
   operator bool() const { return true; }
-
-  using mptr = void (control::*)();
+  using mptr = void (harness::*)();
   static constexpr unsigned mcount = 0;
-  static const mptr mroulette[mcount];
-
+  static constexpr mptr mroulette[] = {};
   static constexpr unsigned ccount = 1;
+  static constexpr size_t subcount = 0;
+  static constexpr std::exception *(*submakers[])(runtime::gen &) = {};
 };
-} // namespace rfstd_exception
 
-namespace rfstd_vector {
-template <typename Tp, typename Alloc = ::std::allocator<Tp>> class control {
+template <typename Tp, typename Alloc> class harness<std::vector<Tp, Alloc>> {
 private:
   // Declare first to initialize early; constructors may use it.
   runtime::gen &g;
@@ -404,43 +335,32 @@ private:
 public:
   std::vector<Tp, Alloc> obj;
 
-  control(runtime::gen &g, unsigned) : g(g) {
+  harness(runtime::gen &g) : g(g) {
     runtime::gen::region reg(g);
     obj.resize(reg.between(0u, 1000u));
     for (int i = 0; i < obj.size(); ++i)
-      g.set_any(obj[i]);
+      obj[i] = *g.make<typename std::remove_cv<Tp>::type>();
   }
 
-  Tp *release() {
-    const auto sz = obj.size();
-    Tp *cp = new Tp[sz];
-    std::copy(obj.cbegin(), obj.cend(), cp);
-    return cp;
-  }
-
+  std::vector<Tp, Alloc> *release() { return new std::vector<Tp, Alloc>(obj); }
   operator bool() const { return true; }
-
-  using mptr = void (control::*)();
+  using mptr = void (harness::*)();
   static constexpr unsigned mcount = 0;
-  static const mptr mroulette[mcount];
-
+  static constexpr mptr mroulette[] = {};
   static constexpr unsigned ccount = 1;
+  static constexpr size_t subcount = 0;
+  static constexpr std::vector<Tp, Alloc> *(*submakers[])(runtime::gen &) = {};
 };
-} // namespace rfstd_vector
 
-template <typename Tp, typename Alloc>
-const typename rfstd_vector::control<Tp, Alloc>::mptr
-    rfstd_vector::control<Tp, Alloc>::control::mroulette[] = {};
-
-namespace rfstd_basic_string {
-template <class CharT, class Traits, class Allocator> class control {
+template <class CharT, class Traits, class Allocator>
+class harness<std::basic_string<CharT, Traits, Allocator>> {
 private:
   // Declare first to initialize early; constructors may use it.
   runtime::gen &g;
 
 public:
   std::basic_string<CharT, Traits, Allocator> obj;
-  control(runtime::gen &g, unsigned) : g(g) {
+  harness(runtime::gen &g) : g(g) {
     runtime::gen::region reg(g);
     obj.resize(reg.between(1u, 1000u));
     for (int i = 0; i < obj.size() - 1; ++i)
@@ -451,62 +371,52 @@ public:
   std::basic_string<CharT, Traits, Allocator> *release() {
     return new std::basic_string<CharT, Traits, Allocator>(obj);
   }
-  using mptr = void (control::*)();
+  using mptr = void (harness::*)();
   static constexpr unsigned mcount = 0;
-  static const mptr mroulette[mcount];
+  static constexpr mptr mroulette[] = {};
   static constexpr unsigned ccount = 1;
+  static constexpr size_t subcount = 0;
+  static constexpr std::basic_string<CharT, Traits, Allocator> *(*submakers[])(
+      runtime::gen &) = {};
 };
-} // namespace rfstd_basic_string
 
-template <class CharT, class Traits, class Allocator>
-const typename rfstd_basic_string::control<CharT, Traits, Allocator>::mptr
-    rfstd_basic_string::control<CharT, Traits,
-                                Allocator>::control::mroulette[] = {};
-
-template <> void runtime::gen::set_any<std::string>(std::string &obj);
-
-namespace rfstd_basic_istream {
-template <class CharT, class Traits = std::char_traits<CharT>> class control {
+template <class CharT, class Traits>
+class harness<std::basic_istream<CharT, Traits>> {
   // Declare first to initialize early; constructors may use it.
   runtime::gen &g;
-  rfstd_basic_string::control<CharT, Traits, std::allocator<CharT>> strctl;
+  std::unique_ptr<std::string> s;
 
 public:
   std::basic_istringstream<CharT, Traits> obj;
-  control(runtime::gen &g, unsigned) : g(g), strctl(g, 0), obj(strctl.obj) {}
+  harness(runtime::gen &g) : g(g), s(g.make<std::string>()), obj(*s) {}
+  std::basic_istream<CharT, Traits> *release() {
+    return new std::basic_istringstream<CharT, Traits>(obj.str());
+  }
   operator bool() const { return true; }
-  using mptr = void (control::*)();
+  using mptr = void (harness::*)();
   static constexpr unsigned mcount = 0;
-  static const mptr mroulette[mcount];
+  static constexpr mptr mroulette[] = {};
   static constexpr unsigned ccount = 1;
+  static constexpr size_t subcount = 0;
+  static constexpr std::basic_istream<CharT, Traits> *(*submakers[])(
+      runtime::gen &) = {};
 };
-} // namespace rfstd_basic_istream
 
-template <typename Tp, typename Alloc>
-const typename rfstd_basic_istream::control<Tp, Alloc>::mptr
-    rfstd_basic_istream::control<Tp, Alloc>::control::mroulette[] = {};
-
-namespace rfstd_basic_ostream {
-template <class CharT, class Traits = std::char_traits<CharT>> struct control {
+template <class CharT, class Traits>
+struct harness<std::basic_ostream<CharT, Traits>> {
   std::basic_ostringstream<CharT, Traits> obj;
-  control(runtime::gen &g, unsigned) {}
+  harness(runtime::gen &g) {}
+  std::basic_ostream<CharT, Traits> *release() {
+    return new std::basic_ostringstream<CharT, Traits>;
+  }
   operator bool() const { return true; }
-  using mptr = void (control::*)();
+  using mptr = void (harness::*)();
   static constexpr unsigned mcount = 0;
-  static const mptr mroulette[mcount];
+  static constexpr mptr mroulette[] = {};
   static constexpr unsigned ccount = 1;
+  static constexpr size_t subcount = 0;
+  static constexpr std::basic_ostream<CharT, Traits> *(*submakers[])(
+      runtime::gen &) = {};
 };
-} // namespace rfstd_basic_ostream
-
-template <typename Tp, typename Alloc>
-const typename rfstd_basic_ostream::control<Tp, Alloc>::mptr
-    rfstd_basic_ostream::control<Tp, Alloc>::control::mroulette[] = {};
-
-namespace runtime {
-// Must be defined after rfstd_vector.
-inline void gen::set_any(void *&obj) {
-  obj = rfstd_vector::control<char>(*this, 0).release();
-}
-} // namespace runtime
 
 } // namespace ramfuzz

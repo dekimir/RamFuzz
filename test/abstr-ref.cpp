@@ -16,9 +16,9 @@
 
 using namespace ramfuzz;
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
   runtime::gen g(argc, argv);
-  rfB::control b(g, 0);
+  harness<B> b(g, 0);
   b.g0();
   return b.obj.sum != 1122;
 }

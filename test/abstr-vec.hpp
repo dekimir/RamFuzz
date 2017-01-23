@@ -56,4 +56,4 @@ public:
 };
 
 #include "ramfuzz-rt.hpp"
-template <> NS::ST<int> ramfuzz::runtime::gen::any<NS::ST<int>>();
+template <> NS::ST<int>* ramfuzz::runtime::gen::make<NS::ST<int>>(int);
