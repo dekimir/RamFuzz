@@ -562,7 +562,7 @@ void RamFuzz::gen_method(const Twine &hname, const CXXMethodDecl *M,
                          const ASTContext &ctx, bool may_recurse) {
   outc << hname << "() {\n";
   if (may_recurse) {
-    outc << "  if (++calldepth >= depthlimit) {\n";
+    outc << "  if (++calldepth >= depthlimit && safectr) {\n";
     early_exit(hname, isa<CXXConstructorDecl>(M) ? "(this->*safectr)()" : "",
                "call depth limit");
     outc << "  }\n";
