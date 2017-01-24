@@ -154,26 +154,6 @@ public:
     return val;
   }
 
-  /// Overload of assign() for when obj isn't assignable.  Does nothing at
-  /// runtime, but allows \c assign(ctl,obj) to always compile correctly,
-  /// whether obj is assignable or not.
-  ///
-  /// One alternative to this arrangement is for the RamFuzz code generator to
-  /// catch unassignable classes under test at code-generation time and only
-  /// generate assign() for the assignable classes.  But determining whether
-  /// copy assignment is implicitly deleted requires a great deal of expensive
-  /// semantic analysis over more classes than RamFuzz generator is currently
-  /// applied to (see, eg, how Sema::ShouldDeleteSpecialMember does it).
-  /// Instead, we chose to generate assign() for all classes under test and use
-  /// template magic to avoid compilation failures.  Quietly ignoring the
-  /// unassignables isn't a problem, since this is intended for use by code
-  /// supporting STL containers requiring assignable types anyway.
-  template <typename RamFuzzControl,
-            typename std::enable_if<
-                !std::is_copy_assignable<decltype(RamFuzzControl::obj)>::value,
-                int>::type = 0>
-  void assign(RamFuzzControl &ctl, decltype(RamFuzzControl::obj) obj) {}
-
   friend class region;
   /// RAII for region (a continuous subset of the log that can be replaced by a
   /// different execution path during replay without affecting the replay of the
