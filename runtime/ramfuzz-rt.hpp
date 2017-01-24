@@ -110,7 +110,7 @@ public:
   template <typename T>
   T *make(typename std::enable_if<std::is_arithmetic<T>::value ||
                                       std::is_enum<T>::value,
-                                  float>::type = 0) {
+                                  int>::type = 0) {
     return new T(
         between(std::numeric_limits<T>::min(), std::numeric_limits<T>::max()));
   }
@@ -134,12 +134,12 @@ public:
   }
 
   template <typename T>
-  T *make(typename std::enable_if<std::is_void<T>::value, double>::type = 0) {
+  T *make(typename std::enable_if<std::is_void<T>::value, int>::type = 0) {
     return new char[between(1, 4196)];
   }
 
   template <typename T>
-  T *make(typename std::enable_if<std::is_pointer<T>::value, float>::type = 0) {
+  T *make(typename std::enable_if<std::is_pointer<T>::value, int>::type = 0) {
     using pointee = typename std::remove_pointer<T>::type;
     return new T(make<typename std::remove_cv<pointee>::type>());
   }
