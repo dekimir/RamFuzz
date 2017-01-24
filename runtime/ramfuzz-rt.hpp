@@ -59,7 +59,7 @@ struct file_error : public std::runtime_error {
 /// log point right after it.  To make this possible, RamFuzz code marks log
 /// regions as it executes.  Each region is a continuous subset of the log that
 /// can be replaced by a different execution path during replay without
-/// affecting the replay of the rest of the log.  For example, a spin_roulette()
+/// affecting the replay of the rest of the log.  For example, a gen::make()
 /// invocation is a region, as one set of spins can be wholly replaced by
 /// another.
 ///
@@ -274,38 +274,6 @@ private:
 /// ClassA::method1(B b) and ClassB::method2(A a)).  The user can modify this
 /// value or the depthlimit member of any RamFuzz class.
 constexpr unsigned depthlimit = 20;
-
-/// Constructs a RamFuzz control instance by randomly spinning croulette.  Only
-/// valid if croulette exists (ie, the class under test has public
-/// constructors).
-template <typename ramfuzz_control, int enable_if = ramfuzz_control::ccount>
-ramfuzz_control construct(ramfuzz::runtime::gen &g) {
-  return ramfuzz_control(g, g.between(0u, ramfuzz_control::ccount - 1));
-}
-
-/// Constructs a RamFuzz control instance by invoking control::make().  Only
-/// valid if make() exists (ie, the class under test has no public
-/// constructors).
-template <typename ramfuzz_control,
-          ramfuzz_control (*makefun)(runtime::gen &) = &ramfuzz_control::make>
-ramfuzz_control construct(ramfuzz::runtime::gen &g) {
-  return makefun(g);
-}
-
-/// Creates a RamFuzz control instance and randomly spins its mroulette.
-template <typename ramfuzz_control>
-ramfuzz_control spin_roulette(ramfuzz::runtime::gen &g) {
-  gen::region reg(g);
-  auto ctl = construct<ramfuzz_control>(g);
-  if (!ctl)
-    return ctl;
-  if (ramfuzz_control::mcount) {
-    const auto mspins = reg.between(0u, ::ramfuzz::runtime::spinlimit);
-    for (auto i = 0u; i < mspins; ++i)
-      (ctl.*ctl.mroulette[g.between(0u, ramfuzz_control::mcount - 1)])();
-  }
-  return ctl;
-}
 
 } // namespace runtime
 
