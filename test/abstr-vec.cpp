@@ -26,6 +26,6 @@ int main(int argc, char *argv[]) {
 
 unsigned runtime::spinlimit = 3;
 
-template <> NS::ST<int> *ramfuzz::runtime::gen::make<NS::ST<int>>(int) {
+template <> NS::ST<int> *ramfuzz::runtime::gen::make<NS::ST<int>>(bool) {
   return new NS::ST<int>{*make<int>()};
 }

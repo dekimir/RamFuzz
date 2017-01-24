@@ -107,18 +107,24 @@ public:
   /// Returns an unconstrained random value of numeric type T, logs it, and
   /// indexes it.  When replaying the log, this value could be modified without
   /// affecting the replay of the rest of the log.
+  ///
+  /// There are several overloads for different kinds of T: fundamental types,
+  /// pointers, classes, etc.
+  ///
+  /// If allow_subclass is true, the result may be an object of T's subclass.
   template <typename T>
   T *make(typename std::enable_if<std::is_arithmetic<T>::value ||
                                       std::is_enum<T>::value,
-                                  int>::type = 0) {
+                                  bool>::type allow_subclass = false) {
     return new T(
         between(std::numeric_limits<T>::min(), std::numeric_limits<T>::max()));
   }
 
   // TODO: avoid slicing!
   template <typename T>
-  T *make(typename std::enable_if<std::is_class<T>::value, int>::type = 0) {
-    if (harness<T>::subcount && *make<float>() > 0.5) {
+  T *make(typename std::enable_if<std::is_class<T>::value, bool>::type
+              allow_subclass = false) {
+    if (harness<T>::subcount && allow_subclass && *make<float>() > 0.5) {
       return (
           *harness<T>::submakers[between(size_t{0}, harness<T>::subcount - 1)])(
           *this);
@@ -134,14 +140,15 @@ public:
   }
 
   template <typename T>
-  T *make(typename std::enable_if<std::is_void<T>::value, int>::type = 0) {
+  T *make(typename std::enable_if<std::is_void<T>::value, bool>::type = false) {
     return new char[between(1, 4196)];
   }
 
   template <typename T>
-  T *make(typename std::enable_if<std::is_pointer<T>::value, int>::type = 0) {
+  T *make(typename std::enable_if<std::is_pointer<T>::value, bool>::type
+              allow_subclass = false) {
     using pointee = typename std::remove_pointer<T>::type;
-    return new T(make<typename std::remove_cv<pointee>::type>());
+    return new T(make<typename std::remove_cv<pointee>::type>(allow_subclass));
   }
 
   /// Returns a random value of type T between lo and hi, inclusive, logs it,
