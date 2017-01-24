@@ -18,8 +18,7 @@ using namespace ramfuzz::runtime;
 
 int main() {
   gen g("fuzzlog1");
-  auto a = spin_roulette<ramfuzz::harness<A>>(g);
-  return a.obj.t != 8421;
+  return g.make<A>()->t != 8421;
 }
 
 unsigned ::ramfuzz::runtime::spinlimit = 3;
