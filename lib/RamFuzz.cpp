@@ -701,9 +701,9 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
 void RamFuzz::finish(const Inheritance &inh) {
   for (auto e : referenced_enums) {
     outh << "template<> " << e.first << "* ramfuzz::runtime::gen::make<"
-         << e.first << ">(int);\n";
+         << e.first << ">(bool);\n";
     outc << "template<> " << e.first << "* ramfuzz::runtime::gen::make<"
-         << e.first << ">(int) {\n";
+         << e.first << ">(bool) {\n";
     outc << "  static " << e.first << " a[] = {\n    ";
     int comma = 0;
     for (const auto &n : e.second)

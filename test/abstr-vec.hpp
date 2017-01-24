@@ -52,8 +52,8 @@ public:
 class C {
 public:
   int sum = 33;
-  void g(const NS::A &a, B& b) { sum -= a.sum * b.m; }
+  void g(const NS::A &a, B &b) { sum -= a.sum * b.m; }
 };
 
 #include "ramfuzz-rt.hpp"
-template <> NS::ST<int>* ramfuzz::runtime::gen::make<NS::ST<int>>(int);
+template <> NS::ST<int> *ramfuzz::runtime::gen::make<NS::ST<int>>(bool);
