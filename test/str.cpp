@@ -15,22 +15,10 @@
 #include "fuzz.hpp"
 
 using namespace ramfuzz::runtime;
-using namespace std;
-
-vector<string> run(gen &g) {
-  auto rf1 = spin_roulette<ramfuzz::harness<A>>(g);
-  return rf1 ? rf1.obj.v : vector<string>();
-}
 
 int main() {
-  vector<string> r1, r2;
-  {
-    gen g1("fuzzlog1");
-    r1 = run(g1);
-  }
-  gen g2("fuzzlog1", "fuzzlog2");
-  r2 = run(g2);
-  return r1 != r2;
+  auto r1 = gen("fuzzlog1").make<A>()->v;
+  return r1 != gen("fuzzlog1", "fuzzlog2").make<A>()->v;
 }
 
-unsigned ::ramfuzz::runtime::spinlimit = 3;
+unsigned ramfuzz::runtime::spinlimit = 3;

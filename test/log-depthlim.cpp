@@ -16,22 +16,14 @@
 
 #include "fuzz.hpp"
 
-bool operator!=(const ramfuzz::harness<A> &a, const ramfuzz::harness<A> &b) {
-  if (!a && !b)
-    return false;
-  if (bool(a) != bool(b))
-    return true;
-  return a.obj != b.obj;
-}
-
 int main() {
   using namespace ramfuzz::runtime;
   using namespace std;
   unique_ptr<gen> g(new gen("fuzzlog1"));
-  auto rf1 = spin_roulette<ramfuzz::harness<A>>(*g);
+  A a1 = *g->make<A>();
   g.reset(new gen("fuzzlog1", "fuzzlog2"));
-  auto rf2 = spin_roulette<ramfuzz::harness<A>>(*g);
-  return rf1 != rf2;
+  A a2 = *g->make<A>();
+  return a1 != a2;
 }
 
 unsigned ::ramfuzz::runtime::spinlimit = 3;

@@ -18,8 +18,7 @@ using namespace ramfuzz;
 
 int main(int argc, char *argv[]) {
   runtime::gen g(argc, argv);
-  auto ra = runtime::spin_roulette<harness<A>>(g);
-  return ra.obj.sum != 0;
+  return g.make<A>()->sum != 0;
 }
 
-unsigned ::ramfuzz::runtime::spinlimit = 3;
+unsigned runtime::spinlimit = 3;
