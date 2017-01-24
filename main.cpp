@@ -50,7 +50,7 @@
 /// object under test using any one of its public constructors.  So a random
 /// object under test may be obtained by constructing the control class and then
 /// randomly invoking its methods to exercise the under-test instance.  This is
-/// called spinning the method roulette.  See the function spin_roulette() in
+/// called spinning the method roulette.  See method gen::make() in
 /// runtime/ramfuzz-rt.hpp for an example of this process.
 ///
 /// Exit code is 0 on success, 1 on a Clang-reported error, and 2 if more input
