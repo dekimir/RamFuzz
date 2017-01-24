@@ -568,9 +568,7 @@ void RamFuzz::gen_method(const Twine &hname, const CXXMethodDecl *M,
     outc << "  }\n";
   }
   if (isa<CXXConstructorDecl>(M)) {
-    if (may_recurse)
-      outc << "  --calldepth;\n";
-    outc << "  return new ";
+    outc << "  auto r = new ";
     if (M->getParent()->isAbstract())
       outc << "concrete_impl(g" << (M->param_empty() ? "" : ", ");
     else {
@@ -599,8 +597,10 @@ void RamFuzz::gen_method(const Twine &hname, const CXXMethodDecl *M,
     register_enum(*valty);
   }
   outc << ");\n";
-  if (!isa<CXXConstructorDecl>(M) && may_recurse)
+  if (may_recurse)
     outc << "  --calldepth;\n";
+  if (isa<CXXConstructorDecl>(M))
+    outc << "  return r;\n";
   outc << "}\n\n";
 }
 
