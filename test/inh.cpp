@@ -21,6 +21,10 @@ int main(int argc, char *argv[]) {
   gen g(argc, argv);
   while (g.make<Base>(true)->id() != 0x5c)
     ;
+  while (g.make<ClientByRef>()->trace != (0xba | 0x5c))
+    ;
+  while (g.make<ClientByPtr>()->trace != (0xba | 0x5c))
+    ;
   return g.make<Base>()->id() != 0xba;
 }
 

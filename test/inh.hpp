@@ -16,12 +16,24 @@
 
 class Base {
 public:
-  virtual int id() { return 0xba; }
-  int m1(Base &b) { return b.id(); }
-  int m2(Base *b) { return b->id(); }
-  int m3(Base b) { return b.id(); }
+  virtual int id() const { return 0xba; }
+  int m1(Base &b) const { return b.id(); }
+  int m2(Base *b) const { return b->id(); }
+  int m3(Base b) const { return b.id(); }
 };
 
 class Subcl : public Base {
-  int id() { return 0x5c; }
+  int id() const { return 0x5c; }
+};
+
+class ClientByRef {
+public:
+  int trace = 0;
+  void m(const Base &b) { trace |= b.id(); }
+};
+
+class ClientByPtr {
+public:
+  int trace = 0;
+  void m(const Base *b) { trace |= b->id(); }
 };

@@ -591,7 +591,8 @@ void RamFuzz::gen_method(const Twine &hname, const CXXMethodDecl *M,
     outc << "*g.make<"
          << valty.getDesugaredType(ctx).getUnqualifiedType().stream(prtpol);
     ntimes(ptrcnt, "*", outc);
-    outc << ">()";
+    outc << ">(" << (ptrcnt || ram->getType()->isReferenceType() ? "true" : "")
+         << ")";
     if (ptrcnt > 1)
       outc << ")";
     register_enum(*valty);
