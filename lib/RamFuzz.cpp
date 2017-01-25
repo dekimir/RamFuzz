@@ -527,7 +527,7 @@ void RamFuzz::gen_submakers_defs(const Inheritance &inh) {
       for (const auto &subcls : found->getValue())
         outc << cls << "* submakerfn" << next_maker_fn++
              << "(runtime::gen& g) { return g.make<" << subcls.first()
-             << ">(); }\n";
+             << ">(true); }\n";
       outc << "} // anonymous namespace\n";
       outc << cls << "*(*const harness<" << cls
            << ">::submakers[])(runtime::gen&) = { ";
