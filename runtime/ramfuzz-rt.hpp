@@ -108,8 +108,8 @@ public:
   /// indexes it.  When replaying the log, this value could be modified without
   /// affecting the replay of the rest of the log.
   ///
-  /// There are several overloads for different kinds of T: fundamental types,
-  /// pointers, classes, etc.
+  /// There are several overloads for different kinds of T: arithmetic types,
+  /// classes, pointers, etc.
   ///
   /// If allow_subclass is true, the result may be an object of T's subclass.
   template <typename T>
