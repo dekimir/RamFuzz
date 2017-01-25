@@ -408,16 +408,13 @@ void RamFuzz::gen_concrete_methods(const CXXRecordDecl *C, const string &cls,
       auto rety =
           M->getReturnType().getDesugaredType(ctx).getLocalUnqualifiedType();
       if (!rety->isVoidType()) {
-        outc << "  return ";
-        if (!rety->isPointerType())
-          outc << "*";
-        else
-          rety = rety->getPointeeType();
-        outc << "ramfuzzgenuniquename.make<"
+        outc << "  return *ramfuzzgenuniquename.make<"
              << rfstream(rety.getNonReferenceType().getUnqualifiedType(),
                          prtpol)
-             << ">();\n";
-        register_enum(*rety);
+             << ">("
+             << (rety->isPointerType() || rety->isReferenceType() ? "true" : "")
+             << ");\n";
+        register_enum(*get<0>(ultimate_pointee(rety, ctx)));
       }
       outc << "}\n\n";
     }
