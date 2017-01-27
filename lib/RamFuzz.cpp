@@ -91,9 +91,9 @@ public:
   /// Adds to MF a matcher that will generate RamFuzz code (capturing *this).
   void tackOnto(MatchFinder &MF);
 
-  /// Calculates which classes under test need their RamFuzz control but don't
-  /// have it yet.  This happens when a control class is referenced in RamFuzz
-  /// output code, but its generation hasn't been triggered.
+  /// Calculates which classes under test need their harness specialization but
+  /// don't have it yet.  This happens when a harness class is referenced in
+  /// RamFuzz output code, but its generation hasn't been triggered.
   vector<string> missingClasses();
 
   /// Emits aditional code required for correct compilation.
@@ -144,7 +144,7 @@ private:
   /// from an int.  This constructor internally creates the object under test
   /// using a constructor indicated by the int.
   void
-  gen_int_ctr(const string &cls ///< Namespace for the RamFuzz control class.
+  gen_int_ctr(const string &cls ///< Fully qualified name of class under test.
               );
 
   /// Generates the declaration of member submakers.
@@ -201,8 +201,8 @@ private:
   /// code.
   set<string> referenced_classes;
 
-  /// Qualified names of classes under test whose control classes have been
-  /// generated.
+  /// Qualified names of classes under test whose harness specializations have
+  /// been generated.
   set<string> processed_classes;
 
   /// Enum types for which parameters have been generated.  Maps the enum name

@@ -17,6 +17,9 @@
 class Base {
 public:
   virtual int id() const { return 0xba0; }
+
+  // Without this, two assignment operators dominate the method roulette, and
+  // they're particularly prone to depth-limit breach.
   bool operator=(const Base &) = delete;
 };
 

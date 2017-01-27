@@ -4,42 +4,80 @@ RamFuzz is a fuzzer for individual method parameters in unit tests.  A unit test
 
 This allows a combination of two testing techniques so powerful they have been [called](https://ep2015.europython.eu/conference/talks/testing-with-two-failure-seeking-missiles-fuzzing-and-property-based-testing) "failure seeking missiles": property-based testing and fuzz testing.  Property-based testing verifies code invariants over a wide range of randomly generated parameter values -- essentially unit testing with endless variations of every test case.  Fuzzing is a way of mutating a program's input until it fails.  Both have been used to discover many hard-to-find bugs but have not, so far, been combined in a general tool.  As discussed on [this blog](http://danluu.com/testing/), combining them should make property-based testing find bugs faster and more directly.
 
-RamFuzz also includes a tool that can generate random objects of any class.  It works by reading the class source code and generating from it test code that creates an instance via a randomly chosen constructor, then proceeds to invoke a random sequence of instance methods with randomly generated arguments.  The resulting object can then be used in property testing of methods that take it as a parameter.  The generated code can also be manually adapted to itself become property tests.
+Random parameter values aren't limited to just fundamental types: RamFuzz can also automatically produce random objects of any class from the user's code. This allows the user to fuzz methods that accept class parameters. For example, if a method takes an `int`, a `struct S`, and a `class C` as parameters, RamFuzz can randomly generate them all!  The test writer needn't worry about the technicalities of creating `S` and `C` objects; RamFuzz will do it automatically.
 
-RamFuzz currently supports C++ (with some limitations that we're working to remove -- please see "Known Limitations" below).  It is provided under the Apache 2.0 license.
+To accomplish this, RamFuzz includes a code generator that reads the C++ source code and generates from it some test code. This test code creates a class instance via a randomly chosen constructor, then proceeds to invoke a random sequence of instance methods with randomly generated arguments. The result is a random class object that can be fed to any method taking that class as a paremeter.
 
-## How to Use the Mutation Functionality
+Of course, this produces superficial tests that likely aren't very useful on average -- most methods don't take completely random parameters but constrain them in some way.  The intent is that these constraints can be inferred automatically from the logs of many RamFuzz test runs.  Because tests are randomized, each run is a different scenario that adds coverage of the code under test.  If the quality of randomness is good, then running tests repeatedly for a long time will cover a wide range of possible parameter values, likely including some perfectly valid tests.  These logs can then be used, for example, to train an AI to recognize which parameter values are valid.  Alternatively, fuzzing strategies can be used to steer the evolution of parameter-value generation towards valid tests.
 
-Simply add the source files under [runtime](runtime) to your project.  See [ramfuzz-rt.hpp](runtime/ramfuzz-rt.hpp) comments for instructions on how to generate random values, replay logs, and mutate log regions.
+RamFuzz itself doesn't include any specific ways of using logs to tune the parameter-value generation -- it only aims to provide logs sufficiently varied to be useful.  Similarly, RamFuzz doesn't automatically generate test assertions on the results of method invocations.  Other projects will be created to accomplish that automatically, but RamFuzz will make it possible by conveniently handling parameter fuzzing and logging.
 
-For example, this code will print two identical arrays of random integers:
+RamFuzz is provided under the Apache 2.0 license.  It currently supports only C++ on input (please see "Known Limitations" below), and it requires C++11 support for compiling its output code and runtime.
+
+## How to Use
+
+The `bin/ramfuzz` executable (in LLVM build, see "How to Build" below) generates test code from C++ headers declaring the classes under test.  Say we have a header file `a.hpp` with the following contents:
 
 ```c++
-#include <iostream>
+class Base {
+public:
+  unsigned sum = 0;
+  void bump(unsigned delta) { sum += delta; }
+  virtual char id() const { return 'B'; }
+};
 
-#include "ramfuzz/runtime/ramfuzz-rt.hpp"
-
-int main() {
-  {
-    ramfuzz::runtime::gen g1("fuzzlog1");
-    std::cout << "generated: [";
-    for (int i = 0, n = g1.between(0, 10); i < n; ++i)
-      std::cout << ' ' << g1.any<int>();
-    std::cout << " ]\n";
-  }
-  {
-    ramfuzz::runtime::gen g2("fuzzlog1", "fuzzlog2");
-    std::cout << "replay: [";
-    for (int i = 0, n = g2.between(0, 10); i < n; ++i)
-      std::cout << ' ' << g2.any<int>();
-    std::cout << " ]\n";
-  }
-}
+class Sub : public Base {
+public:
+  char id() const override { return 'S'; }
+};
 ```
 
-## How to Use the Code Generator
+We feed this header to `bin/ramfuzz` like this:
+```sh
+~/src/llvmbuild/bin/ramfuzz a.hpp -- -std=c++11
+```
 
-The `bin/ramfuzz` executable (in LLVM build, see "How to Build" below) generates test code from C++ headers declaring the classes under test.  Instructions for its use are in [main.cpp](main.cpp).  You can see examples in the [test](test) directory, where each `.hpp` file is processed by `bin/ramfuzz` and the result linked with the eponymous `.cpp` file during testing.
+The result is two files named `fuzz.hpp` and `fuzz.cpp`.  These, together with the [RamFuzz runtime](runtime), contain code that can generate random objects of class `Base`.  The interface is simple: just invoke `runtime::gen::make<Base>()`, and you get an object of type `Base`.  Here is a program to demonstrate it:
+```c++
+#include <iostream>
+#include "fuzz.hpp"
+
+int main(int argc, char *argv[]) {
+  ramfuzz::runtime::gen g(argc, argv);
+  for (;;) {
+    const auto b = g.make<Base>(g.or_subclass);
+    std::cout << b->id() << b->sum << std::endl;
+  }
+}
+
+unsigned ramfuzz::runtime::spinlimit = 2;
+```
+
+Including `fuzz.hpp` brings in all the required declarations, including the RamFuzz runtime.  The `runtime::gen` object keeps RNG state, manages logging, and provides the `make()` method for creating random values of any type.  It is documented in [runtime/ramfuzz-rt.hpp](runtime/ramfuzz-rt.hpp).  The above program simply generates random `Base` objects and prints them out in an infinite loop.
+
+Say the above code is in a file named `main.cpp` in the same directory as `fuzz.*` and `ramfuzz-rt.*`.  Then we can compile it like this:
+```sh
+ c++ -std=c++11 main.cpp fuzz.cpp ramfuzz-rt.cpp 
+```
+
+Here's an excerpt from the resulting executable's output:
+```
+B0
+B1034171753
+B390426976
+S0
+B1608827789
+B1581714349
+S0
+B277714725
+B1526711793
+S0
+B0
+```
+
+Note that `make<Base>(or_subclass)` sometimes produces a `B` object and sometimes an `S` one.  The created objects will have their methods (including `bump()`) invoked a random number of times in random order with random arguments -- this is how a random `Base` is created.
+
+You can see more examples in the [test](test) directory, where each `.hpp` file is processed by `bin/ramfuzz` and the result linked with the eponymous `.cpp` file during testing.
 
 ### Known Limitations
 
@@ -47,15 +85,12 @@ C++ is a huge language, so the code generator is a work in progress.  Although i
 - most template code
 - STL containers other than `vector` and `string`
 - array arguments
-- pure virtual methods that return a reference or a pointer (though other aspects of abstract base classes are supported)
 
 These limitations will typically manifest themselves as ill-formed C++ on the output.
 
-It is also worth noting that the random objects produced by the generated code are unconstrained in any way, so they may not adhere to the requirements of code under test.  This may be fine for some tests, but others will likely require some manual adaptation of the generated code.
+## How to Build
 
-## How to Build the Code Generator
-
-1. **Get Clang:** the RamFuzz code genertor is a Clang tool, so first get and build Clang using [these instructions](http://clang.llvm.org/get_started.html).  RamFuzz is known to work with Clang/LLVM version 3.8.1.
+1. **Get Clang:** the RamFuzz code generator is a Clang tool, so first get and build Clang using [these instructions](http://clang.llvm.org/get_started.html).  RamFuzz is known to work with Clang/LLVM version 4.0.0 and has been successfully tested with version 3.8.1.
 
 2. **Drop RamFuzz into Clang:** RamFuzz source is intended to go under `clang/tools/extra` and build from there (as described in [this](http://clang.llvm.org/docs/LibASTMatchersTutorial.html#step-1-create-a-clangtool) Clang tutorial).  Drop the top-level RamFuzz directory into `clang/tools/extra` and add it (using `add_subdirectory`) to `clang/tools/extra/CMakeLists.txt`.
 
@@ -63,7 +98,7 @@ It is also worth noting that the random objects produced by the generated code a
 
 4. **Run Tests:** There are some end-to-end tests in the [`test`](test) directory -- see [`test.py`](test/test.py) there.  There are also unit tests in the [`unittests`](unittests) directory.  RamFuzz adds a new build target `check-ramfuzz`, which executes all unit- and end-to-end tests.  The end-to-end tests depend on `bin/ramfuzz`, so `bin/ramfuzz` will be rebuilt before testing if it's out of date.
 
-## Contributing
+## How to Contribute
 
 RamFuzz welcomes contributions by the community.  Each contributor will retain copyright over their code but must sign the developer certificate in the [CONTRIBUTORS](CONTRIBUTORS) file by adding their name/contact to the list and using the `-s` flag in all commits.
 
