@@ -19,9 +19,9 @@ using namespace runtime;
 
 int main(int argc, char *argv[]) {
   gen g(argc, argv);
-  while (g.make<Base>(true)->id() != 0x5c1)
+  while (g.make<Base>(g.or_subclass)->id() != 0x5c1)
     ;
-  while (g.make<Base>(true)->id() != 0x5c2)
+  while (g.make<Base>(g.or_subclass)->id() != 0x5c2)
     ;
   return g.make<Base>()->id() != 0xba;
 }

@@ -34,24 +34,8 @@
 /// options directly.)
 ///
 /// For every class in an input file (but not in other headers #included from
-/// input files), it generates a _control class_ in the ramfuzz namespace.  The
-/// control class is in charge of creating an instance of the class under test
-/// and invoking its methods with random parameter values.  The control class is
-/// named to encode the fully qualified name of the class under test.  For
-/// example, if the class under test is a::b::C, then the control class will be
-/// named ramfuzz::rfa_b_C::control.  See test/namespace.cpp for real-life
-/// examples.
-///
-/// The control class has one method for each public non-static method of the
-/// class under test.  The control method, when invoked, generates random
-/// arguments and invokes the corresponding method under test.  Control methods
-/// take no arguments, as they are self-contained and generate parameter values
-/// internally.  The control class also has a constructor that constructs the
-/// object under test using any one of its public constructors.  So a random
-/// object under test may be obtained by constructing the control class and then
-/// randomly invoking its methods to exercise the under-test instance.  This is
-/// called spinning the method roulette.  See method gen::make() in
-/// runtime/ramfuzz-rt.hpp for an example of this process.
+/// input files), it generates a specialization of ramfuzz::harness.  See
+/// ramfuzz-rt.hpp for details of the ramfuzz::harness interface.
 ///
 /// Exit code is 0 on success, 1 on a Clang-reported error, and 2 if more input
 /// is needed to generate full testing code.  For explanation of 2, consider
@@ -60,15 +44,16 @@
 /// class Foo;
 /// struct Bar { void process_foo(Foo& foo); };
 ///
-/// Upon seeing the process_foo() declaration, ramfuzz will generate code to
-/// exercise this method with a random Foo value.  But that code will reference
-/// Foo's control class ramfuzz::rfFoo::control.  If ramfuzz doesn't see Foo's
-/// definition, its control class will never get generated, so Bar's control
-/// will fail to compile with an error like "use of undeclared identifier
-/// 'rfFoo'".  Since ramfuzz keeps track of whether Foo's control is generated
-/// or not, it can detect this situation and return the exit code 2 to warn the
-/// user that the generated code is incomplete.  In that case, ramfuzz will also
-/// print to standard error a list of classes whose controls are missing.
+/// Upon seeing the process_foo() declaration, ramfuzz will generate a
+/// harness<Bar> method to invoke process_foo() with a random argument.  But
+/// that code will reference harness<Foo>, attempting to generate a random Foo
+/// object.  If ramfuzz doesn't see Foo's definition, it won't generate the
+/// harness<Foo> specialization, so harness<Bar> will fail to compile.
+///
+/// Since ramfuzz keeps track of whether harness<Foo> is generated or not, it
+/// can detect this situation and return the exit code 2 to warn the user that
+/// the generated code is incomplete.  In that case, ramfuzz will also print to
+/// standard error a list of classes whose harness specializations are missing.
 ///
 /// Keep in mind that ramfuzz only generates code for its input files and not
 /// for other files #included from them.  It is thus possible to get exit status

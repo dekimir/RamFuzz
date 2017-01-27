@@ -31,6 +31,31 @@
 namespace ramfuzz {
 
 /// RamFuzz harness for testing C objects.
+///
+/// The harness class maintains an internal object of type C, visible via a
+/// member named obj.  There is an interface for invoking obj's methods with
+/// random parameters, as described below.
+///
+/// The harness class has one method for each public non-static method of C.  A
+/// harness method, when invoked, generates random arguments and invokes the
+/// corresponding method under test.  Harness methods take no arguments, as they
+/// are self-contained and generate random values internally.  Their return type
+/// is void (except for constructors, as described below).
+///
+/// Each of C's public constructors also gets a harness method.  These harness
+/// methods allocate a new C and invoke the corresponding C constructor.  They
+/// return a pointer to the constructed object.
+///
+/// The count of constructor harness methods is kept in a member named ccount.
+/// There is also a member named croulette; it's an array of ccount method
+/// pointers, one for each constructor method.  The harness class itself has a
+/// constructor that constructs a C instance using a randomly chosen C
+/// constructor.  This constructor takes a runtime::gen reference as a
+/// parameter.
+///
+/// The count of non-constructor harness methods is kept in a member named
+/// mcount.  There is also a member named mroulette; it's an array of mcount
+/// method pointers, one for each non-constructor harness method.
 template <class C> class harness;
 
 namespace runtime {
@@ -120,7 +145,6 @@ public:
         between(std::numeric_limits<T>::min(), std::numeric_limits<T>::max()));
   }
 
-  // TODO: avoid slicing!
   template <typename T>
   T *make(typename std::enable_if<std::is_class<T>::value, bool>::type
               allow_subclass = false) {
@@ -150,6 +174,9 @@ public:
     using pointee = typename std::remove_pointer<T>::type;
     return new T(make<typename std::remove_cv<pointee>::type>(allow_subclass));
   }
+
+  /// Handy name for invoking make<T>(or_subclass).
+  static constexpr bool or_subclass = true;
 
   /// Returns a random value of type T between lo and hi, inclusive, logs it,
   /// and indexes it.  When replaying the log, this value could be modified
