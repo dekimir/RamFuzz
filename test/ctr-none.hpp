@@ -20,6 +20,7 @@ public:
   static B *create() { return new B; }
   int sum = 2;
   void f(int i) { sum += 7; }
+  void g(const B &) { sum -= 5; }
 
 private:
   B() = default;

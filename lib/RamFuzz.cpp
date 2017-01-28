@@ -156,15 +156,6 @@ private:
   /// processed so far.
   void gen_submakers_defs(const Inheritance &inh);
 
-  /// Generates early exit from RamFuzz method \c name, corresponding to the
-  /// method under test \c M.  The exit code prints \c reason as the reason for
-  /// exiting early, then returns \c failval.  The exit code is multiple
-  /// statements, so the caller may need to generate a pair of braces around it.
-  void early_exit(const Twine &loc,     ///< Code location for logging purposes.
-                  const Twine &failval, ///< Value to return in early exit.
-                  const Twine &reason   ///< Exit reason, for logging purposes.
-                  );
-
   /// True iff M's harness method may recursively call itself.  For example, a
   /// copy constructor's harness needs to construct another object of the same
   /// type, which involves a second harness that may itself call the copy
@@ -537,14 +528,6 @@ void RamFuzz::gen_submakers_defs(const Inheritance &inh) {
   }
 }
 
-void RamFuzz::early_exit(const Twine &loc, const Twine &failval,
-                         const Twine &reason) {
-  outc << "    std::cout << \"" << loc << " exiting early due to " << reason
-       << "\" << std::endl;\n";
-  outc << "    --calldepth;\n";
-  outc << "    return " << failval << ";\n";
-}
-
 bool RamFuzz::harness_may_recurse(const CXXMethodDecl *M,
                                   const ASTContext &ctx) {
   for (const auto &ram : M->parameters())
@@ -558,13 +541,13 @@ bool RamFuzz::harness_may_recurse(const CXXMethodDecl *M,
 void RamFuzz::gen_method(const Twine &hname, const CXXMethodDecl *M,
                          const ASTContext &ctx, bool may_recurse) {
   outc << hname << "() {\n";
-  if (may_recurse) {
-    outc << "  if (++calldepth >= depthlimit && safectr) {\n";
-    early_exit(hname, isa<CXXConstructorDecl>(M) ? "(this->*safectr)()" : "",
-               "call depth limit");
-    outc << "  }\n";
-  }
   if (isa<CXXConstructorDecl>(M)) {
+    if (may_recurse) {
+      outc << "  if (++calldepth >= depthlimit && safectr) {\n";
+      outc << "    --calldepth;\n";
+      outc << "    return (this->*safectr)();\n";
+      outc << "  }\n";
+    }
     outc << "  auto r = new ";
     if (M->getParent()->isAbstract())
       outc << "concrete_impl(g" << (M->param_empty() ? "" : ", ");
@@ -572,8 +555,15 @@ void RamFuzz::gen_method(const Twine &hname, const CXXMethodDecl *M,
       M->getParent()->printQualifiedName(outc);
       outc << "(";
     }
-  } else
+  } else {
+    if (may_recurse) {
+      outc << "  if (++calldepth >= depthlimit) {\n";
+      outc << "    --calldepth;\n";
+      outc << "    return;\n";
+      outc << "  }\n";
+    }
     outc << "  obj." << *M << "(";
+  }
   bool first = true;
   for (const auto &ram : M->parameters()) {
     if (!first)
