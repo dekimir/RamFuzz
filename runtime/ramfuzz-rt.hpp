@@ -56,6 +56,11 @@ namespace ramfuzz {
 /// The count of non-constructor harness methods is kept in a member named
 /// mcount.  There is also a member named mroulette; it's an array of mcount
 /// method pointers, one for each non-constructor harness method.
+///
+/// A member named subcount contains the number of C's direct subclasses.  A
+/// member named submakers is an array of subcount pointers to functions of type
+/// C*(runtime::gen&).  Each direct subclass D has a submakers element that
+/// creates a random D object and returns a pointer to it.
 template <class C> class harness;
 
 namespace runtime {
