@@ -134,9 +134,12 @@ public:
   /// arguments) or replays the log file named by its first argument.
   gen(int argc, const char *const *argv, size_t k = 1);
 
-  /// Returns an unconstrained random value of numeric type T, logs it, and
-  /// indexes it.  When replaying the log, this value could be modified without
-  /// affecting the replay of the rest of the log.
+  /// Returns an unconstrained value of numeric type T, logs it, and indexes it.
+  /// The value is random in "generate" mode but read from the input log in
+  /// "replay" mode.
+  ///
+  /// When the output log is replayed in the future, this value could be
+  /// modified without affecting the replay of the rest of the log.
   ///
   /// There are several overloads for different kinds of T: arithmetic types,
   /// classes, pointers, etc.
@@ -183,9 +186,12 @@ public:
   /// Handy name for invoking make<T>(or_subclass).
   static constexpr bool or_subclass = true;
 
-  /// Returns a random value of type T between lo and hi, inclusive, logs it,
-  /// and indexes it.  When replaying the log, this value could be modified
-  /// without affecting the replay of the rest of the log.
+  /// Returns a value of numeric type T between lo and hi, inclusive, logs it,
+  /// and indexes it.  The value is random in "generate" mode but read from the
+  /// input log in "replay" mode.
+  ///
+  /// When the output log is replayed in the future, this value could be
+  /// modified without affecting the replay of the rest of the log.
   template <typename T> T between(T lo, T hi) {
     olog_index << "0|" << olog.tellp();
     T val = gen_or_read(lo, hi);
