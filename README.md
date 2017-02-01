@@ -77,6 +77,8 @@ B0
 
 Note that `make<Base>(or_subclass)` sometimes produces a `B` object and sometimes an `S` one.  The created objects will have their methods (including `bump()`) invoked a random number of times in random order with random arguments -- this is how a random `Base` is created.
 
+As the executable runs, it logs the random numbers generated into a file named `fuzzlog`.  And this log can be replayed by running the executable again with `fuzzlog` as the command-line argument -- that will execute the same code paths and print the same output again.
+
 You can see more examples in the [test](test) directory, where each `.hpp` file is processed by `bin/ramfuzz` and the result linked with the eponymous `.cpp` file during testing.
 
 ### Known Limitations
