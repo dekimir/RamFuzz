@@ -30,8 +30,10 @@ public:
 using ns2::Abst;
 
 class B {
-public:
   int sum = 5;
+
+public:
+  int get() const { return sum; }
   void f1(const std::vector<ns1::A *> &v) {
     if (!v.empty())
       sum = v[0]->f() / 2;

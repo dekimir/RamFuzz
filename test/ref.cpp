@@ -19,7 +19,7 @@ int main(int argc, char *argv[]) {
   ramfuzz::harness<A> ra(g, 0);
   for (auto m : ra.mroulette)
     (ra.*m)();
-  if (ra.obj.sum != 220)
+  if (ra.obj.get() != 220)
     return 1;
   else
     return 0;

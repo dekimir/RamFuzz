@@ -13,7 +13,8 @@
 // limitations under the License.
 
 class B {
-public:
   int sum = 1;
+public:
+  int get() const { return sum; }
   void f(int i) { sum += 7; }
 };

@@ -20,7 +20,7 @@ int main(int argc, char *argv[]) {
   ramfuzz::harness<B> rb(g, b);
   for (auto m : rb.mroulette)
     (rb.*m)();
-  if (b.sum != 11)
+  if (b.get() != 11)
     return 1;
   else
     return 0;

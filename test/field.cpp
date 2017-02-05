@@ -12,10 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-class C {
-  int sum = 0;
+#include "fuzz.hpp"
 
-public:
-  int get() const { return sum; }
-  void f(const int) { sum += 32; }
-};
+using namespace ramfuzz;
+
+int main(int argc, char *argv[]) {
+  runtime::gen g(argc, argv);
+  while (g.make<C>()->s == 0)
+    ;
+}
+
+unsigned runtime::spinlimit = 3;

@@ -13,13 +13,17 @@
 // limitations under the License.
 
 class A {
-public:
   int sum = 0;
+
+public:
   A() { sum += 10; }
+  int get() const { return sum; }
 };
 
 class B {
-public:
   int sum = 1;
-  void f(A a) { sum += a.sum; }
+
+public:
+  int get() const { return sum; }
+  void f(A a) { sum += a.get(); }
 };

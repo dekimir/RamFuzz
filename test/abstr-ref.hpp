@@ -15,14 +15,18 @@
 /// Tests pure methods returning a reference.
 
 class A {
-public:
-  virtual int *f1(unsigned) = 0;
-  virtual A& f2() = 0;
   int sum = 11;
+
+public:
+  int get() const { return sum; }
+  virtual int *f1(unsigned) = 0;
+  virtual A &f2() = 0;
 };
 
 class B {
-public:
-  void g(A &a) { sum += a.sum * 100; }
   int sum = 22;
+
+public:
+  int get() const { return sum; }
+  void g(A &a) { sum += a.get() * 100; }
 };

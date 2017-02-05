@@ -16,13 +16,7 @@
 
 int main(int argc, char *argv[]) {
   ramfuzz::runtime::gen g(argc, argv);
-  ramfuzz::harness<B> rb(g, ramfuzz::harness<B>::ccount - 1);
-  for (auto m : rb.mroulette)
-    (rb.*m)();
-  ramfuzz::harness<C> rc(g, ramfuzz::harness<C>::ccount - 1);
-  for (auto m : rc.mroulette)
-    (rc.*m)();
-  return rb.obj.sum != 42 || rc.obj.sum != 43;
+  return g.make<B>()->get() != 42 || g.make<C>()->sum != 43;
 }
 
 unsigned ::ramfuzz::runtime::spinlimit = 3;

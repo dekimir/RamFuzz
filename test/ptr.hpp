@@ -13,15 +13,19 @@
 // limitations under the License.
 
 class A {
-public:
   int num = -12;
+
+public:
   A() : num(3) {}
+  int get() const { return num; }
 };
 
 class B {
-public:
   int sum = 0;
-  void f(int *p, A *a) { sum += bool(p) * a->num; }
+
+public:
+  int get() const { return sum; }
+  void f(int *p, A *a) { sum += bool(p) * a->get(); }
   void g(double ***&p) {}
   void h1(void **p) {}
   void h2(const void **p) {}

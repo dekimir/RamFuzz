@@ -19,8 +19,10 @@ enum D { d1 = -999999, d2, d3 };
 }
 
 class B {
-public:
   int sum = 411;
+
+public:
+  int get() const { return sum; }
   void f(E e) { sum += e / 300; }
   int g(NS::D d) { return d; }
 };

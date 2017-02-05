@@ -26,9 +26,11 @@ struct S {
 template <typename T> struct ST { T t; };
 
 class A {
-public:
   int sum = 3;
+
+public:
   A(const std::vector<double> &) {}
+  int get() const { return sum; }
   virtual std::vector<unsigned> f(const std::vector<bool> *) = 0;
   virtual void g1(std::vector<Element>) = 0;
   virtual void g2(const std::vector<Element>) = 0;
@@ -50,9 +52,11 @@ public:
 };
 
 class C {
-public:
   int sum = 33;
-  void g(const NS::A &a, B &b) { sum -= a.sum * b.m; }
+
+public:
+  int get() const { return sum; }
+  void g(const NS::A &a, B &b) { sum -= a.get() * b.m; }
 };
 
 #include "ramfuzz-rt.hpp"

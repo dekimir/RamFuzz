@@ -14,12 +14,12 @@
 
 #include "fuzz.hpp"
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
   ramfuzz::runtime::gen g(argc, argv);
   ramfuzz::harness<B> rb(g, 0);
   for (auto m : rb.mroulette)
     (rb.*m)();
-  return rb.obj.sum != 11;
+  return rb.obj.get() != 11;
 }
 
 unsigned ::ramfuzz::runtime::spinlimit = 3;

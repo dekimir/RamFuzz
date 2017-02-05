@@ -17,27 +17,36 @@ struct R {
 };
 
 class A {
-public:
   int sum = 21;
+
+public:
   A(int) {}
-  A(const R&) {}
+  A(const R &) {}
+  int get() const { return sum; }
   virtual unsigned f1() = 0;
-  virtual void f2(int, double, R&, bool) const = 0;
+  virtual void f2(int, double, R &, bool) const = 0;
+
 protected:
   A(double, double) {}
+
 private:
   A(double) {}
   virtual R f3(unsigned) = 0;
 };
 
-struct B {
+class B {
   int sum = 4000;
+
+public:
+  int get() const { return sum; }
   virtual float g(bool) = 0;
 };
 
 class C {
-public:
   int sum = 300;
-  void g(const A& a) { sum += a.sum; }
-  void g(const B& b) { sum += b.sum; }
+
+public:
+  int get() const { return sum; }
+  void g(const A &a) { sum += a.get(); }
+  void g(const B &b) { sum += b.get(); }
 };

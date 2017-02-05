@@ -18,7 +18,7 @@ using namespace ramfuzz;
 
 int main(int argc, char *argv[]) {
   runtime::gen g(argc, argv);
-  return g.make<A>()->sum != 0;
+  return g.make<A>()->get() != 0;
 }
 
 unsigned runtime::spinlimit = 3;

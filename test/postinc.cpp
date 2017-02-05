@@ -20,7 +20,7 @@ int main(int argc, char *argv[]) {
   ramfuzz::harness<C> rc(g, c);
   for (auto m : rc.mroulette)
     (rc.*m)();
-  return (c.sum != 10);
+  return c.get() != 10;
 }
 
 unsigned ::ramfuzz::runtime::spinlimit = 3;

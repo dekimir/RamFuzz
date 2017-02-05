@@ -15,8 +15,10 @@
 #include <vector>
 namespace ns1 {
 class A {
-public:
   int sum = 0;
+
+public:
+  int get() const { return sum; }
   void a(std::vector<int>) { sum += 3; }
 };
 } // namespace ns1

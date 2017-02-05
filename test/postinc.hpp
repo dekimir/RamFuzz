@@ -13,7 +13,9 @@
 // limitations under the License.
 
 class C {
-public:
   int sum = 0;
+
+public:
+  int get() const { return sum; }
   void operator++(int) { sum += 10; }
 };

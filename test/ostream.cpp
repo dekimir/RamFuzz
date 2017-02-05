@@ -18,7 +18,7 @@ using namespace ramfuzz::runtime;
 
 int main() {
   gen g("fuzzlog1");
-  return g.make<A>()->t != 8421;
+  return g.make<A>()->get() != 8421;
 }
 
 unsigned ::ramfuzz::runtime::spinlimit = 3;

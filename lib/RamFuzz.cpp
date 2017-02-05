@@ -664,6 +664,20 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
       outh << "; }\n";
       ctrs = true;
     }
+    for (const auto f : C->fields()) {
+      const auto ty = f->getType();
+      if (f->getAccess() == AS_public && !ty.isConstQualified() &&
+          !ty->getAsCXXRecordDecl()) {
+        const Twine name = Twine("random_") + f->getName();
+        outh << "  void " << name << namecount[name.str()] << "();\n";
+        outc << "void harness<" << cls << ">::" << name << namecount[name.str()]
+             << "() {\n";
+        outc << "  obj." << *f << " = *g.make<" << rfstream(ty, prtpol)
+             << ">();\n";
+        outc << "}\n";
+        namecount[name.str()]++;
+      }
+    }
     gen_mroulette(cls, namecount);
     if (ctrs) {
       gen_int_ctr(cls);
@@ -709,7 +723,8 @@ void RamFuzz::tackOnto(MatchFinder &MF) {
   static const auto matcher =
       cxxRecordDecl(isExpansionInMainFile(),
                     unless(hasAncestor(namespaceDecl(isAnonymous()))),
-                    hasDescendant(cxxMethodDecl(isPublic())))
+                    anyOf(hasDescendant(cxxMethodDecl(isPublic())),
+                          hasDescendant(fieldDecl(isPublic()))))
           .bind("class");
   MF.addMatcher(matcher, this);
 }

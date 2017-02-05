@@ -23,14 +23,17 @@ public:
 
 // Some of B's methods are implicitly deleted because of A.
 class B {
-public:
-  B() : a(0){};
   A a;
   int sum = 42;
+
+public:
+  B() : a(0){};
+  int get() const { return sum; }
 };
 
 // Some of C's methods are implicitly deleted because of const members.
 class C {
+
 public:
   C() = default;
   const int sum = 43;

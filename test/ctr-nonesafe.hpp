@@ -18,15 +18,19 @@
 class B;
 
 class A {
-public:
   int id;
+
+public:
   A() { id = 123; }
   A(B &b);
   A(B *b);
+  int get() const { return id; }
 };
 
 class B {
-public:
   int id;
-  B(A a) { id = a.id; }
+
+public:
+  B(A a) { id = a.get(); }
+  int get() const { return id; }
 };

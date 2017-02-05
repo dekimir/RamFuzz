@@ -16,8 +16,10 @@
 
 namespace NS {
 class A {
-public:
   int sum = 3;
+
+public:
+  int get() const { return sum; }
   virtual std::string f1(std::string) = 0;
   virtual std::string &f2(std::string &) = 0;
   virtual std::string f3(const std::string) = 0;
@@ -28,7 +30,9 @@ public:
 }
 
 class C {
-public:
   int sum = 53;
-  void g(const NS::A &a) { sum -= a.sum; }
+
+public:
+  int get() const { return sum; }
+  void g(const NS::A &a) { sum -= a.get(); }
 };

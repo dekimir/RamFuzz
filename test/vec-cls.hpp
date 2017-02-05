@@ -21,8 +21,10 @@ public:
 };
 
 class B {
-public:
   int sum = 0;
+
+public:
+  int get() const { return sum; }
   void g(const std::vector<A> &v) { sum += v.size() ? v[0].f() - 5 : 5; }
 };
 

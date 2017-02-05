@@ -18,10 +18,10 @@ using namespace ramfuzz;
 
 int main(int argc, char *argv[]) {
   runtime::gen g(argc, argv);
-  return g.make<B>()->id != 123;
+  return g.make<B>()->get() != 123;
 }
 
-A::A(B &b) { id = b.id; }
-A::A(B *b) { id = b->id; }
+A::A(B &b) { id = b.get(); }
+A::A(B *b) { id = b->get(); }
 
 unsigned runtime::spinlimit = 2;

@@ -12,10 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+/// Tests randomization of data fields.
+
 class C {
-  int sum = 0;
+  float f1 = 0;
 
 public:
-  int get() const { return sum; }
-  void f(const int) { sum += 32; }
+  int s = 0;
+  const float f2 = 0;
+};
+
+struct S {
+  int s = 0;
+  const float f = 0;
 };

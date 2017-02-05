@@ -18,12 +18,14 @@ struct R {
 };
 
 class A {
-public:
   int sum = 40;
+
+public:
   A(int) {}
-  A(const R& ) {}
+  A(const R &) {}
+  int get() const { return sum; }
   virtual unsigned f1() = 0;
-  virtual void f2(int, double, R& , bool) const = 0;
+  virtual void f2(int, double, R &, bool) const = 0;
 
 protected:
   A(double, double) {}
@@ -35,7 +37,9 @@ private:
 }
 
 class C {
-public:
   int sum = 2;
-  void g(const NS::A& a) { sum += a.sum; }
+
+public:
+  void g(const NS::A &a) { sum += a.get(); }
+  int get() const { return sum; }
 };

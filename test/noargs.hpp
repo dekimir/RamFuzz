@@ -13,8 +13,10 @@
 // limitations under the License.
 
 class C {
-public:
   int sum = 0;
+
+public:
+  int get() const { return sum; }
   void a() { sum += 100; }
   void b() { sum += 20; }
   void c() { sum += 3; }

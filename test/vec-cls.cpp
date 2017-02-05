@@ -19,7 +19,7 @@ int main(int argc, char *argv[]) {
   ramfuzz::harness<ns1::B> rb1(g, 0);
   for (auto m : rb1.mroulette)
     (rb1.*m)();
-  return (rb1.obj.sum != 5);
+  return (rb1.obj.get() != 5);
 }
 
 unsigned ::ramfuzz::runtime::spinlimit = 3;

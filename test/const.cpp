@@ -14,13 +14,13 @@
 
 #include "fuzz.hpp"
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
   ramfuzz::runtime::gen g(argc, argv);
   C c;
   ramfuzz::harness<C> rc(g, c);
   for (auto m : rc.mroulette)
     (rc.*m)();
-  if (c.sum != 32)
+  if (c.get() != 32)
     return 1;
   else
     return 0;

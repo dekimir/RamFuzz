@@ -20,19 +20,21 @@ public:
 
 protected:
   virtual int f2(unsigned) = 0;
-  virtual A1* f3() = 0;
+  virtual A1 *f3() = 0;
 };
 
 class B1 : public A1 {
 public:
   virtual float g1(bool) = 0;
   virtual int f2(unsigned) = 0;
-  virtual B1* f3() = 0;
+  virtual B1 *f3() = 0;
 };
 
 class C1 : public B1 {
-public:
   int sum = 300;
+
+public:
+  int get() const { return sum; }
 };
 
 class A2 {
@@ -46,14 +48,18 @@ protected:
 class B2 : public A2 {};
 
 class C2 : public B2, public B1 {
-public:
   int sum = 4000;
+
+public:
+  int get() const { return sum; }
 };
 
 class D {
-public:
   int sum = 21;
-  D(C1 &c1, C2 &c2) { sum += c1.sum + c2.sum; }
+
+public:
+  D(C1 &c1, C2 &c2) { sum += c1.get() + c2.get(); }
+  int get() const { return sum; }
 
 private:
   D(const D &) = delete;

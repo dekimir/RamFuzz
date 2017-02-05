@@ -20,7 +20,7 @@ int main(int argc, char *argv[]) {
   runtime::gen g(argc, argv);
   harness<C> rc(g, 0);
   rc.g0();
-  return rc.obj.sum != 50;
+  return rc.obj.get() != 50;
 }
 
 unsigned ::ramfuzz::runtime::spinlimit = 3;

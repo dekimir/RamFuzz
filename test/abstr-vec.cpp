@@ -21,7 +21,7 @@ int main(int argc, char *argv[]) {
   harness<C> rc(g, 0);
   for (auto m : rc.mroulette)
     (rc.*m)();
-  return (rc.obj.sum != 30);
+  return (rc.obj.get() != 30);
 }
 
 unsigned runtime::spinlimit = 3;

@@ -15,8 +15,10 @@
 /// Tests generation of void* parameters.
 
 class A {
-public:
   int sum = 0;
+
+public:
+  int get() const { return sum; }
   bool foo(void *p) {
     if (p)
       *reinterpret_cast<char *>(p) = 'c';

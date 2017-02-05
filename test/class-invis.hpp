@@ -13,9 +13,9 @@
 // limitations under the License.
 
 /// This is much like class.hpp, except it includes many classes that can't have
-/// a RamFuzz control because they're not visible outside their immediate
-/// context.  Trying to declare a RamFuzz control for such classes will result
-/// in compilation errors.
+/// a harness specialization because they're not visible outside their immediate
+/// context.  Trying to specialize harness for such classes will result in
+/// compilation errors.
 
 class A {
   class A2 {
@@ -27,9 +27,12 @@ class A {
     T foo(char) { return 0; }
   };
 
-public:
   int sum = 0;
+
+public:
   A() { sum += 10; }
+  int get() const { return sum; }
+
   TA2<double> ta2;
 
   class A3 {
@@ -58,9 +61,11 @@ public:
 };
 
 class B {
-public:
   int sum = 1;
-  void f(A a, const A::A7 &a7) { sum += a.sum * a7.one(); }
+
+public:
+  int get() const { return sum; }
+  void f(A a, const A::A7 &a7) { sum += a.get() * a7.one(); }
 };
 
 namespace NS1 {
