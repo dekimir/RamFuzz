@@ -19,11 +19,13 @@ public:
   virtual int *f1(unsigned) = 0;
   virtual A *f2() = 0;
   virtual void *f3() = 0;
-  int sum = 11;
+  const int sum = 11;
 };
 
 class B {
+  int sum = 22;
+
 public:
   void g(A &a) { sum += a.sum * 100; }
-  int sum = 22;
+  int get() const { return sum; }
 };

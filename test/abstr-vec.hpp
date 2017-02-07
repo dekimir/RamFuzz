@@ -47,7 +47,7 @@ public:
 using std::vector;
 class B {
 public:
-  int m = 1;
+  const int m = 1;
   virtual int s(const vector<int> &) = 0;
 };
 
