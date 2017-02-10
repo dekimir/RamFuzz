@@ -52,21 +52,15 @@ template <typename RealT> RealT rbetween(RealT lo, RealT hi, ranlux24 &gen) {
 namespace ramfuzz {
 namespace runtime {
 
-gen::gen(const string &ologname)
-    : runmode(generate), olog(ologname), olog_index(ologname + ".i") {
+gen::gen(const string &ologname) : runmode(generate), olog(ologname) {
   if (!olog)
     throw file_error("Cannot open " + ologname);
-  if (!olog_index)
-    throw file_error("Cannot open " + ologname + ".i");
 }
 
 gen::gen(const string &ilogname, const string &ologname)
-    : runmode(replay), olog(ologname), olog_index(ologname + ".i"),
-      ilog(ilogname), ilog_ctl(ilogname + ".c"), to_skip(ilog_ctl) {
+    : runmode(replay), olog(ologname), ilog(ilogname) {
   if (!olog)
     throw file_error("Cannot open " + ologname);
-  if (!olog_index)
-    throw file_error("Cannot open " + ologname + ".i");
   if (!ilog)
     throw file_error("Cannot open " + ilogname);
 }
@@ -78,22 +72,14 @@ gen::gen(int argc, const char *const *argv, size_t k) {
     ilog.open(argstr);
     if (!ilog)
       throw file_error("Cannot open " + argstr);
-    ilog_ctl.open(argstr + ".c");
-    to_skip = skip(ilog_ctl);
     olog.open(argstr + "+");
     if (!olog)
       throw file_error("Cannot open " + argstr + "+");
-    olog_index.open(argstr + "+.i");
-    if (!olog_index)
-      throw file_error("Cannot open " + argstr + "+.i");
   } else {
     runmode = generate;
     olog.open("fuzzlog");
     if (!olog)
       throw file_error("Cannot open fuzzlog");
-    olog_index.open("fuzzlog.i");
-    if (!olog_index)
-      throw file_error("Cannot open fuzzlog.i");
   }
 }
 
@@ -177,17 +163,6 @@ template <>
 unsigned char gen::uniform_random<unsigned char>(unsigned char lo,
                                                  unsigned char hi) {
   return ibetween(lo, hi, rgen);
-}
-
-gen::skip::skip(istream &str) : valid(false) {
-  if (!(str >> start_))
-    return;
-  if (!(str >> end_)) {
-    std::cerr << "warning: no end position in control file\n";
-    return;
-  }
-  valid = true;
-  str.ignore(numeric_limits<streamsize>::max(), '\n');
 }
 
 } // namespace runtime
