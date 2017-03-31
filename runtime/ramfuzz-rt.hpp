@@ -280,11 +280,10 @@ template <class CharT, class Traits>
 class harness<std::basic_istream<CharT, Traits>> {
   // Declare first to initialize early; constructors may use it.
   runtime::gen &g;
-  std::unique_ptr<std::string> s;
 
 public:
   std::basic_istringstream<CharT, Traits> obj;
-  harness(runtime::gen &g) : g(g), s(g.make<std::string>()), obj(*s) {}
+  harness(runtime::gen &g) : g(g), obj(*g.make<std::string>()) {}
   std::basic_istream<CharT, Traits> *release() {
     return new std::basic_istringstream<CharT, Traits>(obj.str());
   }
