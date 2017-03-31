@@ -102,8 +102,8 @@ public:
   /// arguments) or replays the log file named by its first argument.
   gen(int argc, const char *const *argv, size_t k = 1);
 
-  /// Returns an unconstrained value of numeric type T and logs it.  The value
-  /// is random in "generate" mode but read from the input log in "replay" mode.
+  /// Returns an unconstrained value of type T and logs it.  The value is random
+  /// in "generate" mode but read from the input log in "replay" mode.
   ///
   /// If allow_subclass is true, the result may be an object of T's subclass.
   template <typename T> T *make(bool allow_subclass = false) {
