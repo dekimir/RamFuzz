@@ -131,6 +131,7 @@ public:
     else
       ilog.read(reinterpret_cast<char *>(&val), sizeof(val));
     olog.write(reinterpret_cast<char *>(&val), sizeof(val));
+    olog2 << val << '\n';
     return val;
   }
 
@@ -207,7 +208,7 @@ private:
   std::ranlux24 rgen = std::ranlux24(std::random_device{}());
 
   /// Output log.
-  std::ofstream olog;
+  std::ofstream olog, olog2;
 
   /// Input log in replay mode.
   std::ifstream ilog;
