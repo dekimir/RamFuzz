@@ -109,13 +109,12 @@ public:
   template <typename T> T *make(bool allow_subclass = false) {
     auto &oldies = storage[std::type_index(typeid(T))];
     if (!oldies.empty() && reuse())
+      // Note we don't check allow_subclass here, so T's storage must never hold
+      // subclass objects, only actual Ts.
       return reinterpret_cast<T *>(
           oldies[between<size_t>(0, oldies.size() - 1)]);
-    else {
-      const auto p = makenew<T>(allow_subclass);
-      oldies.push_back(p);
-      return p;
-    }
+    else
+      return makenew<T>(allow_subclass);
   }
 
   /// Handy name for invoking make<T>(or_subclass).
@@ -135,6 +134,12 @@ public:
   }
 
 private:
+  /// Stores p as the newest element in T's storage.  Returns p.
+  template <typename T> T *store(T *p) {
+    storage[std::type_index(typeid(T))].push_back(p);
+    return p;
+  }
+
   /// Like the public make(), but creates a brand new object and never returns
   /// previously created ones.
   ///
@@ -144,8 +149,8 @@ private:
   T *makenew(typename std::enable_if<std::is_arithmetic<T>::value ||
                                          std::is_enum<T>::value,
                                      bool>::type allow_subclass = false) {
-    return new T(
-        between(std::numeric_limits<T>::min(), std::numeric_limits<T>::max()));
+    return store(new T(
+        between(std::numeric_limits<T>::min(), std::numeric_limits<T>::max())));
   }
 
   template <typename T>
@@ -161,21 +166,22 @@ private:
         for (auto i = 0u, e = between(0u, runtime::spinlimit); i < e; ++i)
           (h.*h.mroulette[between(0u, h.mcount - 1)])();
       }
-      return h.release();
+      return store(h.release());
     }
   }
 
   template <typename T>
   T *makenew(
       typename std::enable_if<std::is_void<T>::value, bool>::type = false) {
-    return new char[between(1, 4196)];
+    return store<void>(new char[between(1, 4196)]);
   }
 
   template <typename T>
   T *makenew(typename std::enable_if<std::is_pointer<T>::value, bool>::type
                  allow_subclass = false) {
     using pointee = typename std::remove_pointer<T>::type;
-    return new T(make<typename std::remove_cv<pointee>::type>(allow_subclass));
+    return store(
+        new T(make<typename std::remove_cv<pointee>::type>(allow_subclass)));
   }
 
   /// Returns a random value distributed uniformly between lo and hi, inclusive.
