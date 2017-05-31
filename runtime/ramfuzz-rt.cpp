@@ -47,13 +47,31 @@ template <typename RealT> RealT rbetween(RealT lo, RealT hi, ranlux24 &gen) {
   return uniform_real_distribution<RealT>{lo, hi}(gen);
 }
 
+/// Declares and initializes an unwind context and cursor.
+#define CURSORINIT(context_var, cursor_var)                                    \
+  unw_context_t context_var;                                                   \
+  unw_getcontext(&context_var);                                                \
+  unw_cursor_t cursor_var;                                                     \
+  unw_init_local(&cursor_var, &context_var);
+
+/// Returns the value of the PC (program counter) register inside itself.
+/// Useful as an arbitrary base PC from which to calculate relative offsets of
+/// all other code's PCs.
+unw_word_t get_pc() {
+  CURSORINIT(ctx, curs);
+  unw_word_t pc;
+  unw_get_reg(&curs, UNW_REG_IP, &pc);
+  return pc;
+}
+
 } // anonymous namespace
 
 namespace ramfuzz {
 namespace runtime {
 
 gen::gen(const string &ologname)
-    : runmode(generate), olog(ologname), olog2(ologname + "-ai") {
+    : runmode(generate), olog(ologname), olog2(ologname + "-ai"),
+      base_pc(get_pc()) {
   if (!olog)
     throw file_error("Cannot open " + ologname);
   if (!olog2)
@@ -61,7 +79,8 @@ gen::gen(const string &ologname)
 }
 
 gen::gen(const string &ilogname, const string &ologname)
-    : runmode(replay), olog(ologname), olog2(ologname + "-ai"), ilog(ilogname) {
+    : runmode(replay), olog(ologname), olog2(ologname + "-ai"), ilog(ilogname),
+      base_pc(get_pc()) {
   if (!olog)
     throw file_error("Cannot open " + ologname);
   if (!olog2)
@@ -70,7 +89,7 @@ gen::gen(const string &ilogname, const string &ologname)
     throw file_error("Cannot open " + ilogname);
 }
 
-gen::gen(int argc, const char *const *argv, size_t k) {
+gen::gen(int argc, const char *const *argv, size_t k) : base_pc(get_pc()) {
   if (k < static_cast<size_t>(argc) && argv[k]) {
     runmode = replay;
     const string argstr(argv[k]);
@@ -92,6 +111,28 @@ gen::gen(int argc, const char *const *argv, size_t k) {
     if (!olog2)
       throw file_error("Cannot open fuzzlog-ai");
   }
+}
+
+size_t gen::valueid() {
+  CURSORINIT(ctx, curs);
+  size_t stacktrace_hash = 0; // "Stack trace" = a vector of all callers' PCs.
+  while (unw_step(&curs)) {
+    unw_word_t pc;
+    unw_get_reg(&curs, UNW_REG_IP, &pc);
+    // Cribbed from boost::hash_combine().
+    stacktrace_hash ^= pc - base_pc + 0x9e3779b9 + (stacktrace_hash << 6) +
+                       (stacktrace_hash >> 2);
+  }
+  // A stack trace doesn't uniquely identify the value currently being
+  // generated.  Loops in the program may execute the same location multiple
+  // times, yielding multiple dynamic instances of the same stack trace.  Since
+  // a value ID should be unique, add the stacktrace's dynamic count to its
+  // hash.
+  //
+  // TODO: this doesn't actually guarantee unique value IDs, as this sum may
+  // happen to be identical for two different stack traces.  Fix this if it
+  // proves a problem in practice.
+  return stacktrace_hash + state_count[stacktrace_hash]++;
 }
 
 template <> bool gen::uniform_random<bool>(bool lo, bool hi) {
