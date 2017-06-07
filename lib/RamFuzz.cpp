@@ -226,9 +226,11 @@ raw_ostream &operator<<(raw_ostream &, const rfstream &);
 /// https://github.com/dekimir/RamFuzz/issues/1).
 class rfstream {
 public:
+  /// Prepares to stream the given type.
   rfstream(const QualType &ty, const PrintingPolicy &prtpol)
       : ty(ty), prtpol(prtpol) {}
 
+  /// Prints the constructor's argument \p ty out to \p os.
   void print(raw_ostream &os) const {
     if (auto el = ty->getAs<ElaboratedType>()) {
       print_cv(os);
@@ -252,13 +254,19 @@ public:
       os << rfstream(ty.getNonReferenceType(), prtpol) << '&';
       // TODO: handle lvalue references.
     } else if (ty->isPointerType()) {
-      os << rfstream(ty->getPointeeType(), prtpol) << '*';
+      const auto ptee = ty->getPointeeType();
+      if (const auto funty = ptee->getAs<FunctionProtoType>()) {
+        os << rfstream(funty->getReturnType(), prtpol) << "(*)";
+        print(os, funty->getParamTypes());
+      } else
+        os << rfstream(ptee, prtpol) << '*';
     } else
       ty.print(os, prtpol);
     // TODO: make this fully equivalent to TypePrinter, handling all possible
     // types or cleverly deferring to it.
   }
 
+  /// Prints "const " and/or "volatile " to \p os if appropriate.
   void print_cv(raw_ostream &os) const {
     if (ty.isLocalConstQualified())
       os << "const ";
@@ -266,6 +274,7 @@ public:
       os << "volatile ";
   }
 
+  /// Prints \p name to \p os.
   void print(raw_ostream &os, const TemplateName &name) const {
     if (auto decl = name.getAsTemplateDecl())
       decl->printQualifiedName(os, prtpol);
@@ -273,6 +282,7 @@ public:
       name.print(os, prtpol);
   }
 
+  /// Prints \p qual to \p os.
   void print(raw_ostream &os, const NestedNameSpecifier &qual) const {
     if (qual.getPrefix())
       qual.getPrefix()->print(os, prtpol);
@@ -299,6 +309,17 @@ public:
       break;
     }
     os << "::";
+  }
+
+  /// Prints all elements of \p typelist to \p os, surrounded by parentheses and
+  /// separated by commas.
+  void print(raw_ostream &os, const ArrayRef<QualType> typelist) const {
+    os << '(';
+    for (auto cur = typelist.begin(); cur != typelist.end(); ++cur) {
+      if (cur != typelist.begin()) os << ", ";
+      os << rfstream(*cur, prtpol);
+    }
+    os << ')';
   }
 
 private:

@@ -184,6 +184,15 @@ private:
         new T(make<typename std::remove_cv<pointee>::type>(allow_subclass)));
   }
 
+  template <typename T>
+  T *makenew(typename std::enable_if<std::is_function<T>::value, bool>::type
+                 allow_subclass = false) {
+    // TODO: implement.  Either capture \c this somehow to make() a value of the
+    // return type; or select randomly one of existing functions in the program
+    // that fit the signature.
+    return 0;
+  }
+
   /// Returns a random value distributed uniformly between lo and hi, inclusive.
   /// Logs the value in olog.
   template <typename T> T uniform_random(T lo, T hi);
