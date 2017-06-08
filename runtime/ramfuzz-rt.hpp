@@ -154,8 +154,9 @@ private:
   }
 
   template <typename T>
-  T *makenew(typename std::enable_if<std::is_class<T>::value, bool>::type
-                 allow_subclass = false) {
+  T *makenew(typename std::enable_if<std::is_class<T>::value ||
+                                         std::is_union<T>::value,
+                                     bool>::type allow_subclass = false) {
     if (harness<T>::subcount && allow_subclass && between(0., 1.) > 0.5) {
       return (
           *harness<T>::submakers[between(size_t{0}, harness<T>::subcount - 1)])(
