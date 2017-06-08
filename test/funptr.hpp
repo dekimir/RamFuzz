@@ -14,7 +14,9 @@
 
 class A {
 public:
-  void* (*f0)();
-  void* (*f1)(int);
-  void* (*f2)(int, float);
+  void *(*f0)();
+  void *(*f1)(int);
+  void *(*f2)(int, float);
+
+  int consumes_funptr(void*, void (*)(void*)) { return -234; };
 };

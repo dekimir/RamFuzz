@@ -316,7 +316,8 @@ public:
   void print(raw_ostream &os, const ArrayRef<QualType> typelist) const {
     os << '(';
     for (auto cur = typelist.begin(); cur != typelist.end(); ++cur) {
-      if (cur != typelist.begin()) os << ", ";
+      if (cur != typelist.begin())
+        os << ", ";
       os << rfstream(*cur, prtpol);
     }
     os << ')';
@@ -370,12 +371,6 @@ tuple<QualType, unsigned> ultimate_pointee(QualType ty, const ASTContext &ctx) {
     ++indir_cnt;
   }
   return make_tuple(ty, indir_cnt);
-}
-
-/// Streams str n consecutive times to os.
-void ntimes(unsigned n, const string &str, raw_ostream &os) {
-  while (n--)
-    os << str;
 }
 
 } // anonymous namespace
@@ -597,8 +592,8 @@ void RamFuzz::gen_method(const Twine &hname, const CXXMethodDecl *M,
       // Avoid deep const mismatch: can't pass int** for const int** parameter.
       outc << "const_cast<" << ram->getType().stream(prtpol) << ">(";
     outc << "*g.make<"
-         << valty.getDesugaredType(ctx).getUnqualifiedType().stream(prtpol);
-    ntimes(ptrcnt, "*", outc);
+         << rfstream(ram->getType().getNonReferenceType().getUnqualifiedType(),
+                     prtpol);
     outc << ">(" << (ptrcnt || ram->getType()->isReferenceType() ? "true" : "")
          << ")";
     if (ptrcnt > 1)
