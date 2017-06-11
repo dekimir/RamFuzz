@@ -224,13 +224,9 @@ constexpr unsigned depthlimit = 20;
 } // namespace runtime
 
 template <> class harness<std::exception> {
-private:
-  // Declare first to initialize early; constructors may use it.
-  runtime::gen &g;
-
 public:
   std::exception obj;
-  harness(runtime::gen &g) : g(g) {}
+  harness(runtime::gen &) {}
   std::exception *release() { return new std::exception(obj); }
   operator bool() const { return true; }
   using mptr = void (harness::*)();
@@ -314,7 +310,8 @@ public:
 };
 
 template <class CharT, class Traits>
-struct harness<std::basic_ostream<CharT, Traits>> {
+class harness<std::basic_ostream<CharT, Traits>> {
+public:
   std::basic_ostringstream<CharT, Traits> obj;
   harness(runtime::gen &g) {}
   std::basic_ostream<CharT, Traits> *release() {
