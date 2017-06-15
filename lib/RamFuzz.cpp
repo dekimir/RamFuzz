@@ -218,23 +218,36 @@ string valident(const string &mname) {
   return transf;
 }
 
-class rfstream;
-raw_ostream &operator<<(raw_ostream &, const rfstream &);
+/// An object that can be streamed to raw_ostream.  Subclassed for concrete
+/// content.
+class streamable {
+public:
+  /// Streams content to \p os.
+  virtual void print(raw_ostream &os) const = 0;
+
+  virtual ~streamable() = default;
+};
+
+/// Streams contents of \p thiz to \p os.
+raw_ostream &operator<<(raw_ostream &os, const streamable &thiz) {
+  thiz.print(os);
+  return os;
+}
 
 /// A streaming adapter for QualType.  Prints C++ code that compiles correctly
 /// in the RamFuzz context (unlike Clang's TypePrinter:
 /// https://github.com/dekimir/RamFuzz/issues/1).
-class rfstream {
+class type_streamer : public streamable {
 public:
   /// Prepares to stream the given type.
-  rfstream(const QualType &ty, const PrintingPolicy &prtpol)
+  type_streamer(const QualType &ty, const PrintingPolicy &prtpol)
       : ty(ty), prtpol(prtpol) {}
 
   /// Prints the constructor's argument \p ty out to \p os.
-  void print(raw_ostream &os) const {
+  void print(raw_ostream &os) const override {
     if (auto el = ty->getAs<ElaboratedType>()) {
       print_cv(os);
-      os << rfstream(el->desugar(), prtpol);
+      os << type_streamer(el->desugar(), prtpol);
     } else if (auto spec = ty->getAs<TemplateSpecializationType>()) {
       print_cv(os);
       print(os, spec->getTemplateName());
@@ -242,7 +255,7 @@ public:
       for (auto arg : spec->template_arguments()) {
         os << (first ? '<' : ',') << ' '; // Space after < avoids <:.
         if (arg.getKind() == TemplateArgument::Type)
-          os << rfstream(arg.getAsType(), prtpol);
+          os << type_streamer(arg.getAsType(), prtpol);
         else
           arg.print(prtpol, os);
         first = false;
@@ -251,15 +264,15 @@ public:
     } else if (auto td = ty->getAs<TypedefType>()) {
       td->getDecl()->printQualifiedName(os, prtpol);
     } else if (ty->isReferenceType()) {
-      os << rfstream(ty.getNonReferenceType(), prtpol) << '&';
+      os << type_streamer(ty.getNonReferenceType(), prtpol) << '&';
       // TODO: handle lvalue references.
     } else if (ty->isPointerType()) {
       const auto ptee = ty->getPointeeType();
       if (const auto funty = ptee->getAs<FunctionProtoType>()) {
-        os << rfstream(funty->getReturnType(), prtpol) << "(*)";
+        os << type_streamer(funty->getReturnType(), prtpol) << "(*)";
         print(os, funty->getParamTypes());
       } else
-        os << rfstream(ptee, prtpol) << '*';
+        os << type_streamer(ptee, prtpol) << '*';
     } else
       ty.print(os, prtpol);
     // TODO: make this fully equivalent to TypePrinter, handling all possible
@@ -303,7 +316,7 @@ public:
     case NestedNameSpecifier::TypeSpecWithTemplate:
       os << "template "; // Fallthrough!
     case NestedNameSpecifier::TypeSpec:
-      os << rfstream(QualType(qual.getAsType(), 0), prtpol);
+      os << type_streamer(QualType(qual.getAsType(), 0), prtpol);
       break;
     default:
       break;
@@ -318,7 +331,7 @@ public:
     for (auto cur = typelist.begin(); cur != typelist.end(); ++cur) {
       if (cur != typelist.begin())
         os << ", ";
-      os << rfstream(*cur, prtpol);
+      os << type_streamer(*cur, prtpol);
     }
     os << ')';
   }
@@ -328,18 +341,15 @@ private:
   const PrintingPolicy &prtpol;
 };
 
-raw_ostream &operator<<(raw_ostream &os, const rfstream &thiz) {
-  thiz.print(os);
-  return os;
-}
-
-class rfstream2 {
+/// Streams a method's name.
+class method_streamer : public streamable {
 public:
-  rfstream2(const CXXMethodDecl &m, const PrintingPolicy &prtpol)
+  method_streamer(const CXXMethodDecl &m, const PrintingPolicy &prtpol)
       : m(m), prtpol(prtpol) {}
-  void print(raw_ostream &os) const {
+  void print(raw_ostream &os) const override {
     if (const auto con = dyn_cast<CXXConversionDecl>(&m))
-      os << "operator " << rfstream(con->getConversionType(), prtpol);
+      // Stream the conversion type's name correctly.
+      os << "operator " << type_streamer(con->getConversionType(), prtpol);
     else
       os << m;
   }
@@ -348,11 +358,6 @@ private:
   const CXXMethodDecl &m;
   const PrintingPolicy &prtpol;
 };
-
-raw_ostream &operator<<(raw_ostream &os, const rfstream2 &thiz) {
-  thiz.print(os);
-  return os;
-}
 
 /// Given a (possibly qualified) class name, returns its constructor's name.
 const char *ctrname(const string &cls) {
@@ -423,11 +428,11 @@ void RamFuzz::gen_concrete_methods(const CXXRecordDecl *C, const string &cls,
       to_skip.insert(*M);
       const auto bg = M->param_begin(), en = M->param_end();
       const auto mcom = [bg](decltype(bg) &P) { return P == bg ? "" : ", "; };
-      auto Mrty = rfstream(M->getReturnType(), prtpol);
+      auto Mrty = type_streamer(M->getReturnType(), prtpol);
       outh << "    " << Mrty << " " << *M << "(";
       outc << Mrty << " harness<" << cls << ">::concrete_impl::" << *M << "(";
       for (auto P = bg; P != en; ++P) {
-        auto Pty = rfstream((*P)->getType(), prtpol);
+        auto Pty = type_streamer((*P)->getType(), prtpol);
         outh << mcom(P) << Pty;
         outc << mcom(P) << Pty;
       }
@@ -437,8 +442,8 @@ void RamFuzz::gen_concrete_methods(const CXXRecordDecl *C, const string &cls,
           M->getReturnType().getDesugaredType(ctx).getLocalUnqualifiedType();
       if (!rety->isVoidType()) {
         outc << "  return *ramfuzzgenuniquename.make<"
-             << rfstream(rety.getNonReferenceType().getUnqualifiedType(),
-                         prtpol)
+             << type_streamer(rety.getNonReferenceType().getUnqualifiedType(),
+                              prtpol)
              << ">("
              << (rety->isPointerType() || rety->isReferenceType() ? "true" : "")
              << ");\n";
@@ -464,7 +469,7 @@ void RamFuzz::gen_concrete_impl(const CXXRecordDecl *C, const ASTContext &ctx) {
         const auto bg = M->param_begin(), en = M->param_end();
         const auto mcom = [bg](decltype(bg) &P) { return P == bg ? "" : ", "; };
         for (auto P = bg; P != en; ++P)
-          outh << ", " << rfstream((*P)->getType(), prtpol) << " p"
+          outh << ", " << type_streamer((*P)->getType(), prtpol) << " p"
                << P - bg + 1;
         C->printQualifiedName(outh << ") \n      : ");
         outh << "(";
@@ -599,7 +604,7 @@ void RamFuzz::gen_method(const Twine &hname, const CXXMethodDecl *M,
       outc << "    return;\n";
       outc << "  }\n";
     }
-    outc << "  obj." << rfstream2(*M, prtpol) << "(";
+    outc << "  obj." << method_streamer(*M, prtpol) << "(";
   }
   bool first = true;
   for (const auto &ram : M->parameters()) {
@@ -613,8 +618,9 @@ void RamFuzz::gen_method(const Twine &hname, const CXXMethodDecl *M,
       // Avoid deep const mismatch: can't pass int** for const int** parameter.
       outc << "const_cast<" << ram->getType().stream(prtpol) << ">(";
     outc << "*g.make<"
-         << rfstream(ram->getType().getNonReferenceType().getUnqualifiedType(),
-                     prtpol);
+         << type_streamer(
+                ram->getType().getNonReferenceType().getUnqualifiedType(),
+                prtpol);
     outc << ">(" << (ptrcnt || ram->getType()->isReferenceType() ? "true" : "")
          << ")";
     if (ptrcnt > 1)
@@ -709,7 +715,7 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
         outh << "  void " << name << namecount[name.str()] << "();\n";
         outc << "void harness<" << cls << ">::" << name << namecount[name.str()]
              << "() {\n";
-        outc << "  obj." << *f << " = *g.make<" << rfstream(ty, prtpol)
+        outc << "  obj." << *f << " = *g.make<" << type_streamer(ty, prtpol)
              << ">();\n";
         outc << "}\n";
         namecount[name.str()]++;
