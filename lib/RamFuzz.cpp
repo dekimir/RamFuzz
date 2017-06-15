@@ -333,6 +333,27 @@ raw_ostream &operator<<(raw_ostream &os, const rfstream &thiz) {
   return os;
 }
 
+class rfstream2 {
+public:
+  rfstream2(const CXXMethodDecl &m, const PrintingPolicy &prtpol)
+      : m(m), prtpol(prtpol) {}
+  void print(raw_ostream &os) const {
+    if (const auto con = dyn_cast<CXXConversionDecl>(&m))
+      os << "operator " << rfstream(con->getConversionType(), prtpol);
+    else
+      os << m;
+  }
+
+private:
+  const CXXMethodDecl &m;
+  const PrintingPolicy &prtpol;
+};
+
+raw_ostream &operator<<(raw_ostream &os, const rfstream2 &thiz) {
+  thiz.print(os);
+  return os;
+}
+
 /// Given a (possibly qualified) class name, returns its constructor's name.
 const char *ctrname(const string &cls) {
   const auto found = cls.rfind("::");
@@ -578,7 +599,7 @@ void RamFuzz::gen_method(const Twine &hname, const CXXMethodDecl *M,
       outc << "    return;\n";
       outc << "  }\n";
     }
-    outc << "  obj." << *M << "(";
+    outc << "  obj." << rfstream2(*M, prtpol) << "(";
   }
   bool first = true;
   for (const auto &ram : M->parameters()) {
