@@ -247,7 +247,7 @@ public:
 
   harness(runtime::gen &g) : g(g) {
     obj.resize(g.between(0u, 1000u));
-    for (int i = 0; i < obj.size(); ++i)
+    for (size_t i = 0; i < obj.size(); ++i)
       obj[i] = *g.make<typename std::remove_cv<Tp>::type>();
   }
 
@@ -271,7 +271,7 @@ public:
   std::basic_string<CharT, Traits, Allocator> obj;
   harness(runtime::gen &g) : g(g) {
     obj.resize(g.between(1u, 1000u));
-    for (int i = 0; i < obj.size() - 1; ++i)
+    for (size_t i = 0; i < obj.size() - 1; ++i)
       obj[i] = g.between<CharT>(1, std::numeric_limits<CharT>::max());
     obj.back() = CharT(0);
   }
