@@ -23,6 +23,7 @@ namespace {
 
 using namespace std;
 using namespace testing;
+using ramfuzz::ClassDetails;
 using ramfuzz::Inheritance;
 using ramfuzz::InheritanceBuilder;
 
@@ -131,6 +132,29 @@ TEST(InheritanceTest, Regression2) {
   // type!"
   EXPECT_TRUE(hasInheritance("template <class T> struct A : public T {};",
                              {{"T", {"A"}}}));
+}
+
+TEST(ClassDetailsTest, Template) {
+  ClassDetails cldeets;
+  EXPECT_FALSE(cldeets.isTemplate("class1"));
+  cldeets.setIsTemplate("class1", true);
+  EXPECT_TRUE(cldeets.isTemplate("class1"));
+  cldeets.setIsTemplate("class2");
+  EXPECT_TRUE(cldeets.isTemplate("class2"));
+  cldeets.setIsTemplate("class1", false);
+  EXPECT_FALSE(cldeets.isTemplate("class1"));
+}
+
+TEST(ClassDetailsTest, AccessSpecifier) {
+  ClassDetails cldeets;
+  cldeets.setAccessSpecifier("default");
+  EXPECT_EQ(clang::AS_public, cldeets.getAccessSpecifier("default"));
+  cldeets.setAccessSpecifier("public", clang::AS_public);
+  EXPECT_EQ(clang::AS_public, cldeets.getAccessSpecifier("public"));
+  cldeets.setAccessSpecifier("private", clang::AS_private);
+  EXPECT_EQ(clang::AS_private, cldeets.getAccessSpecifier("private"));
+  cldeets.setAccessSpecifier("protected", clang::AS_protected);
+  EXPECT_EQ(clang::AS_protected, cldeets.getAccessSpecifier("protected"));
 }
 
 } // anonymous namespace

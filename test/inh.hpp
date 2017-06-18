@@ -26,6 +26,13 @@ class Subcl : public Base {
   int id() const { return 0x5c; }
 };
 
+// Currently template subclasses are ignored, but this should still compile.
+template<typename T>
+class TemplateSubcl : public Base {
+public:
+  int id = 230894;
+};
+
 class ClientByRef {
 public:
   int trace = 0;

@@ -34,7 +34,8 @@ void InheritanceBuilder::tackOnto(clang::ast_matchers::MatchFinder &MF) {
 
 void InheritanceBuilder::run(const MatchFinder::MatchResult &Result) {
   if (const auto *C = Result.Nodes.getNodeAs<CXXRecordDecl>("class"))
-    for (const auto &base : C->bases())
+    for (const auto &base : C->bases()) {
+      const auto qname = C->getQualifiedNameAsString();
       if (base.getAccessSpecifier() == AS_public) {
         PrintingPolicy prtpol((LangOptions()));
         prtpol.SuppressTagKeyword = true;
@@ -42,8 +43,10 @@ void InheritanceBuilder::run(const MatchFinder::MatchResult &Result) {
         inh[base.getType()
                 .getDesugaredType(*Result.Context)
                 .getAsString(prtpol)]
-            .insert(C->getQualifiedNameAsString());
+            .insert(qname);
       }
+      cdetails.setIsTemplate(qname, C->getDescribedClassTemplate());
+    }
 }
 
 void InheritanceBuilder::process(const llvm::Twine &Code) {

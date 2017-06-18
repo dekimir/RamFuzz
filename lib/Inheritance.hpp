@@ -25,6 +25,33 @@ namespace ramfuzz {
 /// represented by their fully qualified names.
 using Inheritance = llvm::StringMap<llvm::StringSet<>>;
 
+/// Keeps certain details about (sub)classes (represented by their fully
+/// qualified names), such as: is it a template, is it public/protected/private,
+/// etc.
+class ClassDetails {
+public:
+  void setIsTemplate(llvm::StringRef name, bool value = true) {
+    is_template[name] = value;
+  }
+
+  bool isTemplate(llvm::StringRef name) const {
+    return is_template.lookup(name);
+  }
+
+  void setAccessSpecifier(llvm::StringRef name,
+                          clang::AccessSpecifier spec = clang::AS_public) {
+    access_spec[name] = spec;
+  }
+
+  clang::AccessSpecifier getAccessSpecifier(llvm::StringRef name) const {
+    return access_spec.lookup(name);
+  }
+
+private:
+  llvm::StringSet<> is_template;
+  llvm::StringMap<clang::AccessSpecifier> access_spec;
+};
+
 /// Builds up an Inheritance object by analyzing all non-anonymous classes in
 /// some source code.  Can be used standalone via process() or within an
 /// existing ClangTool via tackOnto().
@@ -47,11 +74,12 @@ public:
   void
   run(const clang::ast_matchers::MatchFinder::MatchResult &Result) override;
 
-  const Inheritance &getInheritance() { return inh; }
+  const Inheritance &getInheritance() const { return inh; }
+  const ClassDetails &getClassDetails() const { return cdetails; }
 
 private:
-  /// Result being built.
-  Inheritance inh;
+  Inheritance inh;       ///< Inheritance result being built.
+  ClassDetails cdetails; ///< Class details collected along the way.
 };
 
 } // namespace ramfuzz
