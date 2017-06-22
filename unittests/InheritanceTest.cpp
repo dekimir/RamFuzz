@@ -135,26 +135,15 @@ TEST(InheritanceTest, Regression2) {
 }
 
 TEST(ClassDetailsTest, Template) {
+  const auto ist = ClassDetails::is_template;
   ClassDetails cldeets;
-  EXPECT_FALSE(cldeets.isTemplate("class1"));
-  cldeets.setIsTemplate("class1", true);
-  EXPECT_TRUE(cldeets.isTemplate("class1"));
-  cldeets.setIsTemplate("class2");
-  EXPECT_TRUE(cldeets.isTemplate("class2"));
-  cldeets.setIsTemplate("class1", false);
-  EXPECT_FALSE(cldeets.isTemplate("class1"));
-}
-
-TEST(ClassDetailsTest, AccessSpecifier) {
-  ClassDetails cldeets;
-  cldeets.setAccessSpecifier("default");
-  EXPECT_EQ(clang::AS_public, cldeets.getAccessSpecifier("default"));
-  cldeets.setAccessSpecifier("public", clang::AS_public);
-  EXPECT_EQ(clang::AS_public, cldeets.getAccessSpecifier("public"));
-  cldeets.setAccessSpecifier("private", clang::AS_private);
-  EXPECT_EQ(clang::AS_private, cldeets.getAccessSpecifier("private"));
-  cldeets.setAccessSpecifier("protected", clang::AS_protected);
-  EXPECT_EQ(clang::AS_protected, cldeets.getAccessSpecifier("protected"));
+  EXPECT_FALSE(cldeets.get("class1", ist));
+  cldeets.set("class1", ist, true);
+  EXPECT_TRUE(cldeets.get("class1", ist));
+  cldeets.set("class2", ist, true);
+  EXPECT_TRUE(cldeets.get("class2", ist));
+  cldeets.set("class1", ist, false);
+  EXPECT_FALSE(cldeets.get("class1", ist));
 }
 
 } // anonymous namespace

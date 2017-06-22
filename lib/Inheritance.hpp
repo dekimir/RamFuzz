@@ -14,6 +14,8 @@
 
 #pragma once
 
+#include <vector>
+
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
@@ -26,30 +28,31 @@ namespace ramfuzz {
 using Inheritance = llvm::StringMap<llvm::StringSet<>>;
 
 /// Keeps certain details about (sub)classes (represented by their fully
-/// qualified names), such as: is it a template, is it public/protected/private,
-/// etc.
+/// qualified names), such as: is it a template, is it globally visible, etc.
 class ClassDetails {
 public:
-  void setIsTemplate(llvm::StringRef name, bool value = true) {
-    is_template[name] = value;
+  /// Symbolic names for class details.
+  enum Detail { is_template, is_visible, detail_count = is_visible + 1 };
+
+  /// Sets a class detail to \p val.
+  void set(llvm::StringRef name, Detail d, bool val) {
+    auto &entry = details[name];
+    entry.resize(detail_count);
+    entry[d] = val;
   }
 
-  bool isTemplate(llvm::StringRef name) const {
-    return is_template.lookup(name);
-  }
-
-  void setAccessSpecifier(llvm::StringRef name,
-                          clang::AccessSpecifier spec = clang::AS_public) {
-    access_spec[name] = spec;
-  }
-
-  clang::AccessSpecifier getAccessSpecifier(llvm::StringRef name) const {
-    return access_spec.lookup(name);
+  /// Returns a detail value for a class.
+  bool get(llvm::StringRef name, Detail d) const {
+    auto found = details.find(name);
+    if (found == details.end() || found->second.empty())
+      return false;
+    else
+      return found->second[d];
   }
 
 private:
-  llvm::StringSet<> is_template;
-  llvm::StringMap<clang::AccessSpecifier> access_spec;
+  /// Maps fully qualified class name to a bitfield of binary features.
+  llvm::StringMap<std::vector<bool>> details;
 };
 
 /// Builds up an Inheritance object by analyzing all non-anonymous classes in

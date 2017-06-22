@@ -45,7 +45,8 @@ void InheritanceBuilder::run(const MatchFinder::MatchResult &Result) {
                 .getAsString(prtpol)]
             .insert(qname);
       }
-      cdetails.setIsTemplate(qname, C->getDescribedClassTemplate());
+      cdetails.set(qname, ClassDetails::is_template,
+                   C->getDescribedClassTemplate());
     }
 }
 
