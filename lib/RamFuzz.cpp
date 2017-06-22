@@ -557,7 +557,8 @@ void RamFuzz::gen_submakers_defs(const Inheritance &inh,
       const auto first_maker_fn = next_maker_fn;
       outc << "namespace {\n";
       for (const auto &subcls : found->getValue())
-        if (!cdetails.get(subcls.first(), cdetails.is_template))
+        if (!cdetails.get(subcls.first(), cdetails.is_template) &&
+            cdetails.get(subcls.first(), cdetails.is_visible))
           outc << cls << "* submakerfn" << next_maker_fn++
                << "(runtime::gen& g) { return g.make<" << subcls.first()
                << ">(true); }\n";
