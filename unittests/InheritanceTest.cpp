@@ -146,4 +146,16 @@ TEST(ClassDetailsTest, Template) {
   EXPECT_FALSE(cldeets.get("class1", ist));
 }
 
+TEST(ClassDetailsTest, Visible) {
+  const auto isvis = ClassDetails::is_visible;
+  ClassDetails cldeets;
+  EXPECT_FALSE(cldeets.get("class1", isvis));
+  cldeets.set("class1", isvis, true);
+  EXPECT_TRUE(cldeets.get("class1", isvis));
+  cldeets.set("class2", isvis, true);
+  EXPECT_TRUE(cldeets.get("class2", isvis));
+  cldeets.set("class1", isvis, false);
+  EXPECT_FALSE(cldeets.get("class1", isvis));
+}
+
 } // anonymous namespace
