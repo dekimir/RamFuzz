@@ -23,6 +23,7 @@
 #include <vector>
 
 #include "Inheritance.hpp"
+#include "Util.hpp"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Tooling/Tooling.h"
@@ -364,28 +365,6 @@ private:
 const char *ctrname(const string &cls) {
   const auto found = cls.rfind("::");
   return &cls[found == string::npos ? 0 : found + 2];
-}
-
-/// True iff C is visible outside all its parent contexts.
-bool globally_visible(const CXXRecordDecl *C) {
-  if (!C || !C->getIdentifier())
-    // Anonymous classes may technically be visible, but only through tricks
-    // like decltype.  Skip until there's a compelling use-case.
-    return false;
-  const auto acc = C->getAccess();
-  if (acc == AS_private || acc == AS_protected)
-    return false;
-  const DeclContext *ctx = C->getLookupParent();
-  while (!isa<TranslationUnitDecl>(ctx)) {
-    if (auto ns = dyn_cast<NamespaceDecl>(ctx)) {
-      if (ns->isAnonymousNamespace())
-        return false;
-      ctx = ns->getLookupParent();
-      continue;
-    } else
-      return globally_visible(dyn_cast<CXXRecordDecl>(ctx));
-  }
-  return true;
 }
 
 /// Returns ty's pointee (and if that's a pointer, its pointee, and so on
