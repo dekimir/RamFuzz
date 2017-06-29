@@ -16,14 +16,7 @@
 
 int main(int argc, char *argv[]) {
   ramfuzz::runtime::gen g(argc, argv);
-  B b;
-  ramfuzz::harness<B> rb(g, b);
-  for (auto m : rb.mroulette)
-    (rb.*m)();
-  if (b.get() != 11)
-    return 1;
-  else
-    return 0;
+  return g.make<B>()->get() % 10 != 1;
 }
 
 unsigned ::ramfuzz::runtime::spinlimit = 3;

@@ -19,7 +19,7 @@ using namespace ramfuzz;
 int main(int argc, char *argv[]) {
   runtime::gen g(argc, argv);
   harness<D> d(g, 0);
-  return (d.obj.get() != 4321);
+  return (d.obj->get() != 4321);
 }
 
 unsigned ::ramfuzz::runtime::spinlimit = 3;

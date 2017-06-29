@@ -26,6 +26,6 @@ int main(int argc, char *argv[]) {
   return g.make<C>()->id != 234;
 }
 
-harness<B>::harness(runtime::gen &g) : g(g), pobj(B::create()), obj(*pobj) {}
+harness<B>::harness(runtime::gen &g) : g(g), obj(B::create()) {}
 
 unsigned runtime::spinlimit = 3;

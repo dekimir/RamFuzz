@@ -34,9 +34,9 @@ namespace ramfuzz {
 
 /// RamFuzz harness for testing C objects.
 ///
-/// The harness class maintains an internal object of type C, visible via a
-/// member named obj.  There is an interface for invoking obj's methods with
-/// random parameters, as described below.
+/// The harness class contains a pointer to C as a public member named obj.
+/// There is an interface for invoking obj's methods with random parameters, as
+/// described below.  The harness does not own obj; the client code does.
 ///
 /// The harness class has one method for each public non-static method of C.  A
 /// harness method, when invoked, generates random arguments and invokes the
@@ -167,7 +167,7 @@ private:
         for (auto i = 0u, e = between(0u, runtime::spinlimit); i < e; ++i)
           (h.*h.mroulette[between(0u, h.mcount - 1)])();
       }
-      return store(h.release());
+      return store(h.obj);
     }
   }
 
@@ -225,9 +225,8 @@ constexpr unsigned depthlimit = 20;
 
 template <> class harness<std::exception> {
 public:
-  std::exception obj;
-  harness(runtime::gen &) {}
-  std::exception *release() { return new std::exception(obj); }
+  std::exception *obj;
+  harness(runtime::gen &) : obj(new std::exception) {}
   operator bool() const { return true; }
   using mptr = void (harness::*)();
   static constexpr unsigned mcount = 0;
@@ -243,15 +242,14 @@ private:
   runtime::gen &g;
 
 public:
-  std::vector<Tp, Alloc> obj;
+  std::vector<Tp, Alloc> *obj;
 
-  harness(runtime::gen &g) : g(g) {
-    obj.resize(g.between(0u, 1000u));
-    for (size_t i = 0; i < obj.size(); ++i)
-      obj[i] = *g.make<typename std::remove_cv<Tp>::type>();
+  harness(runtime::gen &g)
+      : g(g), obj(new std::vector<Tp, Alloc>(g.between(0u, 1000u))) {
+    for (size_t i = 0; i < obj->size(); ++i)
+      (*obj)[i] = *g.make<typename std::remove_cv<Tp>::type>();
   }
 
-  std::vector<Tp, Alloc> *release() { return new std::vector<Tp, Alloc>(obj); }
   operator bool() const { return true; }
   using mptr = void (harness::*)();
   static constexpr unsigned mcount = 0;
@@ -268,17 +266,15 @@ private:
   runtime::gen &g;
 
 public:
-  std::basic_string<CharT, Traits, Allocator> obj;
-  harness(runtime::gen &g) : g(g) {
-    obj.resize(g.between(1u, 1000u));
-    for (size_t i = 0; i < obj.size() - 1; ++i)
+  std::basic_string<CharT, Traits, Allocator> *obj;
+  harness(runtime::gen &g)
+      : g(g), obj(new std::basic_string<CharT, Traits, Allocator>(
+                  g.between(1u, 1000u), CharT())) {
+    for (size_t i = 0; i < obj->size() - 1; ++i)
       obj[i] = g.between<CharT>(1, std::numeric_limits<CharT>::max());
-    obj.back() = CharT(0);
+    obj->back() = CharT(0);
   }
   operator bool() const { return true; }
-  std::basic_string<CharT, Traits, Allocator> *release() {
-    return new std::basic_string<CharT, Traits, Allocator>(obj);
-  }
   using mptr = void (harness::*)();
   static constexpr unsigned mcount = 0;
   static constexpr mptr mroulette[] = {};
@@ -294,11 +290,10 @@ class harness<std::basic_istream<CharT, Traits>> {
   runtime::gen &g;
 
 public:
-  std::basic_istringstream<CharT, Traits> obj;
-  harness(runtime::gen &g) : g(g), obj(*g.make<std::string>()) {}
-  std::basic_istream<CharT, Traits> *release() {
-    return new std::basic_istringstream<CharT, Traits>(obj.str());
-  }
+  std::basic_istringstream<CharT, Traits> *obj;
+  harness(runtime::gen &g)
+      : g(g), obj(new std::basic_istringstream<CharT, Traits>(
+                  *g.make<std::string>())) {}
   operator bool() const { return true; }
   using mptr = void (harness::*)();
   static constexpr unsigned mcount = 0;
@@ -312,11 +307,8 @@ public:
 template <class CharT, class Traits>
 class harness<std::basic_ostream<CharT, Traits>> {
 public:
-  std::basic_ostringstream<CharT, Traits> obj;
-  harness(runtime::gen &g) {}
-  std::basic_ostream<CharT, Traits> *release() {
-    return new std::basic_ostringstream<CharT, Traits>;
-  }
+  std::basic_ostringstream<CharT, Traits> *obj;
+  harness(runtime::gen &g) : obj(new std::basic_ostringstream<CharT, Traits>) {}
   operator bool() const { return true; }
   using mptr = void (harness::*)();
   static constexpr unsigned mcount = 0;

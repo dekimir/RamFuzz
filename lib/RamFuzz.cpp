@@ -509,10 +509,9 @@ void RamFuzz::gen_int_ctr(const string &cls) {
   outh << "  // Creates obj internally, using indicated constructor.\n";
   outh << "  harness(runtime::gen& g, unsigned ctr);\n";
   outc << "harness<" << cls << ">::harness(runtime::gen& g, unsigned ctr)\n";
-  outc << "  : g(g), pobj((this->*croulette[ctr])()), obj(*pobj) {}\n";
+  outc << "  : g(g), obj((this->*croulette[ctr])()) {}\n";
   outc << "harness<" << cls << ">::harness(runtime::gen& g)\n";
-  outc << "  : g(g), pobj((this->*croulette[g.between(0u,ccount-1)])()), "
-          "obj(*pobj) {}\n";
+  outc << "  : g(g), obj((this->*croulette[g.between(0u,ccount-1)])()) {}\n";
 }
 
 void RamFuzz::gen_submakers_decl(const string &cls) {
@@ -587,7 +586,7 @@ void RamFuzz::gen_method(const Twine &hname, const CXXMethodDecl *M,
       outc << "    return;\n";
       outc << "  }\n";
     }
-    outc << "  obj." << method_streamer(*M, prtpol) << "(";
+    outc << "  obj->" << method_streamer(*M, prtpol) << "(";
   }
   bool first = true;
   for (const auto &ram : M->parameters()) {
@@ -629,9 +628,6 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
     outh << " private:\n";
     outh << "  runtime::gen& g; // Declare first to initialize early; "
             "constructors may use it.\n";
-    outh << "  // Owns internally created objects. Must precede obj "
-            "declaration.\n";
-    outh << "  std::unique_ptr<" << cls << "> pobj;\n";
     // Call depth should be made atomic when we start supporting multi-threaded
     // fuzzing.  Holding off for now because we expect to get a lot of mileage
     // out of multi-process fuzzing (running multiple fuzzing executables, each
@@ -645,14 +641,9 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
     gen_concrete_impl(C, *Result.Context);
     outh << " public:\n";
     outh << "  using user_class = " << cls << ";\n";
-    outh << "  " << cls << "& obj; // Object under test.\n";
-    outh << "  harness(runtime::gen& g, " << cls
-         << "& obj) : g(g), obj(obj) {} // Object already created by caller.\n";
+    outh << "  " << cls << "* obj; // Object under test.\n";
     outh << "  // True if obj was successfully internally created.\n";
-    outh << "  operator bool() const { return bool(pobj); }\n";
-    outh << "  // Releases internally generated object and returns its address "
-            "\n  // (or null if externally generated).\n";
-    outh << "  " << cls << "* release() { return pobj.release(); }\n";
+    outh << "  operator bool() const { return obj; }\n";
     unordered_map<string, unsigned> namecount;
     bool ctrs = false;
     string safectr;
@@ -698,7 +689,7 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
         outh << "  void " << name << namecount[name.str()] << "();\n";
         outc << "void harness<" << cls << ">::" << name << namecount[name.str()]
              << "() {\n";
-        outc << "  obj." << *f << " = *g.make<" << type_streamer(ty, prtpol)
+        outc << "  obj->" << *f << " = *g.make<" << type_streamer(ty, prtpol)
              << ">();\n";
         outc << "}\n";
         namecount[name.str()]++;

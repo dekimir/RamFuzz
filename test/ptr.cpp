@@ -16,11 +16,10 @@
 
 int main(int argc, char *argv[]) {
   ramfuzz::runtime::gen g(argc, argv);
-  B b;
-  ramfuzz::harness<B> rf(g, b);
+  ramfuzz::harness<B> rf(g, 0);
   for (auto m : rf.mroulette)
     (rf.*m)();
-  if (b.get() != 3)
+  if (rf.obj->get() != 3)
     return 1;
 }
 
