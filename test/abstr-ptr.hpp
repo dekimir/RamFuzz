@@ -26,6 +26,6 @@ class B {
   int sum = 22;
 
 public:
-  void g(A &a) { sum += a.sum * 100; }
+  void g(A &a) { sum = a.sum; }
   int get() const { return sum; }
 };

@@ -18,10 +18,10 @@ using namespace ramfuzz;
 
 int main(int argc, char *argv[]) {
   runtime::gen g(argc, argv);
-  harness<C> rc(g, 0);
+  harness<C> rc(g);
   for (auto m : rc.mroulette)
     (rc.*m)();
-  return (rc.obj->get() != 30);
+  return rc.obj->get() != 3;
 }
 
 unsigned runtime::spinlimit = 3;

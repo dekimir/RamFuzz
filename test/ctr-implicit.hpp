@@ -16,5 +16,5 @@ class B {
   int sum = 1;
 public:
   int get() const { return sum; }
-  void f(int i) { sum += 7; }
+  void f(int i) { sum |= 0x20; }
 };

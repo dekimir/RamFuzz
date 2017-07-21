@@ -19,6 +19,6 @@ class A {
 
 public:
   int get() const { return sum; }
-  void a(std::vector<int>) { sum += 3; }
+  void a(std::vector<int>) { sum |= 3; }
 };
 } // namespace ns1

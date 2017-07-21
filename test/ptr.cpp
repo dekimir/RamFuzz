@@ -16,11 +16,10 @@
 
 int main(int argc, char *argv[]) {
   ramfuzz::runtime::gen g(argc, argv);
-  ramfuzz::harness<B> rf(g, 0);
+  ramfuzz::harness<B> rf(g);
   for (auto m : rf.mroulette)
     (rf.*m)();
-  if (rf.obj->get() != 3)
-    return 1;
+  return rf.obj->get() != 3;
 }
 
 unsigned ::ramfuzz::runtime::spinlimit = 3;

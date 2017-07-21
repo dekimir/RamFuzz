@@ -25,7 +25,7 @@ class B {
 
 public:
   int get() const { return sum; }
-  void f(int *p, A *a) { sum += bool(p) * a->get(); }
+  void f(int *p, A *a) { sum |= bool(p) * a->get(); }
   void g(double ***&p) {}
   void h1(void **p) {}
   void h2(const void **p) {}

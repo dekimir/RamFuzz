@@ -20,6 +20,6 @@ class A {
 
 public:
   int get() const { return sum; }
-  void a(std::exception &e) { sum += 56; }
+  void a(std::exception &e) { sum |= 0x56; }
 };
 } // namespace ns1

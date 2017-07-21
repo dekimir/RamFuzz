@@ -17,5 +17,5 @@ class C {
 
 public:
   int get() const { return sum; }
-  void f(const int) { sum += 32; }
+  void f(const int) { sum |= 32; }
 };

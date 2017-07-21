@@ -30,7 +30,7 @@ class A {
   int sum = 0;
 
 public:
-  A() { sum += 10; }
+  A() { sum |= 0x10; }
   int get() const { return sum; }
 
   TA2<double> ta2;
@@ -65,7 +65,7 @@ class B {
 
 public:
   int get() const { return sum; }
-  void f(A a, const A::A7 &a7) { sum += a.get() * a7.one(); }
+  void f(A a, const A::A7 &a7) { sum |= a.get() * a7.one(); }
 };
 
 namespace NS1 {

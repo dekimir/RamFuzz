@@ -52,11 +52,11 @@ public:
 };
 
 class C {
-  int sum = 33;
+  int sum = 0x33;
 
 public:
   int get() const { return sum; }
-  void g(const NS::A &a, B &b) { sum -= a.get() * b.m; }
+  void g(const NS::A &a, B &b) { sum &= a.get() * b.m; }
 };
 
 #include "ramfuzz-rt.hpp"
