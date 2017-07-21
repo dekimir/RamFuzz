@@ -36,7 +36,8 @@ namespace ramfuzz {
 ///
 /// The harness class contains a pointer to C as a public member named obj.
 /// There is an interface for invoking obj's methods with random parameters, as
-/// described below.  The harness does not own obj; the client code does.
+/// described below.  The harness creates obj but does not own it; the client
+/// code does.
 ///
 /// The harness class has one method for each public non-static method of C.  A
 /// harness method, when invoked, generates random arguments and invokes the
