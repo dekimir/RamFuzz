@@ -142,13 +142,6 @@ private:
           &namecount ///< Method-name histogram of the class under test.
       );
 
-  /// Generates the declaration and definition of a RamFuzz class constructor
-  /// from an int.  This constructor internally creates the object under test
-  /// using a constructor indicated by the int.
-  void
-  gen_int_ctr(const string &cls ///< Fully qualified name of class under test.
-              );
-
   /// Generates the declaration of member submakers.
   void gen_submakers_decl(
       const string &cls ///< Fully qualified name of class under test.
@@ -505,15 +498,6 @@ void RamFuzz::gen_mroulette(const string &cls,
   outh << "  static const mptr mroulette[mcount];\n";
 }
 
-void RamFuzz::gen_int_ctr(const string &cls) {
-  outh << "  // Creates obj internally, using indicated constructor.\n";
-  outh << "  harness(runtime::gen& g, unsigned ctr);\n";
-  outc << "harness<" << cls << ">::harness(runtime::gen& g, unsigned ctr)\n";
-  outc << "  : g(g), obj((this->*croulette[ctr])()) {}\n";
-  outc << "harness<" << cls << ">::harness(runtime::gen& g)\n";
-  outc << "  : g(g), obj((this->*croulette[g.between(0u,ccount-1)])()) {}\n";
-}
-
 void RamFuzz::gen_submakers_decl(const string &cls) {
   outh << "  static const size_t subcount; // How many direct public "
           "subclasses.\n";
@@ -697,7 +681,9 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
     }
     gen_mroulette(cls, namecount);
     if (ctrs) {
-      gen_int_ctr(cls);
+      outc << "harness<" << cls << ">::harness(runtime::gen& g)\n";
+      outc
+          << "  : g(g), obj((this->*croulette[g.between(0u,ccount-1)])()) {}\n";
       gen_croulette(cls, namecount[C->getNameAsString()]);
       outh << "  // Ctr safe from depthlimit; won't call another harness "
               "method.\n";
