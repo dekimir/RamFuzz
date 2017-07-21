@@ -40,6 +40,6 @@ class C {
   int sum = 2;
 
 public:
-  void g(const NS::A &a) { sum += a.get(); }
+  void g(const NS::A &a) { sum = a.get(); }
   int get() const { return sum; }
 };

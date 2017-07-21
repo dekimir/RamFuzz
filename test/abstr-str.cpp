@@ -18,7 +18,7 @@ using namespace ramfuzz;
 
 int main(int argc, char *argv[]) {
   runtime::gen g(argc, argv);
-  harness<C> rc(g, 0);
+  harness<C> rc(g);
   rc.g0();
   return rc.obj->get() != 50;
 }

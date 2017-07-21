@@ -34,5 +34,5 @@ class C {
 
 public:
   int get() const { return sum; }
-  void g(const NS::A &a) { sum -= a.get(); }
+  void g(const NS::A &a) { sum = 53 - a.get(); }
 };

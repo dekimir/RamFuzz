@@ -17,5 +17,5 @@ class C {
 
 public:
   int get() const { return sum; }
-  void operator++() { sum += 10; }
+  void operator++() { sum |= 0x10; }
 };

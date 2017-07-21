@@ -17,7 +17,7 @@ class C {
 
 public:
   int get() const { return sum; }
-  void a() { sum += 100; }
-  void b() { sum += 20; }
-  void c() { sum += 3; }
+  void a() { sum |= 0x100; }
+  void b() { sum |= 0x20; }
+  void c() { sum |= 0x3; }
 };

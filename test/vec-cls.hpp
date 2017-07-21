@@ -25,7 +25,7 @@ class B {
 
 public:
   int get() const { return sum; }
-  void g(const std::vector<A> &v) { sum += v.size() ? v[0].f() - 5 : 5; }
+  void g(const std::vector<A> &v) { sum |= v.size() ? v[0].f() - 5 : 5; }
 };
 
 } // namespace ns1

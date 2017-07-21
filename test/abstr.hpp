@@ -17,7 +17,7 @@ struct R {
 };
 
 class A {
-  int sum = 21;
+  int sum = 0x21;
 
 public:
   A(int) {}
@@ -35,7 +35,7 @@ private:
 };
 
 class B {
-  int sum = 4000;
+  int sum = 0x4000;
 
 public:
   int get() const { return sum; }
@@ -43,10 +43,10 @@ public:
 };
 
 class C {
-  int sum = 300;
+  int sum = 0x300;
 
 public:
   int get() const { return sum; }
-  void g(const A &a) { sum += a.get(); }
-  void g(const B &b) { sum += b.get(); }
+  void g(const A &a) { sum |= a.get(); }
+  void g(const B &b) { sum |= b.get(); }
 };

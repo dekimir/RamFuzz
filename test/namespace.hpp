@@ -19,9 +19,9 @@ class A {
 
 public:
   int get() const { return sum; }
-  void a(Int *) { sum += 100; }
-  void b() { sum += 20; }
-  void c() { sum += 3; }
+  void a(Int *) { sum |= 0x100; }
+  void b() { sum |= 0x20; }
+  void c() { sum |= 0x3; }
 };
 }
 
@@ -31,9 +31,9 @@ class A {
 
 public:
   int get() const { return sum; }
-  void a() { sum += 1; }
-  void a(int) { sum += 20; }
-  void a(bool) { sum += 300; }
+  void a() { sum |= 0x1; }
+  void a(int) { sum |= 0x20; }
+  void a(bool) { sum |= 0x300; }
 };
 namespace ns2i {
 class A {
@@ -41,7 +41,7 @@ class A {
 
 public:
   int get() const { return sum; }
-  void a() { sum += 45; }
+  void a() { sum |= 0x45; }
 };
 } // namespace ns2i
 namespace {
@@ -50,7 +50,7 @@ class A {
 
 public:
   int get() const { return sum; }
-  void a() { sum += 45; }
+  void a() { sum |= 0x45; }
 };
 } // anonymous namespace
 } // namespace ns2

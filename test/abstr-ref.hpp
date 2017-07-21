@@ -28,5 +28,5 @@ class B {
 
 public:
   int get() const { return sum; }
-  void g(A &a) { sum += a.get() * 100; }
+  void g(A &a) { sum = 22 + a.get() * 100; }
 };

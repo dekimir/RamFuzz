@@ -22,6 +22,6 @@ class A {
 public:
   A() {}
   int get() const { return sum; }
-  void f(int &, const unsigned &) { sum += 20; }
-  void g(R &, const R &) { sum += 200; }
+  void f(int &, const unsigned &) { sum |= 0x20; }
+  void g(R &, const R &) { sum |= 0x200; }
 };
