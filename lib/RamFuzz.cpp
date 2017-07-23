@@ -255,6 +255,13 @@ public:
     os << "template<" << templ_params(templ) << ">\n";
   }
 
+  string str() const {
+    string stemp;
+    raw_string_ostream rs(stemp);
+    rs << *this;
+    return rs.str();
+  }
+
 private:
   const ClassTemplateDecl *templ;
 };
@@ -775,10 +782,7 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
     outh << "};\n";
     outc << "\n";
     processed_classes.insert(cls);
-    string stemp;
-    raw_string_ostream rs(stemp);
-    rs << tmpl_preamble;
-    preambles_of_processed_classes[cls] = rs.str();
+    preambles_of_processed_classes[cls] = tmpl_preamble.str();
   }
 }
 
