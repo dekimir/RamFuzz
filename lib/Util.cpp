@@ -14,14 +14,28 @@
 
 #include "Util.hpp"
 
+#include "clang/AST/DeclTemplate.h"
+
 using namespace clang;
+
+namespace {
+
+/// Returns C's or its described template's (if one exists) AccessSpecifier.
+AccessSpecifier getAccess(const CXXRecordDecl *C) {
+  if (const auto t = C->getDescribedClassTemplate())
+    return t->getAccess();
+  else
+    return C->getAccess();
+}
+
+} // anonymous namespace
 
 bool globally_visible(const CXXRecordDecl *C) {
   if (!C || !C->getIdentifier())
     // Anonymous classes may technically be visible, but only through tricks
     // like decltype.  Skip until there's a compelling use-case.
     return false;
-  const auto acc = C->getAccess();
+  const auto acc = getAccess(C);
   if (acc == AS_private || acc == AS_protected)
     return false;
   const DeclContext *ctx = C->getLookupParent();
