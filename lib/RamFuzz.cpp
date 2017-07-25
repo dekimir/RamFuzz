@@ -376,6 +376,9 @@ private:
   /// Where to output generated code (typically a C++ source file).
   raw_ostream &outc;
 
+  /// Where to output generated definitions of possibly templated code.
+  unique_ptr<raw_string_ostream> outt;
+
   /// Policy for printing to outh and outc.
   PrintingPolicy prtpol;
 
@@ -541,20 +544,20 @@ void RamFuzz::gen_croulette(const string &cls,
   outh << "  static constexpr unsigned ccount = " << size << ";\n";
   outh << "  static const cptr croulette[ccount];\n";
 
-  outc << preamble << "const typename harness<" << cls << ">::cptr harness<"
-       << cls << ">::croulette[] = {\n  ";
+  *outt << preamble << "const typename harness<" << cls << ">::cptr harness<"
+        << cls << ">::croulette[] = {\n  ";
   for (unsigned i = 0; i < size; ++i)
-    outc << (i ? ", " : "") << "&harness<" << cls
-         << ">::" << valident(ctrname(cls)) << i;
-  outc << "\n};\n";
+    *outt << (i ? ", " : "") << "&harness<" << cls
+          << ">::" << valident(ctrname(cls)) << i;
+  *outt << "\n};\n";
 }
 
 void RamFuzz::gen_mroulette(const string &cls,
                             const template_preamble &preamble,
                             const unordered_map<string, unsigned> &namecount) {
   unsigned mroulette_size = 0;
-  outc << preamble << "const typename harness<" << cls << ">::mptr harness<"
-       << cls << ">::mroulette[] = {\n  ";
+  *outt << preamble << "const typename harness<" << cls << ">::mptr harness<"
+        << cls << ">::mroulette[] = {\n  ";
   const auto name = valident(ctrname(cls));
   bool firstel = true;
   for (const auto &nc : namecount) {
@@ -562,13 +565,13 @@ void RamFuzz::gen_mroulette(const string &cls,
       continue; // Skip methods corresponding to constructors under test.
     for (unsigned i = 0; i < nc.second; ++i) {
       if (!firstel)
-        outc << ", ";
+        *outt << ", ";
       firstel = false;
-      outc << "&harness<" << cls << ">::" << nc.first << i;
+      *outt << "&harness<" << cls << ">::" << nc.first << i;
       mroulette_size++;
     }
   }
-  outc << "\n};\n";
+  *outt << "\n};\n";
 
   outh << "  using mptr = void (harness::*)();\n";
   outh << "  static constexpr unsigned mcount = " << mroulette_size << ";\n";
@@ -588,30 +591,33 @@ void RamFuzz::gen_submakers_defs(const Inheritance &inh,
   auto next_maker_fn = 0u;
   for (const auto &cls : processed_classes) {
     const auto tmpl_preamble = preambles_of_processed_classes[cls];
+    string stemp;
+    outt.reset(new raw_string_ostream(stemp));
     const auto found = inh.find(cls);
     if (found == inh.end() || found->getValue().empty()) {
-      outc << tmpl_preamble << "const size_t harness<" << cls
-           << ">::subcount = 0;\n";
-      outc << tmpl_preamble << cls << "*(*const harness<" << cls
-           << ">::submakers[])(runtime::gen&) = {};\n";
+      *outt << tmpl_preamble << "const size_t harness<" << cls
+            << ">::subcount = 0;\n";
+      *outt << tmpl_preamble << cls << "*(*const harness<" << cls
+            << ">::submakers[])(runtime::gen&) = {};\n";
     } else {
       const auto first_maker_fn = next_maker_fn;
-      outc << "namespace {\n";
+      *outt << "namespace {\n";
       for (const auto &subcls : found->getValue())
         if (!cdetails.get(subcls.first(), cdetails.is_template) &&
             cdetails.get(subcls.first(), cdetails.is_visible))
-          outc << tmpl_preamble << cls << "* submakerfn" << next_maker_fn++
-               << "(runtime::gen& g) { return g.make<" << subcls.first()
-               << ">(true); }\n";
-      outc << "} // anonymous namespace\n";
-      outc << cls << "*(*const harness<" << cls
-           << ">::submakers[])(runtime::gen&) = { ";
+          *outt << tmpl_preamble << cls << "* submakerfn" << next_maker_fn++
+                << "(runtime::gen& g) { return g.make<" << subcls.first()
+                << ">(true); }\n";
+      *outt << "} // anonymous namespace\n";
+      *outt << cls << "*(*const harness<" << cls
+            << ">::submakers[])(runtime::gen&) = { ";
       for (auto i = first_maker_fn; i < next_maker_fn; ++i)
-        outc << (i == first_maker_fn ? "" : ",") << "submakerfn" << i;
-      outc << " };\n";
-      outc << tmpl_preamble << "const size_t harness<" << cls
-           << ">::subcount = " << next_maker_fn - first_maker_fn << ";\n\n";
+        *outt << (i == first_maker_fn ? "" : ",") << "submakerfn" << i;
+      *outt << " };\n";
+      *outt << tmpl_preamble << "const size_t harness<" << cls
+            << ">::subcount = " << next_maker_fn - first_maker_fn << ";\n\n";
     }
+    (tmpl_preamble.empty() ? outc : outh) << outt->str();
   }
 }
 
@@ -627,63 +633,65 @@ bool RamFuzz::harness_may_recurse(const CXXMethodDecl *M,
 
 void RamFuzz::gen_method(const Twine &hname, const CXXMethodDecl *M,
                          const ASTContext &ctx, bool may_recurse) {
-  outc << hname << "() {\n";
+  *outt << hname << "() {\n";
   if (isa<CXXConstructorDecl>(M)) {
     if (may_recurse) {
-      outc << "  if (++calldepth >= depthlimit && safectr) {\n";
-      outc << "    --calldepth;\n";
-      outc << "    return (this->*safectr)();\n";
-      outc << "  }\n";
+      *outt << "  if (++calldepth >= depthlimit && safectr) {\n";
+      *outt << "    --calldepth;\n";
+      *outt << "    return (this->*safectr)();\n";
+      *outt << "  }\n";
     }
-    outc << "  auto r = new ";
+    *outt << "  auto r = new ";
     if (M->getParent()->isAbstract())
-      outc << "concrete_impl(g" << (M->param_empty() ? "" : ", ");
+      *outt << "concrete_impl(g" << (M->param_empty() ? "" : ", ");
     else {
-      M->getParent()->printQualifiedName(outc);
-      outc << "(";
+      M->getParent()->printQualifiedName(*outt);
+      *outt << "(";
     }
   } else {
     if (may_recurse) {
-      outc << "  if (++calldepth >= depthlimit) {\n";
-      outc << "    --calldepth;\n";
-      outc << "    return;\n";
-      outc << "  }\n";
+      *outt << "  if (++calldepth >= depthlimit) {\n";
+      *outt << "    --calldepth;\n";
+      *outt << "    return;\n";
+      *outt << "  }\n";
     }
-    outc << "  obj->" << method_streamer(*M, prtpol) << "(";
+    *outt << "  obj->" << method_streamer(*M, prtpol) << "(";
   }
   bool first = true;
   for (const auto &ram : M->parameters()) {
     if (!first)
-      outc << ", ";
+      *outt << ", ";
     first = false;
     QualType valty;
     unsigned ptrcnt;
     tie(valty, ptrcnt) = ultimate_pointee(ram->getType(), ctx);
     if (ptrcnt > 1)
       // Avoid deep const mismatch: can't pass int** for const int** parameter.
-      outc << "const_cast<" << ram->getType().stream(prtpol) << ">(";
-    outc << "*g.make<"
-         << type_streamer(
-                ram->getType().getNonReferenceType().getUnqualifiedType(),
-                prtpol);
-    outc << ">(" << (ptrcnt || ram->getType()->isReferenceType() ? "true" : "")
-         << ")";
+      *outt << "const_cast<" << ram->getType().stream(prtpol) << ">(";
+    *outt << "*g.make<"
+          << type_streamer(
+                 ram->getType().getNonReferenceType().getUnqualifiedType(),
+                 prtpol);
+    *outt << ">(" << (ptrcnt || ram->getType()->isReferenceType() ? "true" : "")
+          << ")";
     if (ptrcnt > 1)
-      outc << ")";
+      *outt << ")";
     register_enum(*valty);
   }
-  outc << ");\n";
+  *outt << ");\n";
   if (may_recurse)
-    outc << "  --calldepth;\n";
+    *outt << "  --calldepth;\n";
   if (isa<CXXConstructorDecl>(M))
-    outc << "  return r;\n";
-  outc << "}\n\n";
+    *outt << "  return r;\n";
+  *outt << "}\n\n";
 }
 
 void RamFuzz::run(const MatchFinder::MatchResult &Result) {
   if (const auto *C = Result.Nodes.getNodeAs<CXXRecordDecl>("class")) {
     if (!globally_visible(C) || isa<ClassTemplateSpecializationDecl>(C))
       return;
+    string stemp;
+    outt.reset(new raw_string_ostream(stemp));
     const string cls = class_under_test(C);
     const auto tmpl = C->getDescribedClassTemplate();
     const auto tmpl_preamble = template_preamble(tmpl);
@@ -699,8 +707,8 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
     // without paying for the overhead of thread-safety.
     outh << "  // Prevents infinite recursion.\n";
     outh << "  static unsigned calldepth;\n";
-    outc << tmpl_preamble << "unsigned harness<" << cls
-         << ">::calldepth = 0;\n\n";
+    *outt << tmpl_preamble << "unsigned harness<" << cls
+          << ">::calldepth = 0;\n\n";
     outh << "  static const unsigned depthlimit = "
             "ramfuzz::runtime::depthlimit;\n";
     gen_concrete_impl(C, *Result.Context);
@@ -717,13 +725,14 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
           !M->isInstance() || M->isDeleted())
         continue;
       const string name = valident(M->getNameAsString());
+      *outt << tmpl_preamble;
       if (isa<CXXConstructorDecl>(M)) {
         outh << "  " << cls << "* ";
-        outc << cls << "* ";
+        *outt << cls << "* ";
         ctrs = true;
       } else {
         outh << "  void ";
-        outc << "void ";
+        *outt << "void ";
       }
       outh << name << namecount[name] << "();\n";
       const bool may_recurse = harness_may_recurse(M, *Result.Context);
@@ -752,11 +761,11 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
           !ty->getAsCXXRecordDecl()) {
         const Twine name = Twine("random_") + f->getName();
         outh << "  void " << name << namecount[name.str()] << "();\n";
-        outc << tmpl_preamble << "void harness<" << cls << ">::" << name
-             << namecount[name.str()] << "() {\n";
-        outc << "  obj->" << *f << " = *g.make<" << type_streamer(ty, prtpol)
-             << ">();\n";
-        outc << "}\n";
+        *outt << tmpl_preamble << "void harness<" << cls << ">::" << name
+              << namecount[name.str()] << "() {\n";
+        *outt << "  obj->" << *f << " = *g.make<" << type_streamer(ty, prtpol)
+              << ">();\n";
+        *outt << "}\n";
         namecount[name.str()]++;
       }
     }
@@ -771,7 +780,7 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
       else
         outh << "&harness::" << safectr;
       outh << ";\n";
-      outc
+      *outt
           << tmpl_preamble << "harness<" << cls
           << ">::harness(runtime::gen& g)\n"
           << "  : g(g), obj((this->*croulette[g.between(0u,ccount-1)])()) {}\n";
@@ -780,7 +789,8 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
     outh << "  harness(runtime::gen& g);\n";
     gen_submakers_decl(cls);
     outh << "};\n";
-    outc << "\n";
+    *outt << "\n";
+    (tmpl ? outh : outc) << outt->str();
     processed_classes.insert(cls);
     preambles_of_processed_classes[cls] = tmpl_preamble.str();
   }
