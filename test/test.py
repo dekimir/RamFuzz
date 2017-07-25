@@ -81,11 +81,11 @@ for case in glob(path.join(scriptdir, '*.hpp')):
         chdir(temp)
         check_call([path.join(bindir, 'ramfuzz'), hfile, '--', '-std=c++11'])
         check_call([path.join(bindir, 'clang++'), '-std=c++11', '-or', '-g',
-                     cfile, 'fuzz.cpp', 'ramfuzz-rt.cpp'])
+                    cfile, 'fuzz.cpp', 'ramfuzz-rt.cpp'])
         check_call(path.join(temp, 'r'))
-        chdir(bindir) # Just a precaution to guarantee rmtree success.
+        chdir(bindir)  # Just a precaution to guarantee rmtree success.
         shutil.rmtree(path.realpath(temp))
     except CalledProcessError:
         failures += 1
-        sys.stderr.write('error in {} ({})\n'.format(testname,temp))
+        sys.stderr.write('error in {} ({})\n'.format(testname, temp))
 sys.exit(failures)
