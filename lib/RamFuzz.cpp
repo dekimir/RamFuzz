@@ -645,17 +645,8 @@ void RamFuzz::gen_method(const Twine &hname, const CXXMethodDecl *M,
     *outt << "  auto r = new ";
     if (parent->isAbstract())
       *outt << "concrete_impl(g" << (M->param_empty() ? "" : ", ");
-    else {
-      parent->printQualifiedName(*outt);
-      if (const auto t = parent->getDescribedClassTemplate()) {
-        *outt << '<';
-        const auto& params = *t->getTemplateParameters();
-        for (auto b = params.begin(), e = params.end(), i = b; i != e; ++i)
-          *outt << (i == b ? "" : ", ") << **i;
-        *outt << '>';
-      }
-      *outt << "(";
-    }
+    else
+      *outt << class_under_test(parent) << "(";
   } else {
     if (may_recurse) {
       *outt << "  if (++calldepth >= depthlimit) {\n";
