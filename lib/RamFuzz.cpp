@@ -105,14 +105,13 @@ public:
     } else if (auto spec = ty->getAs<TemplateSpecializationType>()) {
       print_cv(os);
       print(os, spec->getTemplateName());
-      bool first = true;
+      size_t idx = 0;
       for (auto arg : spec->template_arguments()) {
-        os << (first ? '<' : ',') << ' '; // Space after < avoids <:.
+        os << (idx++ ? ", " : "< "); // Space after < avoids <:.
         if (arg.getKind() == TemplateArgument::Type)
           os << type_streamer(arg.getAsType(), prtpol);
         else
           arg.print(prtpol, os);
-        first = false;
       }
       os << '>';
     } else if (auto td = ty->getAs<TypedefType>()) {
@@ -223,11 +222,9 @@ public:
     if (!templ)
       return;
     /// Similar to DeclPrinter::printTemplateParameters().
-    bool first = true;
+    size_t idx = 0;
     for (const auto par : *templ->getTemplateParameters()) {
-      if (!first)
-        os << ", ";
-      first = false;
+      os << (idx++ ? ", " : "");
       if (auto type = dyn_cast<TemplateTypeParmDecl>(par)) {
         if (type->wasDeclaredWithTypename())
           os << "typename ";
@@ -559,15 +556,13 @@ void RamFuzz::gen_mroulette(const string &cls,
   *outt << preamble << "const typename harness<" << cls << ">::mptr harness<"
         << cls << ">::mroulette[] = {\n  ";
   const auto name = valident(ctrname(cls));
-  bool firstel = true;
+  size_t idx = 0;
   for (const auto &nc : namecount) {
     if (nc.first == name)
       continue; // Skip methods corresponding to constructors under test.
     for (unsigned i = 0; i < nc.second; ++i) {
-      if (!firstel)
-        *outt << ", ";
-      firstel = false;
-      *outt << "&harness<" << cls << ">::" << nc.first << i;
+      *outt << (idx++ ? ", " : "") << "&harness<" << cls << ">::" << nc.first
+            << i;
       mroulette_size++;
     }
   }
@@ -656,11 +651,9 @@ void RamFuzz::gen_method(const Twine &hname, const CXXMethodDecl *M,
     }
     *outt << "  obj->" << method_streamer(*M, prtpol) << "(";
   }
-  bool first = true;
+  size_t idx = 0;
   for (const auto &ram : M->parameters()) {
-    if (!first)
-      *outt << ", ";
-    first = false;
+    *outt << (idx++ ? ", " : "");
     QualType valty;
     unsigned ptrcnt;
     tie(valty, ptrcnt) = ultimate_pointee(ram->getType(), ctx);
