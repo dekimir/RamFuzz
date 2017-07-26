@@ -72,147 +72,6 @@ private:
   }
 };
 
-/// Generates RamFuzz code into an ostream.  The user can tack a RamFuzz
-/// instance onto a MatchFinder for running it via a frontend action.  After the
-/// frontend action completes, the user must call finish().
-class RamFuzz : public MatchFinder::MatchCallback {
-public:
-  /// Prepares for emitting RamFuzz code into outh and outc.
-  RamFuzz(raw_ostream &outh, raw_ostream &outc)
-      : outh(outh), outc(outc), prtpol((LangOptions())) {
-    prtpol.Bool = 1;
-    prtpol.SuppressUnwrittenScope = true;
-    prtpol.SuppressTagKeyword = true;
-    prtpol.SuppressScope = false;
-  }
-
-  /// Match callback.  Expects Result to have a CXXRecordDecl* binding for
-  /// "class".
-  void run(const MatchFinder::MatchResult &Result) override;
-
-  /// Adds to MF a matcher that will generate RamFuzz code (capturing *this).
-  void tackOnto(MatchFinder &MF);
-
-  /// Calculates which classes under test need their harness specialization but
-  /// don't have it yet.  This happens when a harness class is referenced in
-  /// RamFuzz output code, but its generation hasn't been triggered.
-  vector<string> missingClasses();
-
-  /// Emits aditional code required for correct compilation.
-  void finish(const Inheritance &, const ClassDetails &);
-
-private:
-  /// If C is abstract, generates an inner class that's a concrete subclass of
-  /// C.
-  void gen_concrete_impl(const CXXRecordDecl *C, const ASTContext &ctx);
-
-  /// If ty is an enum, adds it to referenced_enums.
-  void register_enum(const Type &ty);
-
-  /// Generates concrete implementations of all C's (and its transitive bases')
-  /// pure methods in cls's concrete_impl class.  C must be either cls or its
-  /// base class.  Skips any methods present in to_skip.  Extends to_skip with
-  /// generated methods.
-  void gen_concrete_methods(
-      /// Class whose pure methods to implement (including inherited pure
-      /// methods).
-      const CXXRecordDecl *C,
-      /// Fully qualified name of the class in whose concrete_impl to place
-      /// generated methods.  Must be C or its subclass.  Eg, if C=BaseClass,
-      /// cls=NS1::SubClass, and BaseClass::method1() is pure, this will
-      /// generate a concrete implementation of
-      /// harness<NS1::SubClass>::method1().
-      const string &cls,
-      /// Context for desugaring types.
-      const ASTContext &ctx,
-      /// Methods to skip, eg, because they've already been generated.  Will be
-      /// extended with all C's methods generated in this call.
-      set<MethodNameAndSignature> &to_skip);
-
-  /// Generates the declaration and definition of member croulette.
-  void gen_croulette(
-      const string &cls, ///< Fully qualified name of class under test.
-      unsigned size      ///< Size of croulette.
-      );
-
-  /// Generates the declaration and definition of member mroulette.
-  void gen_mroulette(
-      const string &cls, ///< Fully qualified name of class under test.
-      const unordered_map<string, unsigned>
-          &namecount ///< Method-name histogram of the class under test.
-      );
-
-  /// Generates the declaration of member submakers.
-  void gen_submakers_decl(
-      const string &cls ///< Fully qualified name of class under test.
-      );
-
-  /// Generates the definition of member submakers for each of the classes
-  /// processed so far.
-  void gen_submakers_defs(const Inheritance &inh, const ClassDetails &cdetails);
-
-  /// True iff M's harness method may recursively call itself.  For example, a
-  /// copy constructor's harness needs to construct another object of the same
-  /// type, which involves a second harness that may itself call the copy
-  /// constructor.  The code will look something like this (assuming class under
-  /// test is named Foo):
-  ///
-  /// Foo* harness<Foo>::Foo123() { return new Foo(*g.make<Foo>()); }
-  ///
-  /// g.make<Foo>() will create a second harness<Foo> object and possibly invoke
-  /// its Foo123() method, so we have the outer Foo123() transitively calling
-  /// the inner one -- recursion.  This may go infinitely deep when the wrong
-  /// random sequence is generated.
-  bool harness_may_recurse(const CXXMethodDecl *M, const ASTContext &ctx);
-
-  /// Generates the definition of harness method named hname, corresponding to
-  /// the method under test M.  Assumes that the return type of the generated
-  /// method has already been output.
-  void gen_method(
-      const Twine &hname, ///< Fully qualified harness method name.
-      const CXXMethodDecl *M, const ASTContext &ctx,
-      bool may_recurse ///< True iff generated body may recursively call itself.
-      );
-
-  /// Where to output generated declarations (typically a header file).
-  raw_ostream &outh;
-
-  /// Where to output generated code (typically a C++ source file).
-  raw_ostream &outc;
-
-  /// Policy for printing to outh and outc.
-  PrintingPolicy prtpol;
-
-  /// Qualified names of classes under test that were referenced in generated
-  /// code.
-  set<string> referenced_classes;
-
-  /// Qualified names of classes under test whose harness specializations have
-  /// been generated.
-  set<string> processed_classes;
-
-  /// Enum types for which parameters have been generated.  Maps the enum name
-  /// to its values.
-  unordered_map<string, vector<string>> referenced_enums;
-};
-
-/// Valid identifier from a CXXMethodDecl name.
-string valident(const string &mname) {
-  static const unordered_map<char, char> table = {
-      {' ', '_'}, {'=', 'e'}, {'+', 'p'}, {'-', 'm'}, {'*', 's'},
-      {'/', 'd'}, {'%', 'c'}, {'&', 'a'}, {'|', 'f'}, {'^', 'r'},
-      {'<', 'l'}, {'>', 'g'}, {'~', 't'}, {'!', 'b'}, {'[', 'h'},
-      {']', 'i'}, {'(', 'j'}, {')', 'k'}, {'.', 'n'},
-  };
-  string transf = mname;
-  for (char &c : transf) {
-    auto found = table.find(c);
-    if (found != table.end())
-      c = found->second;
-  }
-  return transf;
-}
-
 /// An object that can be streamed to raw_ostream.  Subclassed for concrete
 /// content.
 class streamable {
@@ -354,6 +213,209 @@ private:
   const PrintingPolicy &prtpol;
 };
 
+/// Streams template parameters, eg: "typename T, class C, int N".
+class templ_params : public streamable {
+public:
+  /// \p templ may be null, in which case \c print() prints nothing.
+  templ_params(const ClassTemplateDecl *templ) : templ(templ) {}
+
+  void print(raw_ostream &os) const override {
+    if (!templ)
+      return;
+    /// Similar to DeclPrinter::printTemplateParameters().
+    bool first = true;
+    for (const auto par : *templ->getTemplateParameters()) {
+      if (!first)
+        os << ", ";
+      first = false;
+      if (auto type = dyn_cast<TemplateTypeParmDecl>(par)) {
+        if (type->wasDeclaredWithTypename())
+          os << "typename ";
+        else
+          os << "class ";
+        os << *type;
+      }
+    }
+  }
+
+private:
+  const ClassTemplateDecl *templ;
+};
+
+/// Streams the preamble "template<...>" required before a template class's
+/// name.
+class template_preamble : public streamable {
+public:
+  /// \p templ may be null, in which case \c print() prints nothing.
+  template_preamble(const ClassTemplateDecl *templ) : templ(templ) {}
+
+  void print(raw_ostream &os) const override {
+    if (!templ)
+      return;
+    os << "template<" << templ_params(templ) << ">\n";
+  }
+
+  string str() const {
+    string stemp;
+    raw_string_ostream rs(stemp);
+    rs << *this;
+    return rs.str();
+  }
+
+private:
+  const ClassTemplateDecl *templ;
+};
+
+/// Generates RamFuzz code into an ostream.  The user can tack a RamFuzz
+/// instance onto a MatchFinder for running it via a frontend action.  After the
+/// frontend action completes, the user must call finish().
+class RamFuzz : public MatchFinder::MatchCallback {
+public:
+  /// Prepares for emitting RamFuzz code into outh and outc.
+  RamFuzz(raw_ostream &outh, raw_ostream &outc)
+      : outh(outh), outc(outc), prtpol((LangOptions())) {
+    prtpol.Bool = 1;
+    prtpol.SuppressUnwrittenScope = true;
+    prtpol.SuppressTagKeyword = true;
+    prtpol.SuppressScope = false;
+  }
+
+  /// Match callback.  Expects Result to have a CXXRecordDecl* binding for
+  /// "class".
+  void run(const MatchFinder::MatchResult &Result) override;
+
+  /// Adds to MF a matcher that will generate RamFuzz code (capturing *this).
+  void tackOnto(MatchFinder &MF);
+
+  /// Calculates which classes under test need their harness specialization but
+  /// don't have it yet.  This happens when a harness class is referenced in
+  /// RamFuzz output code, but its generation hasn't been triggered.
+  vector<string> missingClasses();
+
+  /// Emits aditional code required for correct compilation.
+  void finish(const Inheritance &, const ClassDetails &);
+
+private:
+  /// If C is abstract, generates an inner class that's a concrete subclass of
+  /// C.
+  void gen_concrete_impl(const CXXRecordDecl *C, const ASTContext &ctx);
+
+  /// If ty is an enum, adds it to referenced_enums.
+  void register_enum(const Type &ty);
+
+  /// Generates concrete implementations of all C's (and its transitive bases')
+  /// pure methods in cls's concrete_impl class.  C must be either cls or its
+  /// base class.  Skips any methods present in to_skip.  Extends to_skip with
+  /// generated methods.
+  void gen_concrete_methods(
+      /// Class whose pure methods to implement (including inherited pure
+      /// methods).
+      const CXXRecordDecl *C,
+      /// Fully qualified name of the class in whose concrete_impl to place
+      /// generated methods.  Must be C or its subclass.  Eg, if C=BaseClass,
+      /// cls=NS1::SubClass, and BaseClass::method1() is pure, this will
+      /// generate a concrete implementation of
+      /// harness<NS1::SubClass>::method1().
+      const string &cls,
+      /// Context for desugaring types.
+      const ASTContext &ctx,
+      /// Methods to skip, eg, because they've already been generated.  Will be
+      /// extended with all C's methods generated in this call.
+      set<MethodNameAndSignature> &to_skip);
+
+  /// Generates the declaration and definition of member croulette.
+  void gen_croulette(
+      const string &cls, ///< Fully qualified name of class under test.
+      const template_preamble &preamble, ///< Goes before "harness<cls>".
+      unsigned size                      ///< Size of croulette.
+      );
+
+  /// Generates the declaration and definition of member mroulette.
+  void gen_mroulette(
+      const string &cls, ///< Fully qualified name of class under test.
+      const template_preamble &preamble, ///< Goes before "harness<cls>".
+      const unordered_map<string, unsigned>
+          &namecount ///< Method-name histogram of the class under test.
+      );
+
+  /// Generates the declaration of member submakers.
+  void gen_submakers_decl(
+      const string &cls ///< Fully qualified name of class under test.
+      );
+
+  /// Generates the definition of member submakers for each of the classes
+  /// processed so far.
+  void gen_submakers_defs(const Inheritance &inh, const ClassDetails &cdetails);
+
+  /// True iff M's harness method may recursively call itself.  For example, a
+  /// copy constructor's harness needs to construct another object of the same
+  /// type, which involves a second harness that may itself call the copy
+  /// constructor.  The code will look something like this (assuming class under
+  /// test is named Foo):
+  ///
+  /// Foo* harness<Foo>::Foo123() { return new Foo(*g.make<Foo>()); }
+  ///
+  /// g.make<Foo>() will create a second harness<Foo> object and possibly invoke
+  /// its Foo123() method, so we have the outer Foo123() transitively calling
+  /// the inner one -- recursion.  This may go infinitely deep when the wrong
+  /// random sequence is generated.
+  bool harness_may_recurse(const CXXMethodDecl *M, const ASTContext &ctx);
+
+  /// Generates the definition of harness method named hname, corresponding to
+  /// the method under test M.  Assumes that the return type of the generated
+  /// method has already been output.
+  void gen_method(
+      const Twine &hname, ///< Fully qualified harness method name.
+      const CXXMethodDecl *M, const ASTContext &ctx,
+      bool may_recurse ///< True iff generated body may recursively call itself.
+      );
+
+  /// Where to output generated declarations (typically a header file).
+  raw_ostream &outh;
+
+  /// Where to output generated code (typically a C++ source file).
+  raw_ostream &outc;
+
+  /// Where to output generated definitions of possibly templated code.
+  unique_ptr<raw_string_ostream> outt;
+
+  /// Policy for printing to outh and outc.
+  PrintingPolicy prtpol;
+
+  /// Qualified names of classes under test that were referenced in generated
+  /// code.
+  set<string> referenced_classes;
+
+  /// Qualified names of classes under test whose harness specializations have
+  /// been generated.
+  set<string> processed_classes;
+
+  /// Maps processed_classes elements to their template preambles (see
+  /// template_preamble).
+  map<string, string> preambles_of_processed_classes;
+
+  /// Enum types for which parameters have been generated.  Maps the enum name
+  /// to its values.
+  unordered_map<string, vector<string>> referenced_enums;
+};
+
+/// Valid identifier from a CXXMethodDecl name.
+string valident(const string &mname) {
+  static const unordered_map<char, char> table = {
+      {' ', '_'}, {'=', 'e'}, {'+', 'p'}, {'-', 'm'}, {'*', 's'},
+      {'/', 'd'}, {'%', 'c'}, {'&', 'a'}, {'|', 'f'}, {'^', 'r'},
+      {'<', 'l'}, {'>', 'g'}, {'~', 't'}, {'!', 'b'}, {'[', 'h'},
+      {']', 'i'}, {'(', 'j'}, {')', 'k'}, {'.', 'n'},
+  };
+  string transf = mname;
+  for (char &c : transf) {
+    auto found = table.find(c);
+    if (found != table.end())
+      c = found->second;
+  }
+  return transf;
+}
+
 /// Given a (possibly qualified) class name, returns its constructor's name.
 const char *ctrname(const string &cls) {
   const auto found = cls.rfind("::");
@@ -370,6 +432,21 @@ tuple<QualType, unsigned> ultimate_pointee(QualType ty, const ASTContext &ctx) {
     ++indir_cnt;
   }
   return make_tuple(ty, indir_cnt);
+}
+
+/// Returns C's qualified name, followed by C's template parameters if C is a
+/// template class.
+string class_under_test(const CXXRecordDecl *C) {
+  string name = C->getQualifiedNameAsString();
+  raw_string_ostream strm(name);
+  if (const auto tmpl = C->getDescribedClassTemplate()) {
+    strm << '<';
+    size_t i = 0;
+    for (const auto par : *tmpl->getTemplateParameters())
+      strm << *par << (i++ ? ", " : "");
+    strm << '>';
+  }
+  return strm.str();
 }
 
 } // anonymous namespace
@@ -461,37 +538,40 @@ void RamFuzz::gen_concrete_impl(const CXXRecordDecl *C, const ASTContext &ctx) {
   }
 }
 
-void RamFuzz::gen_croulette(const string &cls, unsigned size) {
+void RamFuzz::gen_croulette(const string &cls,
+                            const template_preamble &preamble, unsigned size) {
   outh << "  using cptr = " << cls << "* (harness::*)();\n";
   outh << "  static constexpr unsigned ccount = " << size << ";\n";
   outh << "  static const cptr croulette[ccount];\n";
 
-  outc << "const harness<" << cls << ">::cptr harness<" << cls
-       << ">::croulette[] = {\n  ";
+  *outt << preamble << "const typename harness<" << cls << ">::cptr harness<"
+        << cls << ">::croulette[] = {\n  ";
   for (unsigned i = 0; i < size; ++i)
-    outc << (i ? ", " : "") << "&harness<" << cls << ">::" << ctrname(cls) << i;
-  outc << "\n};\n";
+    *outt << (i ? ", " : "") << "&harness<" << cls
+          << ">::" << valident(ctrname(cls)) << i;
+  *outt << "\n};\n";
 }
 
 void RamFuzz::gen_mroulette(const string &cls,
+                            const template_preamble &preamble,
                             const unordered_map<string, unsigned> &namecount) {
   unsigned mroulette_size = 0;
-  outc << "const harness<" << cls << ">::mptr harness<" << cls
-       << ">::mroulette[] = {\n  ";
-  const auto name = ctrname(cls);
+  *outt << preamble << "const typename harness<" << cls << ">::mptr harness<"
+        << cls << ">::mroulette[] = {\n  ";
+  const auto name = valident(ctrname(cls));
   bool firstel = true;
   for (const auto &nc : namecount) {
     if (nc.first == name)
       continue; // Skip methods corresponding to constructors under test.
     for (unsigned i = 0; i < nc.second; ++i) {
       if (!firstel)
-        outc << ", ";
+        *outt << ", ";
       firstel = false;
-      outc << "&harness<" << cls << ">::" << nc.first << i;
+      *outt << "&harness<" << cls << ">::" << nc.first << i;
       mroulette_size++;
     }
   }
-  outc << "\n};\n";
+  *outt << "\n};\n";
 
   outh << "  using mptr = void (harness::*)();\n";
   outh << "  static constexpr unsigned mcount = " << mroulette_size << ";\n";
@@ -510,29 +590,34 @@ void RamFuzz::gen_submakers_defs(const Inheritance &inh,
                                  const ClassDetails &cdetails) {
   auto next_maker_fn = 0u;
   for (const auto &cls : processed_classes) {
+    const auto tmpl_preamble = preambles_of_processed_classes[cls];
+    string stemp;
+    outt.reset(new raw_string_ostream(stemp));
     const auto found = inh.find(cls);
     if (found == inh.end() || found->getValue().empty()) {
-      outc << "const size_t harness<" << cls << ">::subcount = 0;\n";
-      outc << cls << "*(*const harness<" << cls
-           << ">::submakers[])(runtime::gen&) = {};\n";
+      *outt << tmpl_preamble << "const size_t harness<" << cls
+            << ">::subcount = 0;\n";
+      *outt << tmpl_preamble << cls << "*(*const harness<" << cls
+            << ">::submakers[])(runtime::gen&) = {};\n";
     } else {
       const auto first_maker_fn = next_maker_fn;
-      outc << "namespace {\n";
+      *outt << "namespace {\n";
       for (const auto &subcls : found->getValue())
         if (!cdetails.get(subcls.first(), cdetails.is_template) &&
             cdetails.get(subcls.first(), cdetails.is_visible))
-          outc << cls << "* submakerfn" << next_maker_fn++
-               << "(runtime::gen& g) { return g.make<" << subcls.first()
-               << ">(true); }\n";
-      outc << "} // anonymous namespace\n";
-      outc << cls << "*(*const harness<" << cls
-           << ">::submakers[])(runtime::gen&) = { ";
+          *outt << tmpl_preamble << cls << "* submakerfn" << next_maker_fn++
+                << "(runtime::gen& g) { return g.make<" << subcls.first()
+                << ">(true); }\n";
+      *outt << "} // anonymous namespace\n";
+      *outt << cls << "*(*const harness<" << cls
+            << ">::submakers[])(runtime::gen&) = { ";
       for (auto i = first_maker_fn; i < next_maker_fn; ++i)
-        outc << (i == first_maker_fn ? "" : ",") << "submakerfn" << i;
-      outc << " };\n";
-      outc << "const size_t harness<" << cls
-           << ">::subcount = " << next_maker_fn - first_maker_fn << ";\n\n";
+        *outt << (i == first_maker_fn ? "" : ",") << "submakerfn" << i;
+      *outt << " };\n";
+      *outt << tmpl_preamble << "const size_t harness<" << cls
+            << ">::subcount = " << next_maker_fn - first_maker_fn << ";\n\n";
     }
+    (tmpl_preamble.empty() ? outc : outh) << outt->str();
   }
 }
 
@@ -548,66 +633,77 @@ bool RamFuzz::harness_may_recurse(const CXXMethodDecl *M,
 
 void RamFuzz::gen_method(const Twine &hname, const CXXMethodDecl *M,
                          const ASTContext &ctx, bool may_recurse) {
-  outc << hname << "() {\n";
+  *outt << hname << "() {\n";
   if (isa<CXXConstructorDecl>(M)) {
     if (may_recurse) {
-      outc << "  if (++calldepth >= depthlimit && safectr) {\n";
-      outc << "    --calldepth;\n";
-      outc << "    return (this->*safectr)();\n";
-      outc << "  }\n";
+      *outt << "  if (++calldepth >= depthlimit && safectr) {\n";
+      *outt << "    --calldepth;\n";
+      *outt << "    return (this->*safectr)();\n";
+      *outt << "  }\n";
     }
-    outc << "  auto r = new ";
-    if (M->getParent()->isAbstract())
-      outc << "concrete_impl(g" << (M->param_empty() ? "" : ", ");
+    const auto parent = M->getParent();
+    *outt << "  auto r = new ";
+    if (parent->isAbstract())
+      *outt << "concrete_impl(g" << (M->param_empty() ? "" : ", ");
     else {
-      M->getParent()->printQualifiedName(outc);
-      outc << "(";
+      parent->printQualifiedName(*outt);
+      if (const auto t = parent->getDescribedClassTemplate()) {
+        *outt << '<';
+        const auto& params = *t->getTemplateParameters();
+        for (auto b = params.begin(), e = params.end(), i = b; i != e; ++i)
+          *outt << (i == b ? "" : ", ") << **i;
+        *outt << '>';
+      }
+      *outt << "(";
     }
   } else {
     if (may_recurse) {
-      outc << "  if (++calldepth >= depthlimit) {\n";
-      outc << "    --calldepth;\n";
-      outc << "    return;\n";
-      outc << "  }\n";
+      *outt << "  if (++calldepth >= depthlimit) {\n";
+      *outt << "    --calldepth;\n";
+      *outt << "    return;\n";
+      *outt << "  }\n";
     }
-    outc << "  obj->" << method_streamer(*M, prtpol) << "(";
+    *outt << "  obj->" << method_streamer(*M, prtpol) << "(";
   }
   bool first = true;
   for (const auto &ram : M->parameters()) {
     if (!first)
-      outc << ", ";
+      *outt << ", ";
     first = false;
     QualType valty;
     unsigned ptrcnt;
     tie(valty, ptrcnt) = ultimate_pointee(ram->getType(), ctx);
     if (ptrcnt > 1)
       // Avoid deep const mismatch: can't pass int** for const int** parameter.
-      outc << "const_cast<" << ram->getType().stream(prtpol) << ">(";
-    outc << "*g.make<"
-         << type_streamer(
-                ram->getType().getNonReferenceType().getUnqualifiedType(),
-                prtpol);
-    outc << ">(" << (ptrcnt || ram->getType()->isReferenceType() ? "true" : "")
-         << ")";
+      *outt << "const_cast<" << ram->getType().stream(prtpol) << ">(";
+    *outt << "*g.make<"
+          << type_streamer(
+                 ram->getType().getNonReferenceType().getUnqualifiedType(),
+                 prtpol);
+    *outt << ">(" << (ptrcnt || ram->getType()->isReferenceType() ? "true" : "")
+          << ")";
     if (ptrcnt > 1)
-      outc << ")";
+      *outt << ")";
     register_enum(*valty);
   }
-  outc << ");\n";
+  *outt << ");\n";
   if (may_recurse)
-    outc << "  --calldepth;\n";
+    *outt << "  --calldepth;\n";
   if (isa<CXXConstructorDecl>(M))
-    outc << "  return r;\n";
-  outc << "}\n\n";
+    *outt << "  return r;\n";
+  *outt << "}\n\n";
 }
 
 void RamFuzz::run(const MatchFinder::MatchResult &Result) {
   if (const auto *C = Result.Nodes.getNodeAs<CXXRecordDecl>("class")) {
-    if (!globally_visible(C) || C->getDescribedClassTemplate() ||
-        isa<ClassTemplateSpecializationDecl>(C))
+    if (!globally_visible(C) || isa<ClassTemplateSpecializationDecl>(C))
       return;
-    const string cls = C->getQualifiedNameAsString();
-    outh << "template<>\n";
+    string stemp;
+    outt.reset(new raw_string_ostream(stemp));
+    const string cls = class_under_test(C);
+    const auto tmpl = C->getDescribedClassTemplate();
+    const auto tmpl_preamble = template_preamble(tmpl);
+    outh << "template<" << templ_params(tmpl) << ">\n";
     outh << "class harness<" << cls << "> {\n";
     outh << " private:\n";
     outh << "  runtime::gen& g; // Declare first to initialize early; "
@@ -619,7 +715,8 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
     // without paying for the overhead of thread-safety.
     outh << "  // Prevents infinite recursion.\n";
     outh << "  static unsigned calldepth;\n";
-    outc << "unsigned harness<" << cls << ">::calldepth = 0;\n\n";
+    *outt << tmpl_preamble << "unsigned harness<" << cls
+          << ">::calldepth = 0;\n\n";
     outh << "  static const unsigned depthlimit = "
             "ramfuzz::runtime::depthlimit;\n";
     gen_concrete_impl(C, *Result.Context);
@@ -629,20 +726,21 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
     outh << "  // True if obj was successfully internally created.\n";
     outh << "  operator bool() const { return obj; }\n";
     unordered_map<string, unsigned> namecount;
-    bool ctrs = false;
+    size_t ccount = 0;
     string safectr;
     for (auto M : C->methods()) {
       if (isa<CXXDestructorDecl>(M) || M->getAccess() != AS_public ||
           !M->isInstance() || M->isDeleted())
         continue;
       const string name = valident(M->getNameAsString());
+      *outt << tmpl_preamble;
       if (isa<CXXConstructorDecl>(M)) {
         outh << "  " << cls << "* ";
-        outc << cls << "* ";
-        ctrs = true;
+        *outt << cls << "* ";
+        ccount++;
       } else {
         outh << "  void ";
-        outc << "void ";
+        *outt << "void ";
       }
       outh << name << namecount[name] << "();\n";
       const bool may_recurse = harness_may_recurse(M, *Result.Context);
@@ -654,7 +752,7 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
       namecount[name]++;
     }
     if (C->needsImplicitDefaultConstructor()) {
-      const auto name = ctrname(cls);
+      const auto name = valident(ctrname(cls));
       safectr = name + to_string(namecount[name]);
       outh << "  " << cls << "* ";
       outh << name << namecount[name]++ << "() { return new ";
@@ -663,7 +761,7 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
       else
         outh << cls << "()";
       outh << "; }\n";
-      ctrs = true;
+      ccount++;
     }
     for (const auto f : C->fields()) {
       const auto ty = f->getType();
@@ -671,20 +769,17 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
           !ty->getAsCXXRecordDecl()) {
         const Twine name = Twine("random_") + f->getName();
         outh << "  void " << name << namecount[name.str()] << "();\n";
-        outc << "void harness<" << cls << ">::" << name << namecount[name.str()]
-             << "() {\n";
-        outc << "  obj->" << *f << " = *g.make<" << type_streamer(ty, prtpol)
-             << ">();\n";
-        outc << "}\n";
+        *outt << tmpl_preamble << "void harness<" << cls << ">::" << name
+              << namecount[name.str()] << "() {\n";
+        *outt << "  obj->" << *f << " = *g.make<" << type_streamer(ty, prtpol)
+              << ">();\n";
+        *outt << "}\n";
         namecount[name.str()]++;
       }
     }
-    gen_mroulette(cls, namecount);
-    if (ctrs) {
-      outc << "harness<" << cls << ">::harness(runtime::gen& g)\n";
-      outc
-          << "  : g(g), obj((this->*croulette[g.between(0u,ccount-1)])()) {}\n";
-      gen_croulette(cls, namecount[C->getNameAsString()]);
+    gen_mroulette(cls, tmpl_preamble, namecount);
+    if (ccount) {
+      gen_croulette(cls, tmpl_preamble, ccount);
       outh << "  // Ctr safe from depthlimit; won't call another harness "
               "method.\n";
       outh << "  static constexpr cptr safectr = ";
@@ -693,13 +788,19 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
       else
         outh << "&harness::" << safectr;
       outh << ";\n";
+      *outt
+          << tmpl_preamble << "harness<" << cls
+          << ">::harness(runtime::gen& g)\n"
+          << "  : g(g), obj((this->*croulette[g.between(0u,ccount-1)])()) {}\n";
     } else
       outh << "  // No public constructors -- user must provide this:\n";
     outh << "  harness(runtime::gen& g);\n";
     gen_submakers_decl(cls);
     outh << "};\n";
-    outc << "\n";
+    *outt << "\n";
+    (tmpl ? outh : outc) << outt->str();
     processed_classes.insert(cls);
+    preambles_of_processed_classes[cls] = tmpl_preamble.str();
   }
 }
 
