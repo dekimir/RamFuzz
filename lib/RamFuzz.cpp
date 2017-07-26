@@ -718,7 +718,7 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
     outh << "  // True if obj was successfully internally created.\n";
     outh << "  operator bool() const { return obj; }\n";
     unordered_map<string, unsigned> namecount;
-    bool ctrs = false;
+    size_t ccount = 0;
     string safectr;
     for (auto M : C->methods()) {
       if (isa<CXXDestructorDecl>(M) || M->getAccess() != AS_public ||
@@ -729,7 +729,7 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
       if (isa<CXXConstructorDecl>(M)) {
         outh << "  " << cls << "* ";
         *outt << cls << "* ";
-        ctrs = true;
+        ccount++;
       } else {
         outh << "  void ";
         *outt << "void ";
@@ -753,7 +753,7 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
       else
         outh << cls << "()";
       outh << "; }\n";
-      ctrs = true;
+      ccount++;
     }
     for (const auto f : C->fields()) {
       const auto ty = f->getType();
@@ -770,8 +770,8 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
       }
     }
     gen_mroulette(cls, tmpl_preamble, namecount);
-    if (ctrs) {
-      gen_croulette(cls, tmpl_preamble, namecount[C->getNameAsString()]);
+    if (ccount) {
+      gen_croulette(cls, tmpl_preamble, ccount);
       outh << "  // Ctr safe from depthlimit; won't call another harness "
               "method.\n";
       outh << "  static constexpr cptr safectr = ";
