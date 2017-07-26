@@ -17,5 +17,6 @@
 template<typename T>
 class A {
 public:
+  A(int) {}
   T plus1(T x) { return x + 1; }
 };
