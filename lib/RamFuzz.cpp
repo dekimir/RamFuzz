@@ -665,9 +665,11 @@ void RamFuzz::gen_method(const Twine &hname, const CXXMethodDecl *M,
       // Avoid deep const mismatch: can't pass int** for const int** parameter.
       *outt << "const_cast<" << ram->getType().stream(prtpol) << ">(";
     *outt << "*g.make<"
-          << type_streamer(
-                 ram->getType().getNonReferenceType().getUnqualifiedType(),
-                 prtpol);
+          << type_streamer(ram->getType()
+                               .getDesugaredType(ctx)
+                               .getNonReferenceType()
+                               .getUnqualifiedType(),
+                           prtpol);
     *outt << ">(" << (ptrcnt || ram->getType()->isReferenceType() ? "true" : "")
           << ")";
     if (ptrcnt > 1)

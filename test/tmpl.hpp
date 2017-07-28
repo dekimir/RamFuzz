@@ -19,4 +19,6 @@ class A {
 public:
   A(int) {}
   T plus1(T x) { return x + 1; }
+  typedef int INT;
+  void m(INT) {}
 };
