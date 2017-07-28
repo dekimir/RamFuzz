@@ -126,6 +126,8 @@ public:
         print(os, funty->getParamTypes());
       } else
         os << type_streamer(ptee, prtpol) << '*';
+    } else if (auto inj = ty->getAs<InjectedClassNameType>()) {
+      os << type_streamer(inj->getInjectedSpecializationType(), prtpol);
     } else
       ty.print(os, prtpol);
     // TODO: make this fully equivalent to TypePrinter, handling all possible
@@ -618,11 +620,13 @@ void RamFuzz::gen_submakers_defs(const Inheritance &inh,
 
 bool RamFuzz::harness_may_recurse(const CXXMethodDecl *M,
                                   const ASTContext &ctx) {
-  for (const auto &ram : M->parameters())
-    if (get<0>(ultimate_pointee(ram->getType(), ctx))->isRecordType())
+  for (const auto &ram : M->parameters()) {
+    const auto t = get<0>(ultimate_pointee(ram->getType(), ctx));
+    if (t->isRecordType() || isa<InjectedClassNameType>(t))
       // Making a class parameter value invokes other RamFuzz code, which may,
       // in turn, invoke M again.  So M's harness may recurse.
       return true;
+  }
   return false;
 }
 
