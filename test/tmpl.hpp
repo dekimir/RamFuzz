@@ -14,11 +14,15 @@
 
 /// Tests generation of random instances of template classes.
 
-template<typename T>
-class A {
+template <typename T> class A {
 public:
   A(int) {}
   T plus1(T x) { return x + 1; }
   typedef int INT;
   void m(INT) {}
+};
+
+template <int n> class B {
+public:
+  B() = default;
 };

@@ -80,9 +80,10 @@ You can see more examples in the [test](test) directory, where each `.hpp` file 
 ### Known Limitations
 
 C++ is a huge language, so the code generator is a work in progress.  Although improvements are made constantly, it currently can't handle the following important categories:
-- templates with non-type parameters
+- template parameters with default values
+- variadic templates
 - STL containers other than `vector` and `string`
-- array arguments
+- array parameters
 
 These limitations will typically manifest themselves as ill-formed C++ on the output.
 

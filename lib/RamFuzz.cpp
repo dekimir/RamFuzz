@@ -218,7 +218,8 @@ private:
 class templ_params : public streamable {
 public:
   /// \p templ may be null, in which case \c print() prints nothing.
-  templ_params(const ClassTemplateDecl *templ) : templ(templ) {}
+  templ_params(const ClassTemplateDecl *templ, const PrintingPolicy &prtpol)
+      : templ(templ), prtpol(prtpol) {}
 
   void print(raw_ostream &os) const override {
     if (!templ)
@@ -233,12 +234,18 @@ public:
         else
           os << "class ";
         os << *type;
+      } else if (const auto nontype = dyn_cast<NonTypeTemplateParmDecl>(par)) {
+        StringRef name;
+        if (auto id = nontype->getIdentifier())
+          name = id->getName();
+        nontype->getType().print(os, prtpol, name);
       }
     }
   }
 
 private:
   const ClassTemplateDecl *templ;
+  const PrintingPolicy &prtpol;
 };
 
 /// Streams the preamble "template<...>" required before a template class's
@@ -246,12 +253,14 @@ private:
 class template_preamble : public streamable {
 public:
   /// \p templ may be null, in which case \c print() prints nothing.
-  template_preamble(const ClassTemplateDecl *templ) : templ(templ) {}
+  template_preamble(const ClassTemplateDecl *templ,
+                    const PrintingPolicy &prtpol)
+      : templ(templ), prtpol(prtpol) {}
 
   void print(raw_ostream &os) const override {
     if (!templ)
       return;
-    os << "template<" << templ_params(templ) << ">\n";
+    os << "template<" << templ_params(templ, prtpol) << ">\n";
   }
 
   string str() const {
@@ -263,6 +272,7 @@ public:
 
 private:
   const ClassTemplateDecl *templ;
+  const PrintingPolicy &prtpol;
 };
 
 /// Generates RamFuzz code into an ostream.  The user can tack a RamFuzz
@@ -692,8 +702,8 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
     outt.reset(new raw_string_ostream(stemp));
     const string cls = class_under_test(C);
     const auto tmpl = C->getDescribedClassTemplate();
-    const auto tmpl_preamble = template_preamble(tmpl);
-    outh << "template<" << templ_params(tmpl) << ">\n";
+    const auto tmpl_preamble = template_preamble(tmpl, prtpol);
+    outh << "template<" << templ_params(tmpl, prtpol) << ">\n";
     outh << "class harness<" << cls << "> {\n";
     outh << " private:\n";
     outh << "  runtime::gen& g; // Declare first to initialize early; "
