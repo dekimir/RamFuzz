@@ -22,7 +22,7 @@ public:
   void m(INT) {}
 };
 
-template <int n> class B {
+template <int n, typename T> class B {
 public:
   B() = default;
 };

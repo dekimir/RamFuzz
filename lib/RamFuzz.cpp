@@ -414,7 +414,7 @@ string valident(const string &mname) {
       {' ', '_'}, {'=', 'e'}, {'+', 'p'}, {'-', 'm'}, {'*', 's'},
       {'/', 'd'}, {'%', 'c'}, {'&', 'a'}, {'|', 'f'}, {'^', 'r'},
       {'<', 'l'}, {'>', 'g'}, {'~', 't'}, {'!', 'b'}, {'[', 'h'},
-      {']', 'i'}, {'(', 'j'}, {')', 'k'}, {'.', 'n'},
+      {']', 'i'}, {'(', 'j'}, {')', 'k'}, {'.', 'n'}, {',', 'v'},
   };
   string transf = mname;
   for (char &c : transf) {
@@ -452,7 +452,7 @@ string class_under_test(const CXXRecordDecl *C) {
     strm << '<';
     size_t i = 0;
     for (const auto par : *tmpl->getTemplateParameters())
-      strm << *par << (i++ ? ", " : "");
+      strm << (i++ ? ", " : "") << *par;
     strm << '>';
   }
   return strm.str();
