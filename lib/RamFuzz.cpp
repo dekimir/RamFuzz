@@ -128,6 +128,10 @@ public:
         os << type_streamer(ptee, prtpol) << '*';
     } else if (auto inj = ty->getAs<InjectedClassNameType>()) {
       os << type_streamer(inj->getInjectedSpecializationType(), prtpol);
+    } else if (auto dep = ty->getAs<DependentNameType>()) {
+      os << "typename ";
+      print(os, *dep->getQualifier());
+      os << dep->getIdentifier()->getName();
     } else
       ty.print(os, prtpol);
     // TODO: make this fully equivalent to TypePrinter, handling all possible
