@@ -14,6 +14,10 @@
 
 /// Tests generation of random instances of template classes.
 
+// Declare A with a differently named parameter -- this used to trick RamFuzz
+// into mismatching method names and croulette elements.
+template <typename E> class A;
+
 template <typename T> class A {
 public:
   A(int) {}

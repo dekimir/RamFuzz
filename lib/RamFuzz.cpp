@@ -736,7 +736,11 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
       if (isa<CXXDestructorDecl>(M) || M->getAccess() != AS_public ||
           !M->isInstance() || M->isDeleted())
         continue;
-      const string name = valident(M->getNameAsString());
+      const string name =
+          // M->getNameAsString() sometimes uses wrong template-parameter names;
+          // see ramfuzz/test/tmpl.hpp.
+          valident(isa<CXXConstructorDecl>(M) ? ctrname(cls)
+                                              : M->getNameAsString());
       *outt << tmpl_preamble;
       if (isa<CXXConstructorDecl>(M)) {
         outh << "  " << cls << "* ";
