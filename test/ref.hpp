@@ -24,4 +24,5 @@ public:
   int get() const { return sum; }
   void f(int &, const unsigned &) { sum |= 0x20; }
   void g(R &, const R &) { sum |= 0x200; }
+  void h(R&& value) {}
 };

@@ -678,6 +678,16 @@ void RamFuzz::gen_method(const Twine &hname, const CXXMethodDecl *M,
     if (ptrcnt > 1)
       // Avoid deep const mismatch: can't pass int** for const int** parameter.
       *outt << "const_cast<" << ram->getType().stream(prtpol) << ">(";
+    const bool is_rvalue_ref = ram->getType()->isRValueReferenceType();
+    if (is_rvalue_ref)
+      // This will leave a stored object in an unspecified (though not illegal)
+      // state.  It should be possible to subsequently call some of its methods
+      // -- eg, this is legal:
+      //
+      // std::string s("abc");
+      // std::string r = std::move(s);
+      // s.clear();
+      *outt << "std::move(";
     *outt << "*g.make<"
           << type_streamer(ram->getType()
                                .getDesugaredType(ctx)
@@ -686,6 +696,8 @@ void RamFuzz::gen_method(const Twine &hname, const CXXMethodDecl *M,
                            prtpol);
     *outt << ">(" << (ptrcnt || ram->getType()->isReferenceType() ? "true" : "")
           << ")";
+    if (is_rvalue_ref)
+      *outt << ")";
     if (ptrcnt > 1)
       *outt << ")";
     register_enum(*valty);
