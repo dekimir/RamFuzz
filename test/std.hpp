@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <exception>
+#include <functional>
 
 namespace ns1 {
 class A {
@@ -20,6 +20,6 @@ class A {
 
 public:
   int get() const { return sum; }
-  void a(std::exception &e) { sum |= 0x56; }
+  void a(std::function<bool(int)> &) { sum |= 0x56; }
 };
 } // namespace ns1

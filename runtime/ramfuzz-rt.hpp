@@ -320,4 +320,20 @@ public:
       runtime::gen &) = {};
 };
 
+template <typename Res, typename... Args>
+class harness<std::function<Res(Args...)>> {
+public:
+  using user_class = std::function<Res(Args...)>;
+  user_class *obj;
+  harness(runtime::gen &g)
+      : obj(new user_class([&g](Args...) { return *g.make<Res>(); })) {}
+  operator bool() const { return true; }
+  using mptr = void (harness::*)();
+  static constexpr unsigned mcount = 0;
+  static constexpr mptr mroulette[] = {};
+  static constexpr unsigned ccount = 1;
+  static constexpr size_t subcount = 0;
+  static constexpr user_class *(*submakers[])(runtime::gen &) = {};
+};
+
 } // namespace ramfuzz
