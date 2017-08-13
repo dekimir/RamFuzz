@@ -316,6 +316,14 @@ private:
   /// If ty is an enum, adds it to referenced_enums.
   void register_enum(const Type &ty);
 
+  /// If ty is a class, adds it to referenced_classes.
+  void register_class(const Type &ty);
+
+  void reg(const Type &ty) {
+    register_enum(ty);
+    register_class(ty);
+  }
+
   /// Generates concrete implementations of all C's (and its transitive bases')
   /// pure methods in cls's concrete_impl class.  C must be either cls or its
   /// base class.  Skips any methods present in to_skip.  Extends to_skip with
@@ -341,7 +349,7 @@ private:
       const string &cls, ///< Fully qualified name of class under test.
       const template_preamble &preamble, ///< Goes before "harness<cls>".
       unsigned size                      ///< Size of croulette.
-      );
+  );
 
   /// Generates the declaration and definition of member mroulette.
   void gen_mroulette(
@@ -349,12 +357,12 @@ private:
       const template_preamble &preamble, ///< Goes before "harness<cls>".
       const unordered_map<string, unsigned>
           &namecount ///< Method-name histogram of the class under test.
-      );
+  );
 
   /// Generates the declaration of member submakers.
   void gen_submakers_decl(
       const string &cls ///< Fully qualified name of class under test.
-      );
+  );
 
   /// Generates the definition of member submakers for each of the classes
   /// processed so far.
@@ -381,7 +389,7 @@ private:
       const Twine &hname, ///< Fully qualified harness method name.
       const CXXMethodDecl *M, const ASTContext &ctx,
       bool may_recurse ///< True iff generated body may recursively call itself.
-      );
+  );
 
   /// Where to output generated declarations (typically a header file).
   raw_ostream &outh;
@@ -481,6 +489,16 @@ void RamFuzz::register_enum(const Type &ty) {
   }
 }
 
+void RamFuzz::register_class(const Type &ty) {
+  const auto rec = ty.getAsCXXRecordDecl();
+  if (!rec || rec->isInStdNamespace())
+    return;
+  if (const auto t = rec->getAs<ClassTemplateSpecializationDecl>())
+    register_class(t->getSpecializedTemplate());
+  else
+    referenced_classes.insert(class_under_test(rec));
+}
+
 void RamFuzz::gen_concrete_methods(const CXXRecordDecl *C, const string &cls,
                                    const ASTContext &ctx,
                                    set<MethodNameAndSignature> &to_skip) {
@@ -510,7 +528,7 @@ void RamFuzz::gen_concrete_methods(const CXXRecordDecl *C, const string &cls,
              << ">("
              << (rety->isPointerType() || rety->isReferenceType() ? "true" : "")
              << ");\n";
-        register_enum(*get<0>(ultimate_pointee(rety, ctx)));
+        reg(*get<0>(ultimate_pointee(rety, ctx)));
       }
       outc << "}\n\n";
     }
@@ -615,10 +633,12 @@ void RamFuzz::gen_submakers_defs(const Inheritance &inh,
       *outt << "namespace {\n";
       for (const auto &subcls : found->getValue())
         if (!cdetails.get(subcls.first(), cdetails.is_template) &&
-            cdetails.get(subcls.first(), cdetails.is_visible))
+            cdetails.get(subcls.first(), cdetails.is_visible)) {
           *outt << tmpl_preamble << cls << "* submakerfn" << next_maker_fn++
                 << "(runtime::gen& g) { return g.make<" << subcls.first()
                 << ">(true); }\n";
+          referenced_classes.insert(subcls.first());
+        }
       *outt << "} // anonymous namespace\n";
       *outt << cls << "*(*const harness<" << cls
             << ">::submakers[])(runtime::gen&) = { ";
@@ -688,12 +708,12 @@ void RamFuzz::gen_method(const Twine &hname, const CXXMethodDecl *M,
       // std::string r = std::move(s);
       // s.clear();
       *outt << "std::move(";
-    *outt << "*g.make<"
-          << type_streamer(ram->getType()
-                               .getDesugaredType(ctx)
-                               .getNonReferenceType()
-                               .getUnqualifiedType(),
-                           prtpol);
+    const auto strty = ram->getType()
+                           .getDesugaredType(ctx)
+                           .getNonReferenceType()
+                           .getUnqualifiedType();
+    *outt << "*g.make<" << type_streamer(strty, prtpol);
+    reg(*strty);
     *outt << ">(" << (ptrcnt || ram->getType()->isReferenceType() ? "true" : "")
           << ")";
     if (is_rvalue_ref)
@@ -793,6 +813,7 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
               << namecount[name.str()] << "() {\n";
         *outt << "  obj->" << *f << " = *g.make<" << type_streamer(ty, prtpol)
               << ">();\n";
+        reg(*ty);
         *outt << "}\n";
         namecount[name.str()]++;
       }
