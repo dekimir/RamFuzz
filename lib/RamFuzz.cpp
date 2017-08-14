@@ -490,13 +490,12 @@ void RamFuzz::register_enum(const Type &ty) {
 }
 
 void RamFuzz::register_class(const Type &ty) {
-  const auto rec = ty.getAsCXXRecordDecl();
+  auto rec = ty.getAsCXXRecordDecl();
   if (!rec || rec->isInStdNamespace())
     return;
-  if (const auto t = rec->getAs<ClassTemplateSpecializationDecl>())
-    register_class(t->getSpecializedTemplate());
-  else
-    referenced_classes.insert(class_under_test(rec));
+  if (const auto t = dyn_cast<ClassTemplateSpecializationDecl>(rec))
+    rec = t->getSpecializedTemplate()->getTemplatedDecl();
+  referenced_classes.insert(class_under_test(rec));
 }
 
 void RamFuzz::gen_concrete_methods(const CXXRecordDecl *C, const string &cls,
