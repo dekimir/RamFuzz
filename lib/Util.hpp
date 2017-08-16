@@ -16,3 +16,21 @@
 
 /// True iff C is visible outside all its parent contexts.
 bool globally_visible(const clang::CXXRecordDecl *C);
+
+namespace ramfuzz {
+
+class ClassReference {
+public:
+  ClassReference() = default;
+  ClassReference(const clang::QualType &);
+  ClassReference(const clang::CXXRecordDecl &);
+  const std::string &prefix();
+  const std::string &name() { return name_; };
+  const std::string &suffix();
+  bool operator<(const ClassReference &) const;
+
+private:
+  std::string name_;
+};
+
+} // namespace ramfuzz

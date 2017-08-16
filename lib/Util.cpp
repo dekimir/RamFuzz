@@ -50,3 +50,14 @@ bool globally_visible(const CXXRecordDecl *C) {
   }
   return true;
 }
+
+namespace ramfuzz {
+
+ClassReference::ClassReference(clang::CXXRecordDecl const &decl)
+    : name_(decl.getQualifiedNameAsString()) {}
+
+bool ClassReference::operator<(const ClassReference &that) const {
+  return this->name_ < that.name_;
+}
+
+} // namespace ramfuzz
