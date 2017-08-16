@@ -26,7 +26,7 @@ using namespace tooling;
 
 namespace ramfuzz {
 
-void InheritanceBuilder::tackOnto(clang::ast_matchers::MatchFinder &MF) {
+void InheritanceBuilder::tackOnto(MatchFinder &MF) {
   MF.addMatcher(cxxRecordDecl(isDefinition(),
                               unless(hasAncestor(namespaceDecl(isAnonymous()))))
                     .bind("class"),
