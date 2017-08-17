@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#pragma once
+
 #include "clang/AST/DeclCXX.h"
 
 /// True iff C is visible outside all its parent contexts.
@@ -24,9 +26,9 @@ public:
   ClassReference() = default;
   ClassReference(const clang::QualType &);
   ClassReference(const clang::CXXRecordDecl &);
-  const std::string &prefix();
-  const std::string &name() { return name_; };
-  const std::string &suffix();
+  const std::string &prefix() const;
+  const std::string &name() const { return name_; };
+  const std::string &suffix() const;
   bool operator<(const ClassReference &) const;
 
 private:

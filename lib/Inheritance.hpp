@@ -14,8 +14,10 @@
 
 #pragma once
 
+#include <map>
 #include <vector>
 
+#include "Util.hpp"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
@@ -79,10 +81,14 @@ public:
 
   const Inheritance &getInheritance() const { return inh; }
   const ClassDetails &getClassDetails() const { return cdetails; }
+  /// Maps base class to subclasses.
+  using Subclasses = std::map<ClassReference, std::vector<ClassReference>>;
+  const Subclasses& getSubclasses() const { return subclasses; }
 
 private:
   Inheritance inh;       ///< Inheritance result being built.
   ClassDetails cdetails; ///< Class details collected along the way.
+  Subclasses subclasses;
 };
 
 } // namespace ramfuzz

@@ -45,6 +45,11 @@ void InheritanceBuilder::run(const MatchFinder::MatchResult &Result) {
                 .getDesugaredType(*Result.Context)
                 .getAsString(prtpol)]
             .insert(qname);
+        if (const auto tag = base.getType()
+                                 .getDesugaredType(*Result.Context)
+                                 ->getAs<TagType>())
+          subclasses[ClassReference(*dyn_cast<CXXRecordDecl>(tag->getDecl()))]
+              .emplace_back(*C);
       }
       cdetails.set(qname, ClassDetails::is_template,
                    C->getDescribedClassTemplate());

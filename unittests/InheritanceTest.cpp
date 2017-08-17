@@ -32,13 +32,13 @@ using ramfuzz::InheritanceBuilder;
 AssertionResult hasInheritance(const string &code,
                                const Inheritance &expected) {
   InheritanceBuilder builder(code);
-  const auto &inh = builder.getInheritance();
-  if (inh.size() != expected.size()) {
-    return AssertionFailure() << "expected " << expected.size()
-                              << " elements, got " << inh.size();
+  const auto &sc = builder.getSubclasses();
+  if (sc.size() != expected.size()) {
+    return AssertionFailure()
+           << "expected " << expected.size() << " elements, got " << sc.size();
   }
-  for (const auto &entry : inh) {
-    const auto clsname = entry.first();
+  for (const auto &entry : sc) {
+    const auto clsname = entry.first.name();
     const auto found = expected.find(clsname);
     if (found == expected.end())
       return AssertionFailure() << "unexpected base class " << clsname;
@@ -49,8 +49,8 @@ AssertionResult hasInheritance(const string &code,
                                 << " subclasses for base class " << clsname
                                 << ", got " << actual_subclasses.size();
     for (const auto &subcls : actual_subclasses)
-      if (!expected_subclasses.count(subcls.first()))
-        return AssertionFailure() << "unexpected subclass " << subcls.first()
+      if (!expected_subclasses.count(subcls.name()))
+        return AssertionFailure() << "unexpected subclass " << subcls.name()
                                   << " of class " << clsname;
   }
   return AssertionSuccess();
@@ -130,8 +130,10 @@ TEST(InheritanceTest, Regression1) {
 TEST(InheritanceTest, Regression2) {
   // This once triggered the assertion "cast<Ty>() argument of incompatible
   // type!"
-  EXPECT_TRUE(hasInheritance("template <class T> struct A : public T {};",
-                             {{"T", {"A"}}}));
+  const auto code = "template <class T> struct A : public T {};";
+  // Although T is a base class of A<T>, we can't make concrete use of that for
+  // now.  Expect empty inheritance info.
+  EXPECT_TRUE(hasInheritance(code, {}));
 }
 
 TEST(ClassDetailsTest, Template) {
