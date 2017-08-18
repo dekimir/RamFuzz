@@ -21,18 +21,29 @@ bool globally_visible(const clang::CXXRecordDecl *C);
 
 namespace ramfuzz {
 
+/// Keeps class details permanently, even after AST is destructed.
 class ClassReference {
 public:
   ClassReference() = default;
-  ClassReference(const clang::QualType &);
-  ClassReference(const clang::CXXRecordDecl &);
+  explicit ClassReference(const clang::CXXRecordDecl &);
   const std::string &prefix() const;
   const std::string &name() const { return name_; };
-  const std::string &suffix() const;
-  bool operator<(const ClassReference &) const;
+  const std::string &suffix() const { return suffix_; }
+  bool operator<(const ClassReference &that) const {
+    return this->name_ < that.name_;
+  }
+  bool operator<(const std::string &s) const { return name_ < s; }
+  ClassReference &operator=(const ClassReference &that) {
+    this->name_ = that.name_;
+    return *this;
+  }
 
 private:
-  std::string name_;
+  std::string name_, suffix_;
 };
+
+inline bool operator<(const std::string &s, const ClassReference &ref) {
+  return ref.name() < s;
+}
 
 } // namespace ramfuzz

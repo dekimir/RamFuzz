@@ -15,8 +15,11 @@
 #include "Util.hpp"
 
 #include "clang/AST/DeclTemplate.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace clang;
+using namespace llvm;
+using namespace std;
 
 namespace {
 
@@ -26,6 +29,21 @@ AccessSpecifier getAccess(const CXXRecordDecl *C) {
     return t->getAccess();
   else
     return C->getAccess();
+}
+
+/// Returns tmpl's parameters formatted as <T1, T2, T3>.  If tmpl is null,
+/// returns an empty string.
+string parameters(const ClassTemplateDecl *tmpl) {
+  string s;
+  raw_string_ostream strm(s);
+  if (tmpl) {
+    strm << '<';
+    size_t i = 0;
+    for (const auto par : *tmpl->getTemplateParameters())
+      strm << (i++ ? ", " : "") << *par;
+    strm << '>';
+  }
+  return strm.str();
 }
 
 } // anonymous namespace
@@ -54,10 +72,7 @@ bool globally_visible(const CXXRecordDecl *C) {
 namespace ramfuzz {
 
 ClassReference::ClassReference(clang::CXXRecordDecl const &decl)
-    : name_(decl.getQualifiedNameAsString()) {}
-
-bool ClassReference::operator<(const ClassReference &that) const {
-  return this->name_ < that.name_;
-}
+    : name_(decl.getQualifiedNameAsString()),
+      suffix_(parameters(decl.getDescribedClassTemplate())) {}
 
 } // namespace ramfuzz
