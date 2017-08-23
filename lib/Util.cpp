@@ -47,17 +47,6 @@ string parameters(const ClassTemplateDecl *tmpl) {
   return strm.str();
 }
 
-string template_preamble(const ClassTemplateDecl *templ) {
-  string s;
-  raw_string_ostream rs(s);
-  if (templ) {
-    rs << "template<";
-    print_names_with_types(*templ->getTemplateParameters(), rs);
-    rs << ">\n";
-  }
-  return rs.str();
-}
-
 } // anonymous namespace
 
 bool globally_visible(const CXXRecordDecl *C) {
@@ -106,7 +95,7 @@ namespace ramfuzz {
 
 ClassReference::ClassReference(clang::CXXRecordDecl const &decl)
     : name_(decl.getQualifiedNameAsString()),
-      prefix_(template_preamble(decl.getDescribedClassTemplate())),
+      prefix_(template_preamble(decl.getDescribedClassTemplate()).str()),
       suffix_(parameters(decl.getDescribedClassTemplate())),
       is_template_(decl.getDescribedClassTemplate()),
       is_visible_(globally_visible(&decl)) {}

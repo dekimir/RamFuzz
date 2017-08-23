@@ -217,34 +217,6 @@ private:
   const PrintingPolicy &prtpol;
 };
 
-/// Streams the preamble "template<...>" required before a template class's
-/// name.  If the class isn't a template, streams nothing.
-class template_preamble : public streamable {
-public:
-  /// \p templ may be null, in which case \c print() prints nothing.
-  template_preamble(const ClassTemplateDecl *templ,
-                    const PrintingPolicy &prtpol)
-      : templ(templ) {}
-
-  void print(raw_ostream &os) const override {
-    if (templ) {
-      os << "template<";
-      print_names_with_types(*templ->getTemplateParameters(), os);
-      os << ">\n";
-    }
-  }
-
-  string str() const {
-    string stemp;
-    raw_string_ostream rs(stemp);
-    rs << *this;
-    return rs.str();
-  }
-
-private:
-  const ClassTemplateDecl *templ;
-};
-
 /// Generates RamFuzz code into an ostream.  The user can tack a RamFuzz
 /// instance onto a MatchFinder for running it via a frontend action.  After the
 /// frontend action completes, the user must call finish().
@@ -695,7 +667,7 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
     outt.reset(new raw_string_ostream(stemp));
     const string cls = class_under_test(C);
     const auto tmpl = C->getDescribedClassTemplate();
-    const template_preamble tmpl_preamble(tmpl, prtpol);
+    const template_preamble tmpl_preamble(tmpl);
     outh << "template<";
     if (tmpl)
       print_names_with_types(*tmpl->getTemplateParameters(), outh);

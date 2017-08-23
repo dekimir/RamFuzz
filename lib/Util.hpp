@@ -14,9 +14,13 @@
 
 #pragma once
 
+#include <string>
+
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/AST/PrettyPrinter.h"
+#include "llvm/Support/raw_ostream.h"
 
 /// True iff C is visible outside all its parent contexts.
 bool globally_visible(const clang::CXXRecordDecl *C);
@@ -57,6 +61,38 @@ private:
 
 inline bool operator<(const std::string &s, const ClassReference &ref) {
   return ref.name() < s;
+}
+
+/// Streams the preamble "template<...>" required before a template class's
+/// name.  If the class isn't a template, streams nothing.
+class template_preamble {
+public:
+  /// \p templ may be null, in which case \c print() prints nothing.
+  template_preamble(const clang::ClassTemplateDecl *templ) : templ(templ) {}
+
+  void print(llvm::raw_ostream &os) const {
+    if (templ) {
+      os << "template<";
+      print_names_with_types(*templ->getTemplateParameters(), os);
+      os << ">\n";
+    }
+  }
+
+  std::string str() const {
+    std::string stemp;
+    llvm::raw_string_ostream rs(stemp);
+    print(rs);
+    return rs.str();
+  }
+
+private:
+  const clang::ClassTemplateDecl *templ;
+};
+
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
+                                     const template_preamble &pream) {
+  pream.print(os);
+  return os;
 }
 
 } // namespace ramfuzz
