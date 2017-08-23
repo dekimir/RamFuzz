@@ -19,6 +19,7 @@
 
 using namespace clang;
 using namespace llvm;
+using namespace ramfuzz;
 using namespace std;
 
 namespace {
@@ -44,6 +45,33 @@ string parameters(const ClassTemplateDecl *tmpl) {
     strm << '>';
   }
   return strm.str();
+}
+
+string template_preamble(const ClassTemplateDecl *templ) {
+  string s;
+  raw_string_ostream rs(s);
+  if (templ) {
+    rs << "template<";
+    /// Similar to DeclPrinter::printTemplateParameters().
+    size_t idx = 0;
+    for (const auto par : *templ->getTemplateParameters()) {
+      rs << (idx++ ? ", " : "");
+      if (auto type = dyn_cast<TemplateTypeParmDecl>(par)) {
+        if (type->wasDeclaredWithTypename())
+          rs << "typename ";
+        else
+          rs << "class ";
+        rs << *type;
+      } else if (const auto nontype = dyn_cast<NonTypeTemplateParmDecl>(par)) {
+        StringRef name;
+        if (auto id = nontype->getIdentifier())
+          name = id->getName();
+        nontype->getType().print(rs, RFPP(), name);
+      }
+    }
+    rs << ">\n";
+  }
+  return rs.str();
 }
 
 } // anonymous namespace
@@ -73,8 +101,18 @@ namespace ramfuzz {
 
 ClassReference::ClassReference(clang::CXXRecordDecl const &decl)
     : name_(decl.getQualifiedNameAsString()),
+      prefix_(template_preamble(decl.getDescribedClassTemplate())),
       suffix_(parameters(decl.getDescribedClassTemplate())),
       is_template_(decl.getDescribedClassTemplate()),
       is_visible_(globally_visible(&decl)) {}
+
+PrintingPolicy RFPP() {
+  PrintingPolicy rfpp((LangOptions()));
+  rfpp.Bool = 1;
+  rfpp.SuppressUnwrittenScope = true;
+  rfpp.SuppressTagKeyword = true;
+  rfpp.SuppressScope = false;
+  return rfpp;
+}
 
 } // namespace ramfuzz

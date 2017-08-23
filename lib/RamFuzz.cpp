@@ -285,12 +285,7 @@ class RamFuzz : public MatchFinder::MatchCallback {
 public:
   /// Prepares for emitting RamFuzz code into outh and outc.
   RamFuzz(raw_ostream &outh, raw_ostream &outc)
-      : outh(outh), outc(outc), prtpol((LangOptions())) {
-    prtpol.Bool = 1;
-    prtpol.SuppressUnwrittenScope = true;
-    prtpol.SuppressTagKeyword = true;
-    prtpol.SuppressScope = false;
-  }
+      : outh(outh), outc(outc), prtpol(RFPP()) {}
 
   /// Match callback.  Expects Result to have a CXXRecordDecl* binding for
   /// "class".
@@ -408,10 +403,6 @@ private:
   /// Qualified names of classes under test whose harness specializations have
   /// been generated.
   set<ClassReference> processed_classes;
-
-  /// Maps processed_classes elements to their template preambles (see
-  /// template_preamble).
-  map<string, string> preambles_of_processed_classes;
 
   /// Enum types for which parameters have been generated.  Maps the enum name
   /// to its values.
@@ -619,7 +610,7 @@ void RamFuzz::gen_submakers_defs(const Inheritance &sc) {
   auto next_maker_fn = 0u;
   for (const auto &cls : processed_classes) {
     const auto name = cls.name() + cls.suffix();
-    const auto tmpl_preamble = preambles_of_processed_classes[name];
+    const auto &tmpl_preamble = cls.prefix();
     string stemp;
     outt.reset(new raw_string_ostream(stemp));
     const auto found = sc.find(cls);
@@ -840,7 +831,6 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
     *outt << "\n";
     (tmpl ? outh : outc) << outt->str();
     processed_classes.insert(ClassReference(*C));
-    preambles_of_processed_classes[cls] = tmpl_preamble.str();
   }
 }
 

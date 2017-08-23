@@ -15,18 +15,23 @@
 #pragma once
 
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/PrettyPrinter.h"
 
 /// True iff C is visible outside all its parent contexts.
 bool globally_visible(const clang::CXXRecordDecl *C);
 
 namespace ramfuzz {
 
+/// RamFuzz printing policy.
+clang::PrintingPolicy RFPP();
+
 /// Keeps class details permanently, even after AST is destructed.
 class ClassReference {
 public:
   ClassReference() = default;
+  /// CXXRecordDecl object needn't survive past this constructor.
   explicit ClassReference(const clang::CXXRecordDecl &);
-  const std::string &prefix() const;
+  const std::string &prefix() const { return prefix_; }
   const std::string &name() const { return name_; };
   const std::string &suffix() const { return suffix_; }
   bool operator<(const ClassReference &that) const {
@@ -38,7 +43,7 @@ public:
   bool is_visible() const { return is_visible_; }
 
 private:
-  std::string name_, suffix_;
+  std::string name_, prefix_, suffix_;
   bool is_template_; ///< True iff this is a class template.
   ///< True iff this class is visible from the outermost scope.
   bool is_visible_;
