@@ -305,7 +305,7 @@ public:
   vector<string> missingClasses();
 
   /// Emits aditional code required for correct compilation.
-  void finish(const InheritanceBuilder::Subclasses &, const ClassDetails &);
+  void finish(const Inheritance &, const ClassDetails &);
 
 private:
   /// If C is abstract, generates an inner class that's a concrete subclass of
@@ -365,8 +365,7 @@ private:
 
   /// Generates the definition of member submakers for each of the classes
   /// processed so far.
-  void gen_submakers_defs(const InheritanceBuilder::Subclasses &,
-                          const ClassDetails &cdetails);
+  void gen_submakers_defs(const Inheritance &, const ClassDetails &cdetails);
 
   /// True iff M's harness method may recursively call itself.  For example, a
   /// copy constructor's harness needs to construct another object of the same
@@ -616,7 +615,7 @@ void RamFuzz::gen_submakers_decl(const string &cls) {
   outh << "  static " << cls << " *(*const submakers[])(runtime::gen &);\n";
 }
 
-void RamFuzz::gen_submakers_defs(const InheritanceBuilder::Subclasses &sc,
+void RamFuzz::gen_submakers_defs(const Inheritance &sc,
                                  const ClassDetails &cdetails) {
   auto next_maker_fn = 0u;
   for (const auto &cls : processed_classes) {
@@ -847,8 +846,7 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
   }
 }
 
-void RamFuzz::finish(const InheritanceBuilder::Subclasses &sc,
-                     const ClassDetails &cdetails) {
+void RamFuzz::finish(const Inheritance &sc, const ClassDetails &cdetails) {
   for (auto e : referenced_enums) {
     outh << "template<> " << e.first << "* ramfuzz::runtime::gen::make<"
          << e.first << ">(bool);\n";
@@ -902,7 +900,7 @@ namespace ramfuzz {
   InheritanceBuilder inh;
   inh.tackOnto(mf);
   const int run_error = tool.run(newFrontendActionFactory(&mf).get());
-  rf.finish(inh.getSubclasses(), inh.getClassDetails());
+  rf.finish(inh.getInheritance(), inh.getClassDetails());
   outc << "} // namespace ramfuzz\n";
   outh << "} // namespace ramfuzz\n";
   if (run_error)

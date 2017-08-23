@@ -25,9 +25,8 @@
 
 namespace ramfuzz {
 
-/// Maps a class to all subclasses that inherit from it directly.  Classes are
-/// represented by their fully qualified names.
-using Inheritance = llvm::StringMap<llvm::StringSet<>>;
+/// Maps a class to all subclasses that inherit from it directly.
+using Inheritance = std::map<ClassReference, std::vector<ClassReference>>;
 
 /// Keeps certain details about (sub)classes (represented by their fully
 /// qualified names), such as: is it a template, is it globally visible, etc.
@@ -81,14 +80,10 @@ public:
 
   const Inheritance &getInheritance() const { return inh; }
   const ClassDetails &getClassDetails() const { return cdetails; }
-  /// Maps base class to subclasses.
-  using Subclasses = std::map<ClassReference, std::vector<ClassReference>>;
-  const Subclasses& getSubclasses() const { return subclasses; }
 
 private:
   Inheritance inh;       ///< Inheritance result being built.
   ClassDetails cdetails; ///< Class details collected along the way.
-  Subclasses subclasses;
 };
 
 } // namespace ramfuzz

@@ -16,6 +16,7 @@
 
 #include <algorithm>
 #include <string>
+#include <vector>
 
 #include "ramfuzz/lib/Inheritance.hpp"
 
@@ -30,15 +31,15 @@ using ramfuzz::InheritanceBuilder;
 /// Returns success if findInheritance(code) equals expected, modulo ordering.
 /// Otherwise, returns failure with an explanation.
 AssertionResult hasInheritance(const string &code,
-                               const Inheritance &expected) {
+                               const map<string, vector<string>> &expected) {
   InheritanceBuilder builder(code);
-  const auto &sc = builder.getSubclasses();
-  if (sc.size() != expected.size()) {
+  const auto &inh = builder.getInheritance();
+  if (inh.size() != expected.size()) {
     return AssertionFailure()
-           << "expected " << expected.size() << " elements, got " << sc.size();
+           << "expected " << expected.size() << " elements, got " << inh.size();
   }
-  for (const auto &entry : sc) {
-    const auto clsname = entry.first.name();
+  for (const auto &entry : inh) {
+    const auto &clsname = entry.first.name();
     const auto found = expected.find(clsname);
     if (found == expected.end())
       return AssertionFailure() << "unexpected base class " << clsname;
@@ -49,7 +50,8 @@ AssertionResult hasInheritance(const string &code,
                                 << " subclasses for base class " << clsname
                                 << ", got " << actual_subclasses.size();
     for (const auto &subcls : actual_subclasses)
-      if (!expected_subclasses.count(subcls.name()))
+      if (find(expected_subclasses.cbegin(), expected_subclasses.cend(),
+               subcls.name()) == expected_subclasses.cend())
         return AssertionFailure() << "unexpected subclass " << subcls.name()
                                   << " of class " << clsname;
   }
