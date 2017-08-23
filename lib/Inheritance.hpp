@@ -28,34 +28,6 @@ namespace ramfuzz {
 /// Maps a class to all subclasses that inherit from it directly.
 using Inheritance = std::map<ClassReference, std::vector<ClassReference>>;
 
-/// Keeps certain details about (sub)classes (represented by their fully
-/// qualified names), such as: is it a template, is it globally visible, etc.
-class ClassDetails {
-public:
-  /// Symbolic names for class details.
-  enum Detail { is_template, is_visible, detail_count = is_visible + 1 };
-
-  /// Sets a class detail to \p val.
-  void set(llvm::StringRef name, Detail d, bool val) {
-    auto &entry = details[name];
-    entry.resize(detail_count);
-    entry[d] = val;
-  }
-
-  /// Returns a detail value for a class.
-  bool get(llvm::StringRef name, Detail d) const {
-    auto found = details.find(name);
-    if (found == details.end() || found->second.empty())
-      return false;
-    else
-      return found->second[d];
-  }
-
-private:
-  /// Maps fully qualified class name to a bitfield of binary features.
-  llvm::StringMap<std::vector<bool>> details;
-};
-
 /// Builds up an Inheritance object by analyzing all non-anonymous classes in
 /// some source code.  Can be used standalone via process() or within an
 /// existing ClangTool via tackOnto().
@@ -79,11 +51,9 @@ public:
   run(const clang::ast_matchers::MatchFinder::MatchResult &Result) override;
 
   const Inheritance &getInheritance() const { return inh; }
-  const ClassDetails &getClassDetails() const { return cdetails; }
 
 private:
   Inheritance inh;       ///< Inheritance result being built.
-  ClassDetails cdetails; ///< Class details collected along the way.
 };
 
 } // namespace ramfuzz

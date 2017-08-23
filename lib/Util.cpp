@@ -73,6 +73,8 @@ namespace ramfuzz {
 
 ClassReference::ClassReference(clang::CXXRecordDecl const &decl)
     : name_(decl.getQualifiedNameAsString()),
-      suffix_(parameters(decl.getDescribedClassTemplate())) {}
+      suffix_(parameters(decl.getDescribedClassTemplate())),
+      is_template_(decl.getDescribedClassTemplate()),
+      is_visible_(globally_visible(&decl)) {}
 
 } // namespace ramfuzz

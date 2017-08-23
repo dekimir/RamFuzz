@@ -33,13 +33,15 @@ public:
     return this->name_ < that.name_;
   }
   bool operator<(const std::string &s) const { return name_ < s; }
-  ClassReference &operator=(const ClassReference &that) {
-    this->name_ = that.name_;
-    return *this;
-  }
+  ClassReference &operator=(const ClassReference &that) = default;
+  bool is_template() const { return is_template_; }
+  bool is_visible() const { return is_visible_; }
 
 private:
   std::string name_, suffix_;
+  bool is_template_; ///< True iff this is a class template.
+  ///< True iff this class is visible from the outermost scope.
+  bool is_visible_;
 };
 
 inline bool operator<(const std::string &s, const ClassReference &ref) {

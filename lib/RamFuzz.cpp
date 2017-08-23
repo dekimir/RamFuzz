@@ -305,7 +305,7 @@ public:
   vector<string> missingClasses();
 
   /// Emits aditional code required for correct compilation.
-  void finish(const Inheritance &, const ClassDetails &);
+  void finish(const Inheritance &);
 
 private:
   /// If C is abstract, generates an inner class that's a concrete subclass of
@@ -365,7 +365,7 @@ private:
 
   /// Generates the definition of member submakers for each of the classes
   /// processed so far.
-  void gen_submakers_defs(const Inheritance &, const ClassDetails &cdetails);
+  void gen_submakers_defs(const Inheritance &);
 
   /// True iff M's harness method may recursively call itself.  For example, a
   /// copy constructor's harness needs to construct another object of the same
@@ -615,8 +615,7 @@ void RamFuzz::gen_submakers_decl(const string &cls) {
   outh << "  static " << cls << " *(*const submakers[])(runtime::gen &);\n";
 }
 
-void RamFuzz::gen_submakers_defs(const Inheritance &sc,
-                                 const ClassDetails &cdetails) {
+void RamFuzz::gen_submakers_defs(const Inheritance &sc) {
   auto next_maker_fn = 0u;
   for (const auto &cls : processed_classes) {
     const auto name = cls.name() + cls.suffix();
@@ -633,8 +632,7 @@ void RamFuzz::gen_submakers_defs(const Inheritance &sc,
       const auto first_maker_fn = next_maker_fn;
       *outt << "namespace {\n";
       for (const auto &subcls : found->second)
-        if (!cdetails.get(subcls.name(), cdetails.is_template) &&
-            cdetails.get(subcls.name(), cdetails.is_visible)) {
+        if (!subcls.is_template() && subcls.is_visible()) {
           *outt << tmpl_preamble << name << "* submakerfn" << next_maker_fn++
                 << "(runtime::gen& g) { return g.make<" << subcls.name()
                 << ">(true); }\n";
@@ -846,7 +844,7 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
   }
 }
 
-void RamFuzz::finish(const Inheritance &sc, const ClassDetails &cdetails) {
+void RamFuzz::finish(const Inheritance &sc) {
   for (auto e : referenced_enums) {
     outh << "template<> " << e.first << "* ramfuzz::runtime::gen::make<"
          << e.first << ">(bool);\n";
@@ -862,7 +860,7 @@ void RamFuzz::finish(const Inheritance &sc, const ClassDetails &cdetails) {
     outc << "}\n";
   }
 
-  gen_submakers_defs(sc, cdetails);
+  gen_submakers_defs(sc);
 }
 
 void RamFuzz::tackOnto(MatchFinder &MF) {
@@ -900,7 +898,7 @@ namespace ramfuzz {
   InheritanceBuilder inh;
   inh.tackOnto(mf);
   const int run_error = tool.run(newFrontendActionFactory(&mf).get());
-  rf.finish(inh.getInheritance(), inh.getClassDetails());
+  rf.finish(inh.getInheritance());
   outc << "} // namespace ramfuzz\n";
   outh << "} // namespace ramfuzz\n";
   if (run_error)

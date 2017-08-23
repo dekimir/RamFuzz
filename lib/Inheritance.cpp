@@ -47,9 +47,6 @@ void InheritanceBuilder::run(const MatchFinder::MatchResult &Result) {
           inh[ClassReference(*dyn_cast<CXXRecordDecl>(tag->getDecl()))]
               .emplace_back(*C);
       }
-      cdetails.set(qname, ClassDetails::is_template,
-                   C->getDescribedClassTemplate());
-      cdetails.set(qname, ClassDetails::is_visible, globally_visible(C));
     }
 }
 

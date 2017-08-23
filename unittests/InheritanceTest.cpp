@@ -24,7 +24,6 @@ namespace {
 
 using namespace std;
 using namespace testing;
-using ramfuzz::ClassDetails;
 using ramfuzz::Inheritance;
 using ramfuzz::InheritanceBuilder;
 
@@ -136,30 +135,6 @@ TEST(InheritanceTest, Regression2) {
   // Although T is a base class of A<T>, we can't make concrete use of that for
   // now.  Expect empty inheritance info.
   EXPECT_TRUE(hasInheritance(code, {}));
-}
-
-TEST(ClassDetailsTest, Template) {
-  const auto ist = ClassDetails::is_template;
-  ClassDetails cldeets;
-  EXPECT_FALSE(cldeets.get("class1", ist));
-  cldeets.set("class1", ist, true);
-  EXPECT_TRUE(cldeets.get("class1", ist));
-  cldeets.set("class2", ist, true);
-  EXPECT_TRUE(cldeets.get("class2", ist));
-  cldeets.set("class1", ist, false);
-  EXPECT_FALSE(cldeets.get("class1", ist));
-}
-
-TEST(ClassDetailsTest, Visible) {
-  const auto isvis = ClassDetails::is_visible;
-  ClassDetails cldeets;
-  EXPECT_FALSE(cldeets.get("class1", isvis));
-  cldeets.set("class1", isvis, true);
-  EXPECT_TRUE(cldeets.get("class1", isvis));
-  cldeets.set("class2", isvis, true);
-  EXPECT_TRUE(cldeets.get("class2", isvis));
-  cldeets.set("class1", isvis, false);
-  EXPECT_FALSE(cldeets.get("class1", isvis));
 }
 
 } // anonymous namespace
