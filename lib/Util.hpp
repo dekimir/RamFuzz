@@ -14,11 +14,17 @@
 
 #pragma once
 
+#include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/PrettyPrinter.h"
 
 /// True iff C is visible outside all its parent contexts.
 bool globally_visible(const clang::CXXRecordDecl *C);
+
+/// Prints \p params to \p os, together with their types.  Eg: "typename T1,
+/// class T2, int T3".
+void print_names_with_types(const clang::TemplateParameterList &params,
+                            llvm::raw_ostream &os);
 
 namespace ramfuzz {
 

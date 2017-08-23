@@ -52,23 +52,7 @@ string template_preamble(const ClassTemplateDecl *templ) {
   raw_string_ostream rs(s);
   if (templ) {
     rs << "template<";
-    /// Similar to DeclPrinter::printTemplateParameters().
-    size_t idx = 0;
-    for (const auto par : *templ->getTemplateParameters()) {
-      rs << (idx++ ? ", " : "");
-      if (auto type = dyn_cast<TemplateTypeParmDecl>(par)) {
-        if (type->wasDeclaredWithTypename())
-          rs << "typename ";
-        else
-          rs << "class ";
-        rs << *type;
-      } else if (const auto nontype = dyn_cast<NonTypeTemplateParmDecl>(par)) {
-        StringRef name;
-        if (auto id = nontype->getIdentifier())
-          name = id->getName();
-        nontype->getType().print(rs, RFPP(), name);
-      }
-    }
+    print_names_with_types(*templ->getTemplateParameters(), rs);
     rs << ">\n";
   }
   return rs.str();
@@ -95,6 +79,27 @@ bool globally_visible(const CXXRecordDecl *C) {
       return globally_visible(dyn_cast<CXXRecordDecl>(ctx));
   }
   return true;
+}
+
+void print_names_with_types(const TemplateParameterList &params,
+                            raw_ostream &os) {
+  /// Similar to DeclPrinter::printTemplateParameters().
+  size_t idx = 0;
+  for (const auto par : params) {
+    os << (idx++ ? ", " : "");
+    if (auto type = dyn_cast<TemplateTypeParmDecl>(par)) {
+      if (type->wasDeclaredWithTypename())
+        os << "typename ";
+      else
+        os << "class ";
+      os << *type;
+    } else if (const auto nontype = dyn_cast<NonTypeTemplateParmDecl>(par)) {
+      StringRef name;
+      if (auto id = nontype->getIdentifier())
+        name = id->getName();
+      nontype->getType().print(os, RFPP(), name);
+    }
+  }
 }
 
 namespace ramfuzz {
