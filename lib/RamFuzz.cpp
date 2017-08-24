@@ -797,13 +797,9 @@ void RamFuzz::finish(const Inheritance &sc) {
 
 void RamFuzz::tackOnto(MatchFinder &MF) {
   static const auto matcher =
-      cxxRecordDecl(
-          isExpansionInMainFile(),
-          unless(hasAncestor(namespaceDecl(isAnonymous()))),
-          anyOf(hasDescendant(cxxMethodDecl(
-                    isPublic(), unless(functionDecl(isStaticStorageClass())))),
-                hasDescendant(fieldDecl(
-                    isPublic(), unless(varDecl(isStaticStorageClass()))))))
+      cxxRecordDecl(isExpansionInMainFile(), isDefinition(),
+                    unless(hasAncestor(namespaceDecl(isAnonymous()))),
+                    unless(isImplicit()))
           .bind("class");
   MF.addMatcher(matcher, this);
 }
