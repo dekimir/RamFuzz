@@ -93,7 +93,7 @@ void print_names_with_types(const TemplateParameterList &params,
 
 namespace ramfuzz {
 
-ClassReference::ClassReference(clang::CXXRecordDecl const &decl)
+ClassDetails::ClassDetails(const clang::CXXRecordDecl &decl)
     : name_(decl.getQualifiedNameAsString()),
       prefix_(template_preamble(decl.getDescribedClassTemplate()).str()),
       suffix_(parameters(decl.getDescribedClassTemplate())),

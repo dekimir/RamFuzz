@@ -36,19 +36,19 @@ namespace ramfuzz {
 clang::PrintingPolicy RFPP();
 
 /// Keeps class details permanently, even after AST is destructed.
-class ClassReference {
+class ClassDetails {
 public:
-  ClassReference() = default;
+  ClassDetails() = default;
   /// CXXRecordDecl object needn't survive past this constructor.
-  explicit ClassReference(const clang::CXXRecordDecl &);
+  explicit ClassDetails(const clang::CXXRecordDecl &);
   const std::string &prefix() const { return prefix_; }
   const std::string &name() const { return name_; };
   const std::string &suffix() const { return suffix_; }
-  bool operator<(const ClassReference &that) const {
+  bool operator<(const ClassDetails &that) const {
     return this->name_ < that.name_;
   }
   bool operator<(const std::string &s) const { return name_ < s; }
-  ClassReference &operator=(const ClassReference &that) = default;
+  ClassDetails &operator=(const ClassDetails &that) = default;
   bool is_template() const { return is_template_; }
   bool is_visible() const { return is_visible_; }
 
@@ -59,7 +59,7 @@ private:
   bool is_visible_;
 };
 
-inline bool operator<(const std::string &s, const ClassReference &ref) {
+inline bool operator<(const std::string &s, const ClassDetails &ref) {
   return ref.name() < s;
 }
 

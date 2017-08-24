@@ -26,7 +26,7 @@
 namespace ramfuzz {
 
 /// Maps a class to all subclasses that inherit from it directly.
-using Inheritance = std::map<ClassReference, std::vector<ClassReference>>;
+using Inheritance = std::map<ClassDetails, std::vector<ClassDetails>>;
 
 /// Builds up an Inheritance object by analyzing all non-anonymous classes in
 /// some source code.  Can be used standalone via process() or within an
@@ -53,7 +53,7 @@ public:
   const Inheritance &getInheritance() const { return inh; }
 
 private:
-  Inheritance inh;       ///< Inheritance result being built.
+  Inheritance inh; ///< Inheritance result being built.
 };
 
 } // namespace ramfuzz

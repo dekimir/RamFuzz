@@ -32,10 +32,10 @@ using namespace ast_matchers;
 using namespace tooling;
 
 class Helper : public MatchFinder::MatchCallback {
-  ClassReference obj;
+  ClassDetails obj;
 
 public:
-  static ClassReference process(const Twine &code) {
+  static ClassDetails process(const Twine &code) {
     Helper h;
     MatchFinder MF;
     MF.addMatcher(cxxRecordDecl(unless(isImplicit())).bind("class"), &h);
@@ -45,15 +45,15 @@ public:
 
   void run(const MatchFinder::MatchResult &result) {
     if (const auto *C = result.Nodes.getNodeAs<CXXRecordDecl>("class"))
-      obj = ClassReference(*C);
+      obj = ClassDetails(*C);
   }
 };
 
-TEST(ClassReferenceTest, Bare) {
+TEST(ClassDetailsTest, Bare) {
   EXPECT_EQ("C", Helper::process("class C {};").name());
 }
 
-TEST(ClassReferenceTest, Qualified) {
+TEST(ClassDetailsTest, Qualified) {
   EXPECT_EQ("N::C", Helper::process("namespace N {class C {};}").name());
 }
 

@@ -337,11 +337,11 @@ private:
   PrintingPolicy prtpol;
 
   /// Classes under test that were referenced in generated code.
-  set<ClassReference> referenced_classes;
+  set<ClassDetails> referenced_classes;
 
   /// Qualified names of classes under test whose harness specializations have
   /// been generated.
-  set<ClassReference> processed_classes;
+  set<ClassDetails> processed_classes;
 
   /// Enum types for which parameters have been generated.  Maps the enum name
   /// to its values.
@@ -401,7 +401,7 @@ string class_under_test(const CXXRecordDecl *C) {
 } // anonymous namespace
 
 vector<string> RamFuzz::missingClasses() {
-  vector<ClassReference> diff;
+  vector<ClassDetails> diff;
   set_difference(referenced_classes.cbegin(), referenced_classes.cend(),
                  processed_classes.cbegin(), processed_classes.cend(),
                  inserter(diff, diff.begin()));
@@ -426,7 +426,7 @@ void RamFuzz::register_class(const Type &ty) {
     return;
   if (const auto t = dyn_cast<ClassTemplateSpecializationDecl>(rec))
     rec = t->getSpecializedTemplate()->getTemplatedDecl();
-  referenced_classes.insert(ClassReference(*rec));
+  referenced_classes.insert(ClassDetails(*rec));
 }
 
 void RamFuzz::gen_concrete_methods(const CXXRecordDecl *C, const string &cls,
@@ -772,7 +772,7 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
     outh << "};\n";
     *outt << "\n";
     (tmpl ? outh : outc) << outt->str();
-    processed_classes.insert(ClassReference(*C));
+    processed_classes.insert(ClassDetails(*C));
   }
 }
 
