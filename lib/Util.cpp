@@ -41,7 +41,7 @@ string parameters(const ClassTemplateDecl *tmpl) {
     strm << '<';
     size_t i = 0;
     for (const auto par : *tmpl->getTemplateParameters())
-      strm << (i++ ? ", " : "") << *par;
+      strm << (i++ ? ", " : "") << getName(*par, default_typename);
     strm << '>';
   }
   return strm.str();
@@ -72,23 +72,24 @@ bool globally_visible(const CXXRecordDecl *C) {
 
 void print_names_with_types(const TemplateParameterList &params,
                             raw_ostream &os) {
-  /// Similar to DeclPrinter::printTemplateParameters().
+  /// Similar to DeclPrinter::printTemplateParameters(), but must generate names
+  /// for nameless parameters.
   size_t idx = 0;
   for (const auto par : params) {
     os << (idx++ ? ", " : "");
-    if (auto type = dyn_cast<TemplateTypeParmDecl>(par)) {
-      if (type->wasDeclaredWithTypename())
-        os << "typename ";
-      else
-        os << "class ";
-      os << *type;
-    } else if (const auto nontype = dyn_cast<NonTypeTemplateParmDecl>(par)) {
-      StringRef name;
-      if (auto id = nontype->getIdentifier())
-        name = id->getName();
+    const auto name = getName(*par, default_typename);
+    if (auto type = dyn_cast<TemplateTypeParmDecl>(par))
+      os << (type->wasDeclaredWithTypename() ? "typename " : "class ") << name;
+    else if (const auto nontype = dyn_cast<NonTypeTemplateParmDecl>(par))
       nontype->getType().print(os, RFPP(), name);
-    }
   }
+}
+
+StringRef getName(const NamedDecl &decl, const char *deflt) {
+  StringRef name;
+  if (auto id = decl.getIdentifier())
+    name = id->getName();
+  return name.empty() ? deflt : name;
 }
 
 namespace ramfuzz {

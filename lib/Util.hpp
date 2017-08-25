@@ -19,6 +19,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -29,6 +30,9 @@ bool globally_visible(const clang::CXXRecordDecl *C);
 /// class T2, int T3".
 void print_names_with_types(const clang::TemplateParameterList &params,
                             llvm::raw_ostream &os);
+
+/// Returns decl's name, if nonempty; otherwise, returns deflt.
+llvm::StringRef getName(const clang::NamedDecl &decl, const char *deflt);
 
 namespace ramfuzz {
 
@@ -94,5 +98,8 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
   pream.print(os);
   return os;
 }
+
+/// Default template parameter name.
+constexpr char default_typename[] = "ramfuzz_typename_placeholder";
 
 } // namespace ramfuzz

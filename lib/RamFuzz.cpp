@@ -392,7 +392,7 @@ string class_under_test(const CXXRecordDecl *C) {
     strm << '<';
     size_t i = 0;
     for (const auto par : *tmpl->getTemplateParameters())
-      strm << (i++ ? ", " : "") << *par;
+      strm << (i++ ? ", " : "") << getName(*par, default_typename);
     strm << '>';
   }
   return strm.str();
