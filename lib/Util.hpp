@@ -41,6 +41,7 @@ public:
   /// CXXRecordDecl object needn't survive past this constructor.
   explicit ClassDetails(const clang::CXXRecordDecl &);
   const std::string &prefix() const { return prefix_; }
+  const std::string &name() const { return name_; };
   const std::string &qname() const { return qname_; };
   const std::string &suffix() const { return suffix_; }
   bool operator<(const ClassDetails &that) const {
@@ -52,7 +53,7 @@ public:
   bool is_visible() const { return is_visible_; }
 
 private:
-  std::string qname_, prefix_, suffix_;
+  std::string name_, qname_, prefix_, suffix_;
   bool is_template_; ///< True iff this is a class template.
   ///< True iff this class is visible from the outermost scope.
   bool is_visible_;

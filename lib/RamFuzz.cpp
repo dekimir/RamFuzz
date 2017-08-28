@@ -360,12 +360,6 @@ string valident(const string &mname) {
   return transf;
 }
 
-/// Given a (possibly qualified) class name, returns its constructor's name.
-const char *ctrname(const string &cls) {
-  const auto found = cls.rfind("::");
-  return &cls[found == string::npos ? 0 : found + 2];
-}
-
 /// Returns ty's pointee (and if that's a pointer, its pointee, and so on
 /// recursively), as well as the depth level of that recursion.
 tuple<QualType, unsigned> ultimate_pointee(QualType ty, const ASTContext &ctx) {
@@ -503,7 +497,7 @@ void RamFuzz::gen_croulette(const ClassDetails &cls, unsigned size) {
         << ">::cptr harness<" << cls << ">::croulette[] = {\n  ";
   for (unsigned i = 0; i < size; ++i)
     *outt << (i ? ", " : "") << "&harness<" << cls
-          << ">::" << valident(ctrname(cls.qname())) << i;
+          << ">::" << valident(cls.name()) << i;
   *outt << "\n};\n";
 }
 
@@ -512,7 +506,7 @@ void RamFuzz::gen_mroulette(const ClassDetails &cls,
   unsigned mroulette_size = 0;
   *outt << cls.prefix() << "const typename harness<" << cls
         << ">::mptr harness<" << cls << ">::mroulette[] = {\n  ";
-  const auto name = valident(ctrname(cls.qname()));
+  const auto name = valident(cls.name());
   size_t idx = 0;
   for (const auto &nc : namecount) {
     if (nc.first == name)
@@ -695,7 +689,7 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
       const string name =
           // M->getNameAsString() sometimes uses wrong template-parameter names;
           // see ramfuzz/test/tmpl.hpp.
-          valident(isa<CXXConstructorDecl>(M) ? ctrname(cls.qname())
+          valident(isa<CXXConstructorDecl>(M) ? cls.name()
                                               : M->getNameAsString());
       *outt << cls.prefix();
       if (isa<CXXConstructorDecl>(M)) {
@@ -716,7 +710,7 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
       namecount[name]++;
     }
     if (C->needsImplicitDefaultConstructor()) {
-      const auto name = valident(ctrname(cls.qname()));
+      const auto name = valident(cls.name());
       safectr = name + to_string(namecount[name]);
       outh << "  " << cls << "* ";
       outh << name << namecount[name]++ << "() { return new ";
