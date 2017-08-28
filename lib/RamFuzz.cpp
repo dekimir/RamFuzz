@@ -402,7 +402,7 @@ vector<string> RamFuzz::missingClasses() {
                  inserter(diff, diff.begin()));
   vector<string> names;
   for (const auto &d : diff)
-    names.push_back(d.name());
+    names.push_back(d.qname());
   return names;
 }
 
@@ -503,7 +503,7 @@ void RamFuzz::gen_croulette(const ClassDetails &cls, unsigned size) {
         << ">::cptr harness<" << cls << ">::croulette[] = {\n  ";
   for (unsigned i = 0; i < size; ++i)
     *outt << (i ? ", " : "") << "&harness<" << cls
-          << ">::" << valident(ctrname(cls.name())) << i;
+          << ">::" << valident(ctrname(cls.qname())) << i;
   *outt << "\n};\n";
 }
 
@@ -512,7 +512,7 @@ void RamFuzz::gen_mroulette(const ClassDetails &cls,
   unsigned mroulette_size = 0;
   *outt << cls.prefix() << "const typename harness<" << cls
         << ">::mptr harness<" << cls << ">::mroulette[] = {\n  ";
-  const auto name = valident(ctrname(cls.name()));
+  const auto name = valident(ctrname(cls.qname()));
   size_t idx = 0;
   for (const auto &nc : namecount) {
     if (nc.first == name)
@@ -541,7 +541,7 @@ void RamFuzz::gen_submakers_decl(const ClassDetails &cls) {
 void RamFuzz::gen_submakers_defs(const Inheritance &sc) {
   auto next_maker_fn = 0u;
   for (const auto &cls : processed_classes) {
-    const auto name = cls.name() + cls.suffix();
+    const auto name = cls.qname() + cls.suffix();
     const auto &tmpl_preamble = cls.prefix();
     string stemp;
     outt.reset(new raw_string_ostream(stemp));
@@ -557,7 +557,7 @@ void RamFuzz::gen_submakers_defs(const Inheritance &sc) {
       for (const auto &subcls : found->second)
         if (!subcls.is_template() && subcls.is_visible()) {
           *outt << tmpl_preamble << name << "* submakerfn" << next_maker_fn++
-                << "(runtime::gen& g) { return g.make<" << subcls.name()
+                << "(runtime::gen& g) { return g.make<" << subcls.qname()
                 << ">(true); }\n";
           referenced_classes.insert(subcls);
         }
@@ -695,7 +695,7 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
       const string name =
           // M->getNameAsString() sometimes uses wrong template-parameter names;
           // see ramfuzz/test/tmpl.hpp.
-          valident(isa<CXXConstructorDecl>(M) ? ctrname(cls.name())
+          valident(isa<CXXConstructorDecl>(M) ? ctrname(cls.qname())
                                               : M->getNameAsString());
       *outt << cls.prefix();
       if (isa<CXXConstructorDecl>(M)) {
@@ -716,7 +716,7 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
       namecount[name]++;
     }
     if (C->needsImplicitDefaultConstructor()) {
-      const auto name = valident(ctrname(cls.name()));
+      const auto name = valident(ctrname(cls.qname()));
       safectr = name + to_string(namecount[name]);
       outh << "  " << cls << "* ";
       outh << name << namecount[name]++ << "() { return new ";

@@ -50,11 +50,11 @@ public:
 };
 
 TEST(ClassDetailsTest, Bare) {
-  EXPECT_EQ("C", Helper::process("class C {};").name());
+  EXPECT_EQ("C", Helper::process("class C {};").qname());
 }
 
 TEST(ClassDetailsTest, Qualified) {
-  EXPECT_EQ("N::C", Helper::process("namespace N {class C {};}").name());
+  EXPECT_EQ("N::C", Helper::process("namespace N {class C {};}").qname());
 }
 
 } // anonymous namespace

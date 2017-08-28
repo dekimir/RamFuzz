@@ -38,7 +38,7 @@ AssertionResult hasInheritance(const string &code,
            << "expected " << expected.size() << " elements, got " << inh.size();
   }
   for (const auto &entry : inh) {
-    const auto &clsname = entry.first.name();
+    const auto &clsname = entry.first.qname();
     const auto found = expected.find(clsname);
     if (found == expected.end())
       return AssertionFailure() << "unexpected base class " << clsname;
@@ -50,8 +50,8 @@ AssertionResult hasInheritance(const string &code,
                                 << ", got " << actual_subclasses.size();
     for (const auto &subcls : actual_subclasses)
       if (find(expected_subclasses.cbegin(), expected_subclasses.cend(),
-               subcls.name()) == expected_subclasses.cend())
-        return AssertionFailure() << "unexpected subclass " << subcls.name()
+               subcls.qname()) == expected_subclasses.cend())
+        return AssertionFailure() << "unexpected subclass " << subcls.qname()
                                   << " of class " << clsname;
   }
   return AssertionSuccess();

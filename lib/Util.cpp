@@ -111,7 +111,7 @@ StringRef getName(const NamedDecl &decl, const char *deflt) {
 namespace ramfuzz {
 
 ClassDetails::ClassDetails(const clang::CXXRecordDecl &decl)
-    : name_(decl.getQualifiedNameAsString()),
+    : qname_(decl.getQualifiedNameAsString()),
       prefix_(template_preamble(decl.getDescribedClassTemplate())),
       suffix_(parameters(decl.getDescribedClassTemplate())),
       is_template_(decl.getDescribedClassTemplate()),

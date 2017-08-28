@@ -34,37 +34,37 @@ namespace ramfuzz {
 /// RamFuzz printing policy.
 clang::PrintingPolicy RFPP();
 
-/// Keeps class details permanently, even after AST is destructed.
+/// Keeps class details permanently, even after AST is deleted.
 class ClassDetails {
 public:
   ClassDetails() = default;
   /// CXXRecordDecl object needn't survive past this constructor.
   explicit ClassDetails(const clang::CXXRecordDecl &);
   const std::string &prefix() const { return prefix_; }
-  const std::string &name() const { return name_; };
+  const std::string &qname() const { return qname_; };
   const std::string &suffix() const { return suffix_; }
   bool operator<(const ClassDetails &that) const {
-    return this->name_ < that.name_;
+    return this->qname_ < that.qname_;
   }
-  bool operator<(const std::string &s) const { return name_ < s; }
+  bool operator<(const std::string &s) const { return qname_ < s; }
   ClassDetails &operator=(const ClassDetails &that) = default;
   bool is_template() const { return is_template_; }
   bool is_visible() const { return is_visible_; }
 
 private:
-  std::string name_, prefix_, suffix_;
+  std::string qname_, prefix_, suffix_;
   bool is_template_; ///< True iff this is a class template.
   ///< True iff this class is visible from the outermost scope.
   bool is_visible_;
 };
 
 inline bool operator<(const std::string &s, const ClassDetails &ref) {
-  return ref.name() < s;
+  return ref.qname() < s;
 }
 
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
                                      const ClassDetails &cd) {
-  return os << cd.name() << cd.suffix();
+  return os << cd.qname() << cd.suffix();
 }
 
 /// Default template parameter name.
