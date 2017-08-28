@@ -278,24 +278,19 @@ private:
       set<MethodNameAndSignature> &to_skip);
 
   /// Generates the declaration and definition of member croulette.
-  void gen_croulette(
-      const string &cls, ///< Fully qualified name of class under test.
-      const template_preamble &preamble, ///< Goes before "harness<cls>".
-      unsigned size                      ///< Size of croulette.
+  void gen_croulette(const ClassDetails &cls, ///< Class under test.
+                     unsigned size            ///< Size of croulette.
   );
 
   /// Generates the declaration and definition of member mroulette.
   void gen_mroulette(
-      const string &cls, ///< Fully qualified name of class under test.
-      const template_preamble &preamble, ///< Goes before "harness<cls>".
+      const ClassDetails &cls, ///< Class under test.
       const unordered_map<string, unsigned>
           &namecount ///< Method-name histogram of the class under test.
   );
 
-  /// Generates the declaration of member submakers.
-  void gen_submakers_decl(
-      const string &cls ///< Fully qualified name of class under test.
-  );
+  /// Generates the declaration of cls member submakers.
+  void gen_submakers_decl(const ClassDetails &cls);
 
   /// Generates the definition of member submakers for each of the classes
   /// processed so far.
@@ -499,27 +494,25 @@ void RamFuzz::gen_concrete_impl(const CXXRecordDecl *C, const ASTContext &ctx) {
   }
 }
 
-void RamFuzz::gen_croulette(const string &cls,
-                            const template_preamble &preamble, unsigned size) {
+void RamFuzz::gen_croulette(const ClassDetails &cls, unsigned size) {
   outh << "  using cptr = " << cls << "* (harness::*)();\n";
   outh << "  static constexpr unsigned ccount = " << size << ";\n";
   outh << "  static const cptr croulette[ccount];\n";
 
-  *outt << preamble << "const typename harness<" << cls << ">::cptr harness<"
-        << cls << ">::croulette[] = {\n  ";
+  *outt << cls.prefix() << "const typename harness<" << cls
+        << ">::cptr harness<" << cls << ">::croulette[] = {\n  ";
   for (unsigned i = 0; i < size; ++i)
     *outt << (i ? ", " : "") << "&harness<" << cls
-          << ">::" << valident(ctrname(cls)) << i;
+          << ">::" << valident(ctrname(cls.name())) << i;
   *outt << "\n};\n";
 }
 
-void RamFuzz::gen_mroulette(const string &cls,
-                            const template_preamble &preamble,
+void RamFuzz::gen_mroulette(const ClassDetails &cls,
                             const unordered_map<string, unsigned> &namecount) {
   unsigned mroulette_size = 0;
-  *outt << preamble << "const typename harness<" << cls << ">::mptr harness<"
-        << cls << ">::mroulette[] = {\n  ";
-  const auto name = valident(ctrname(cls));
+  *outt << cls.prefix() << "const typename harness<" << cls
+        << ">::mptr harness<" << cls << ">::mroulette[] = {\n  ";
+  const auto name = valident(ctrname(cls.name()));
   size_t idx = 0;
   for (const auto &nc : namecount) {
     if (nc.first == name)
@@ -537,7 +530,7 @@ void RamFuzz::gen_mroulette(const string &cls,
   outh << "  static const mptr mroulette[mcount];\n";
 }
 
-void RamFuzz::gen_submakers_decl(const string &cls) {
+void RamFuzz::gen_submakers_decl(const ClassDetails &cls) {
   outh << "  static const size_t subcount; // How many direct public "
           "subclasses.\n";
   outh << "  // Maker functions for direct public subclasses (subcount "
@@ -665,13 +658,13 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
       return;
     string stemp;
     outt.reset(new raw_string_ostream(stemp));
-    const string cls = class_under_test(C);
+    ClassDetails cls(*C);
     const auto tmpl = C->getDescribedClassTemplate();
     const template_preamble tmpl_preamble(tmpl);
-    outh << "template<";
-    if (tmpl)
-      print_names_with_types(*tmpl->getTemplateParameters(), outh);
-    outh << ">\n";
+    outh << cls.prefix();
+    if (cls.prefix().empty())
+      outh << "template<>";
+    outh << "\n";
     outh << "class harness<" << cls << "> {\n";
     outh << " private:\n";
     outh << "  runtime::gen& g; // Declare first to initialize early; "
@@ -703,7 +696,7 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
       const string name =
           // M->getNameAsString() sometimes uses wrong template-parameter names;
           // see ramfuzz/test/tmpl.hpp.
-          valident(isa<CXXConstructorDecl>(M) ? ctrname(cls)
+          valident(isa<CXXConstructorDecl>(M) ? ctrname(cls.name())
                                               : M->getNameAsString());
       *outt << tmpl_preamble;
       if (isa<CXXConstructorDecl>(M)) {
@@ -716,15 +709,15 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
       }
       outh << name << namecount[name] << "();\n";
       const bool may_recurse = harness_may_recurse(M, *Result.Context);
-      gen_method(Twine("harness<") + cls + ">::" + name +
-                     Twine(namecount[name]),
-                 M, *Result.Context, may_recurse);
+      *outt << "harness<" << cls << ">::";
+      gen_method(Twine(name) + Twine(namecount[name]), M, *Result.Context,
+                 may_recurse);
       if (safectr.empty() && !may_recurse && isa<CXXConstructorDecl>(M))
         safectr = name + to_string(namecount[name]);
       namecount[name]++;
     }
     if (C->needsImplicitDefaultConstructor()) {
-      const auto name = valident(ctrname(cls));
+      const auto name = valident(ctrname(cls.name()));
       safectr = name + to_string(namecount[name]);
       outh << "  " << cls << "* ";
       outh << name << namecount[name]++ << "() { return new ";
@@ -750,9 +743,9 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
         namecount[name.str()]++;
       }
     }
-    gen_mroulette(cls, tmpl_preamble, namecount);
+    gen_mroulette(cls, namecount);
     if (ccount) {
-      gen_croulette(cls, tmpl_preamble, ccount);
+      gen_croulette(cls, ccount);
       outh << "  // Ctr safe from depthlimit; won't call another harness "
               "method.\n";
       outh << "  static constexpr cptr safectr = ";
@@ -772,7 +765,7 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
     outh << "};\n";
     *outt << "\n";
     (tmpl ? outh : outc) << outt->str();
-    processed_classes.insert(ClassDetails(*C));
+    processed_classes.insert(cls);
   }
 }
 

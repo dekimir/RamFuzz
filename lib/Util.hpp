@@ -67,6 +67,11 @@ inline bool operator<(const std::string &s, const ClassDetails &ref) {
   return ref.name() < s;
 }
 
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
+                                     const ClassDetails &cd) {
+  return os << cd.name() << cd.suffix();
+}
+
 /// Streams the preamble "template<...>" required before a template class's
 /// name.  If the class isn't a template, streams nothing.
 class template_preamble {
