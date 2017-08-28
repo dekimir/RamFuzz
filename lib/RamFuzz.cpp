@@ -311,10 +311,10 @@ private:
   bool harness_may_recurse(const CXXMethodDecl *M, const ASTContext &ctx);
 
   /// Generates the definition of harness method named hname, corresponding to
-  /// the method under test M.  Assumes that the return type of the generated
-  /// method has already been output.
+  /// the method under test M.  Assumes that the return type and scope of the
+  /// generated method have already been output.
   void gen_method(
-      const Twine &hname, ///< Fully qualified harness method name.
+      const Twine &hname, ///< Harness method name.
       const CXXMethodDecl *M, const ASTContext &ctx,
       bool may_recurse ///< True iff generated body may recursively call itself.
   );
