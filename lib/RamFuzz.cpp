@@ -660,7 +660,6 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
     outt.reset(new raw_string_ostream(stemp));
     ClassDetails cls(*C);
     const auto tmpl = C->getDescribedClassTemplate();
-    const template_preamble tmpl_preamble(tmpl);
     outh << cls.prefix();
     if (cls.prefix().empty())
       outh << "template<>";
@@ -676,7 +675,7 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
     // without paying for the overhead of thread-safety.
     outh << "  // Prevents infinite recursion.\n";
     outh << "  static unsigned calldepth;\n";
-    *outt << tmpl_preamble << "unsigned harness<" << cls
+    *outt << cls.prefix() << "unsigned harness<" << cls
           << ">::calldepth = 0;\n\n";
     outh << "  static const unsigned depthlimit = "
             "ramfuzz::runtime::depthlimit;\n";
@@ -698,7 +697,7 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
           // see ramfuzz/test/tmpl.hpp.
           valident(isa<CXXConstructorDecl>(M) ? ctrname(cls.name())
                                               : M->getNameAsString());
-      *outt << tmpl_preamble;
+      *outt << cls.prefix();
       if (isa<CXXConstructorDecl>(M)) {
         outh << "  " << cls << "* ";
         *outt << cls << "* ";
@@ -734,7 +733,7 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
           !ty->getAsCXXRecordDecl()) {
         const Twine name = Twine("random_") + f->getName();
         outh << "  void " << name << namecount[name.str()] << "();\n";
-        *outt << tmpl_preamble << "void harness<" << cls << ">::" << name
+        *outt << cls.prefix() << "void harness<" << cls << ">::" << name
               << namecount[name.str()] << "() {\n";
         *outt << "  obj->" << *f << " = *g.make<" << type_streamer(ty, prtpol)
               << ">();\n";
@@ -755,7 +754,7 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
         outh << "&harness::" << safectr;
       outh << ";\n";
       *outt
-          << tmpl_preamble << "harness<" << cls
+          << cls.prefix() << "harness<" << cls
           << ">::harness(runtime::gen& g)\n"
           << "  : g(g), obj((this->*croulette[g.between(0u,ccount-1)])()) {}\n";
     } else
