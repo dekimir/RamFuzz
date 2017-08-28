@@ -373,7 +373,8 @@ tuple<QualType, unsigned> ultimate_pointee(QualType ty, const ASTContext &ctx) {
 }
 
 /// Returns C's qualified name, followed by C's template parameters if C is a
-/// template class.
+/// template class.  It's equivalent to constructing ClassDetails(*C) and
+/// concatenating its qname() and suffix().
 string class_under_test(const CXXRecordDecl *C) {
   string name = C->getQualifiedNameAsString();
   raw_string_ostream strm(name);
@@ -493,7 +494,7 @@ void RamFuzz::gen_croulette(const ClassDetails &cls, unsigned size) {
   outh << "  static constexpr unsigned ccount = " << size << ";\n";
   outh << "  static const cptr croulette[ccount];\n";
 
-  *outt << cls.prefix() << "const typename harness<" << cls
+  *outt << cls.tpreamble() << "const typename harness<" << cls
         << ">::cptr harness<" << cls << ">::croulette[] = {\n  ";
   for (unsigned i = 0; i < size; ++i)
     *outt << (i ? ", " : "") << "&harness<" << cls
@@ -504,7 +505,7 @@ void RamFuzz::gen_croulette(const ClassDetails &cls, unsigned size) {
 void RamFuzz::gen_mroulette(const ClassDetails &cls,
                             const unordered_map<string, unsigned> &namecount) {
   unsigned mroulette_size = 0;
-  *outt << cls.prefix() << "const typename harness<" << cls
+  *outt << cls.tpreamble() << "const typename harness<" << cls
         << ">::mptr harness<" << cls << ">::mroulette[] = {\n  ";
   const auto name = valident(cls.name());
   size_t idx = 0;
@@ -535,8 +536,8 @@ void RamFuzz::gen_submakers_decl(const ClassDetails &cls) {
 void RamFuzz::gen_submakers_defs(const Inheritance &sc) {
   auto next_maker_fn = 0u;
   for (const auto &cls : processed_classes) {
-    const auto name = cls.qname() + cls.suffix();
-    const auto &tmpl_preamble = cls.prefix();
+    const auto name = cls.qname() + cls.tparams();
+    const auto &tmpl_preamble = cls.tpreamble();
     string stemp;
     outt.reset(new raw_string_ostream(stemp));
     const auto found = sc.find(cls);
@@ -654,8 +655,8 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
     outt.reset(new raw_string_ostream(stemp));
     ClassDetails cls(*C);
     const auto tmpl = C->getDescribedClassTemplate();
-    outh << cls.prefix();
-    if (cls.prefix().empty())
+    outh << cls.tpreamble();
+    if (cls.tpreamble().empty())
       outh << "template<>";
     outh << "\n";
     outh << "class harness<" << cls << "> {\n";
@@ -669,7 +670,7 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
     // without paying for the overhead of thread-safety.
     outh << "  // Prevents infinite recursion.\n";
     outh << "  static unsigned calldepth;\n";
-    *outt << cls.prefix() << "unsigned harness<" << cls
+    *outt << cls.tpreamble() << "unsigned harness<" << cls
           << ">::calldepth = 0;\n\n";
     outh << "  static const unsigned depthlimit = "
             "ramfuzz::runtime::depthlimit;\n";
@@ -691,7 +692,7 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
           // see ramfuzz/test/tmpl.hpp.
           valident(isa<CXXConstructorDecl>(M) ? cls.name()
                                               : M->getNameAsString());
-      *outt << cls.prefix();
+      *outt << cls.tpreamble();
       if (isa<CXXConstructorDecl>(M)) {
         outh << "  " << cls << "* ";
         *outt << cls << "* ";
@@ -727,7 +728,7 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
           !ty->getAsCXXRecordDecl()) {
         const Twine name = Twine("random_") + f->getName();
         outh << "  void " << name << namecount[name.str()] << "();\n";
-        *outt << cls.prefix() << "void harness<" << cls << ">::" << name
+        *outt << cls.tpreamble() << "void harness<" << cls << ">::" << name
               << namecount[name.str()] << "() {\n";
         *outt << "  obj->" << *f << " = *g.make<" << type_streamer(ty, prtpol)
               << ">();\n";
@@ -748,7 +749,7 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
         outh << "&harness::" << safectr;
       outh << ";\n";
       *outt
-          << cls.prefix() << "harness<" << cls
+          << cls.tpreamble() << "harness<" << cls
           << ">::harness(runtime::gen& g)\n"
           << "  : g(g), obj((this->*croulette[g.between(0u,ccount-1)])()) {}\n";
     } else

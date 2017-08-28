@@ -34,22 +34,42 @@ namespace ramfuzz {
 /// RamFuzz printing policy.
 clang::PrintingPolicy RFPP();
 
-/// Keeps class details permanently, even after AST is deleted.
+/// Keeps class details permanently, even after AST is deleted.  Has enough
+/// information to allow various ways of referencing the class in generated
+/// code.  Examples:
+/// - a simple class A is referenced by just its name (if visible)
+/// - a class in a namespace is referenced by its qualified name
+/// - a class template is referenced by its name and template parameters, eg:
+///   A<T1, T2>. But this requires a preamble like `template<class T1, class
+///   T2>` somewhere before the reference.
 class ClassDetails {
 public:
   ClassDetails() = default;
+
   /// CXXRecordDecl object needn't survive past this constructor.
   explicit ClassDetails(const clang::CXXRecordDecl &);
-  const std::string &prefix() const { return prefix_; }
-  const std::string &name() const { return name_; };
+
+  /// The class's fully qualified name.  Meant to uniquely identify this object.
   const std::string &qname() const { return qname_; };
-  const std::string &suffix() const { return suffix_; }
+
+  /// Unqualified class name.
+  const std::string &name() const { return name_; };
+
+  /// Template preamble, eg, `template<typename T1, int n>`.  Empty if the class
+  /// is not a template.
+  const std::string &tpreamble() const { return prefix_; }
+
+  /// Template parameters, eg, `<T1, n>`.  Empty if the class is not a template.
+  const std::string &tparams() const { return suffix_; }
+
   bool operator<(const ClassDetails &that) const {
     return this->qname_ < that.qname_;
   }
-  bool operator<(const std::string &s) const { return qname_ < s; }
+
   ClassDetails &operator=(const ClassDetails &that) = default;
+
   bool is_template() const { return is_template_; }
+
   bool is_visible() const { return is_visible_; }
 
 private:
@@ -59,13 +79,9 @@ private:
   bool is_visible_;
 };
 
-inline bool operator<(const std::string &s, const ClassDetails &ref) {
-  return ref.qname() < s;
-}
-
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
                                      const ClassDetails &cd) {
-  return os << cd.qname() << cd.suffix();
+  return os << cd.qname() << cd.tparams();
 }
 
 /// Default template parameter name.
