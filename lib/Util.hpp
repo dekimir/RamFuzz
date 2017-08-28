@@ -26,11 +26,6 @@
 /// True iff C is visible outside all its parent contexts.
 bool globally_visible(const clang::CXXRecordDecl *C);
 
-/// Prints \p params to \p os, together with their types.  Eg: "typename T1,
-/// class T2, int T3".
-void print_names_with_types(const clang::TemplateParameterList &params,
-                            llvm::raw_ostream &os);
-
 /// Returns decl's name, if nonempty; otherwise, returns deflt.
 llvm::StringRef getName(const clang::NamedDecl &decl, const char *deflt);
 
@@ -70,38 +65,6 @@ inline bool operator<(const std::string &s, const ClassDetails &ref) {
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
                                      const ClassDetails &cd) {
   return os << cd.name() << cd.suffix();
-}
-
-/// Streams the preamble "template<...>" required before a template class's
-/// name.  If the class isn't a template, streams nothing.
-class template_preamble {
-public:
-  /// \p templ may be null, in which case \c print() prints nothing.
-  template_preamble(const clang::ClassTemplateDecl *templ) : templ(templ) {}
-
-  void print(llvm::raw_ostream &os) const {
-    if (templ) {
-      os << "template<";
-      print_names_with_types(*templ->getTemplateParameters(), os);
-      os << ">\n";
-    }
-  }
-
-  std::string str() const {
-    std::string stemp;
-    llvm::raw_string_ostream rs(stemp);
-    print(rs);
-    return rs.str();
-  }
-
-private:
-  const clang::ClassTemplateDecl *templ;
-};
-
-inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
-                                     const template_preamble &pream) {
-  pream.print(os);
-  return os;
 }
 
 /// Default template parameter name.

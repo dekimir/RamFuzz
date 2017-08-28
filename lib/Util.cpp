@@ -47,6 +47,37 @@ string parameters(const ClassTemplateDecl *tmpl) {
   return strm.str();
 }
 
+/// Prints \p params to \p os, together with their types.  Eg: "typename T1,
+/// class T2, int T3".
+void print_names_with_types(const TemplateParameterList &params,
+                            raw_ostream &os) {
+  /// Similar to DeclPrinter::printTemplateParameters(), but must generate names
+  /// for nameless parameters.
+  size_t idx = 0;
+  for (const auto par : params) {
+    os << (idx++ ? ", " : "");
+    const auto name = getName(*par, default_typename);
+    if (auto type = dyn_cast<TemplateTypeParmDecl>(par))
+      os << (type->wasDeclaredWithTypename() ? "typename " : "class ") << name;
+    else if (const auto nontype = dyn_cast<NonTypeTemplateParmDecl>(par))
+      nontype->getType().print(os, RFPP(), name);
+  }
+}
+
+/// Returns the preamble "template<...>" required before a template class's
+/// name.  If the class isn't a template, or \p templ is null, returns an empty
+/// string.
+string template_preamble(const clang::ClassTemplateDecl *templ) {
+  string stemp;
+  raw_string_ostream rs(stemp);
+  if (templ) {
+    rs << "template<";
+    print_names_with_types(*templ->getTemplateParameters(), rs);
+    rs << ">\n";
+  }
+  return rs.str();
+}
+
 } // anonymous namespace
 
 bool globally_visible(const CXXRecordDecl *C) {
@@ -70,21 +101,6 @@ bool globally_visible(const CXXRecordDecl *C) {
   return true;
 }
 
-void print_names_with_types(const TemplateParameterList &params,
-                            raw_ostream &os) {
-  /// Similar to DeclPrinter::printTemplateParameters(), but must generate names
-  /// for nameless parameters.
-  size_t idx = 0;
-  for (const auto par : params) {
-    os << (idx++ ? ", " : "");
-    const auto name = getName(*par, default_typename);
-    if (auto type = dyn_cast<TemplateTypeParmDecl>(par))
-      os << (type->wasDeclaredWithTypename() ? "typename " : "class ") << name;
-    else if (const auto nontype = dyn_cast<NonTypeTemplateParmDecl>(par))
-      nontype->getType().print(os, RFPP(), name);
-  }
-}
-
 StringRef getName(const NamedDecl &decl, const char *deflt) {
   StringRef name;
   if (auto id = decl.getIdentifier())
@@ -96,7 +112,7 @@ namespace ramfuzz {
 
 ClassDetails::ClassDetails(const clang::CXXRecordDecl &decl)
     : name_(decl.getQualifiedNameAsString()),
-      prefix_(template_preamble(decl.getDescribedClassTemplate()).str()),
+      prefix_(template_preamble(decl.getDescribedClassTemplate())),
       suffix_(parameters(decl.getDescribedClassTemplate())),
       is_template_(decl.getDescribedClassTemplate()),
       is_visible_(globally_visible(&decl)) {}
