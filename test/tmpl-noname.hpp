@@ -14,7 +14,7 @@
 
 /// Tests templates with nameless parameters.
 
-template <typename> class A {
+template <typename, typename> class A {
 public:
   A(int) {}
   int get() { return 321; }

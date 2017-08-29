@@ -14,6 +14,8 @@
 
 #include "Util.hpp"
 
+#include <utility>
+
 #include "clang/AST/DeclTemplate.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -34,14 +36,14 @@ AccessSpecifier getAccess(const CXXRecordDecl *C) {
 
 /// Returns tmpl's parameters formatted as <T1, T2, T3>.  If tmpl is null,
 /// returns an empty string.
-string parameters(const ClassTemplateDecl *tmpl) {
+string parameters(const ClassTemplateDecl *tmpl, NameGetter &ng) {
   string s;
   raw_string_ostream strm(s);
   if (tmpl) {
     strm << '<';
     size_t i = 0;
     for (const auto par : *tmpl->getTemplateParameters())
-      strm << (i++ ? ", " : "") << getName(*par, default_typename);
+      strm << (i++ ? ", " : "") << ng.get(par);
     strm << '>';
   }
   return strm.str();
@@ -50,13 +52,13 @@ string parameters(const ClassTemplateDecl *tmpl) {
 /// Prints \p params to \p os, together with their types.  Eg: "typename T1,
 /// class T2, int T3".
 void print_names_with_types(const TemplateParameterList &params,
-                            raw_ostream &os) {
+                            raw_ostream &os, NameGetter &ng) {
   /// Similar to DeclPrinter::printTemplateParameters(), but must generate names
   /// for nameless parameters.
   size_t idx = 0;
   for (const auto par : params) {
     os << (idx++ ? ", " : "");
-    const auto name = getName(*par, default_typename);
+    const auto name = ng.get(par);
     if (auto type = dyn_cast<TemplateTypeParmDecl>(par))
       os << (type->wasDeclaredWithTypename() ? "typename " : "class ") << name;
     else if (const auto nontype = dyn_cast<NonTypeTemplateParmDecl>(par))
@@ -67,12 +69,13 @@ void print_names_with_types(const TemplateParameterList &params,
 /// Returns the preamble "template<...>" required before a template class's
 /// name.  If the class isn't a template, or \p templ is null, returns an empty
 /// string.
-string template_preamble(const clang::ClassTemplateDecl *templ) {
+string template_preamble(const clang::ClassTemplateDecl *templ,
+                         NameGetter &ng) {
   string stemp;
   raw_string_ostream rs(stemp);
   if (templ) {
     rs << "template<";
-    print_names_with_types(*templ->getTemplateParameters(), rs);
+    print_names_with_types(*templ->getTemplateParameters(), rs, ng);
     rs << ">\n";
   }
   return rs.str();
@@ -101,19 +104,12 @@ bool globally_visible(const CXXRecordDecl *C) {
   return true;
 }
 
-StringRef getName(const NamedDecl &decl, const char *deflt) {
-  StringRef name;
-  if (auto id = decl.getIdentifier())
-    name = id->getName();
-  return name.empty() ? deflt : name;
-}
-
 namespace ramfuzz {
 
-ClassDetails::ClassDetails(const clang::CXXRecordDecl &decl)
+ClassDetails::ClassDetails(const clang::CXXRecordDecl &decl, NameGetter &ng)
     : name_(decl.getNameAsString()), qname_(decl.getQualifiedNameAsString()),
-      prefix_(template_preamble(decl.getDescribedClassTemplate())),
-      suffix_(parameters(decl.getDescribedClassTemplate())),
+      prefix_(template_preamble(decl.getDescribedClassTemplate(), ng)),
+      suffix_(parameters(decl.getDescribedClassTemplate(), ng)),
       is_template_(decl.getDescribedClassTemplate()),
       is_visible_(globally_visible(&decl)) {}
 
@@ -124,6 +120,20 @@ PrintingPolicy RFPP() {
   rfpp.SuppressTagKeyword = true;
   rfpp.SuppressScope = false;
   return rfpp;
+}
+
+StringRef NameGetter::get(const NamedDecl *decl) {
+  StringRef name;
+  if (auto id = decl->getIdentifier())
+    name = id->getName();
+  if (!name.empty())
+    return name;
+  const auto found = placeholders.find(decl);
+  if (found != placeholders.end())
+    return found->second;
+  return placeholders
+      .insert(make_pair(decl, placeholder_prefix + to_string(watermark++)))
+      .first->second;
 }
 
 } // namespace ramfuzz

@@ -34,7 +34,7 @@ using Inheritance = std::map<ClassDetails, std::vector<ClassDetails>>;
 class InheritanceBuilder
     : public clang::ast_matchers::MatchFinder::MatchCallback {
 public:
-  InheritanceBuilder() = default;
+  InheritanceBuilder() : tparam_names(default_typename) {}
 
   /// Adds to MF a matcher that will build inheritance (capturing *this).
   void tackOnto(clang::ast_matchers::MatchFinder &MF);
@@ -43,7 +43,9 @@ public:
   void process(const llvm::Twine &Code);
 
   /// Convenience constructor directly from Code.
-  InheritanceBuilder(const llvm::Twine &Code) { process(Code); }
+  InheritanceBuilder(const llvm::Twine &Code) : tparam_names(default_typename) {
+    process(Code);
+  }
 
   /// Match callback.  Expects Result to have a CXXRecordDecl* binding for
   /// "class".
@@ -53,7 +55,8 @@ public:
   const Inheritance &getInheritance() const { return inh; }
 
 private:
-  Inheritance inh; ///< Inheritance result being built.
+  Inheritance inh;         ///< Inheritance result being built.
+  NameGetter tparam_names; ///< Gets template-parameter names.
 };
 
 } // namespace ramfuzz

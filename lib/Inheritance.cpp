@@ -44,8 +44,9 @@ void InheritanceBuilder::run(const MatchFinder::MatchResult &Result) {
         if (const auto tag = base.getType()
                                  .getDesugaredType(*Result.Context)
                                  ->getAs<TagType>())
-          inh[ClassDetails(*dyn_cast<CXXRecordDecl>(tag->getDecl()))]
-              .emplace_back(*C);
+          inh[ClassDetails(*dyn_cast<CXXRecordDecl>(tag->getDecl()),
+                           tparam_names)]
+              .emplace_back(*C, tparam_names);
       }
     }
 }

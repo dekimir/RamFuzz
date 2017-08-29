@@ -224,7 +224,8 @@ class RamFuzz : public MatchFinder::MatchCallback {
 public:
   /// Prepares for emitting RamFuzz code into outh and outc.
   RamFuzz(raw_ostream &outh, raw_ostream &outc)
-      : outh(outh), outc(outc), prtpol(RFPP()) {}
+      : outh(outh), outc(outc), prtpol(RFPP()), tparam_names(default_typename) {
+  }
 
   /// Match callback.  Expects Result to have a CXXRecordDecl* binding for
   /// "class".
@@ -341,6 +342,8 @@ private:
   /// Enum types for which parameters have been generated.  Maps the enum name
   /// to its values.
   unordered_map<string, vector<string>> referenced_enums;
+
+  NameGetter tparam_names; ///< Gets template-parameter names.
 };
 
 /// Valid identifier from a CXXMethodDecl name.
@@ -375,14 +378,14 @@ tuple<QualType, unsigned> ultimate_pointee(QualType ty, const ASTContext &ctx) {
 /// Returns C's qualified name, followed by C's template parameters if C is a
 /// template class.  It's equivalent to constructing ClassDetails(*C) and
 /// concatenating its qname() and suffix().
-string class_under_test(const CXXRecordDecl *C) {
+string class_under_test(const CXXRecordDecl *C, NameGetter& ng) {
   string name = C->getQualifiedNameAsString();
   raw_string_ostream strm(name);
   if (const auto tmpl = C->getDescribedClassTemplate()) {
     strm << '<';
     size_t i = 0;
     for (const auto par : *tmpl->getTemplateParameters())
-      strm << (i++ ? ", " : "") << getName(*par, default_typename);
+      strm << (i++ ? ", " : "") << ng.get(par);
     strm << '>';
   }
   return strm.str();
@@ -416,7 +419,7 @@ void RamFuzz::register_class(const Type &ty) {
     return;
   if (const auto t = dyn_cast<ClassTemplateSpecializationDecl>(rec))
     rec = t->getSpecializedTemplate()->getTemplatedDecl();
-  referenced_classes.insert(ClassDetails(*rec));
+  referenced_classes.insert(ClassDetails(*rec, tparam_names));
 }
 
 void RamFuzz::gen_concrete_methods(const CXXRecordDecl *C, const string &cls,
@@ -596,7 +599,7 @@ void RamFuzz::gen_method(const Twine &hname, const CXXMethodDecl *M,
     if (parent->isAbstract())
       *outt << "concrete_impl(g" << (M->param_empty() ? "" : ", ");
     else
-      *outt << class_under_test(parent) << "(";
+      *outt << class_under_test(parent, tparam_names) << "(";
   } else {
     if (may_recurse) {
       *outt << "  if (++calldepth >= depthlimit) {\n";
@@ -653,7 +656,7 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
       return;
     string stemp;
     outt.reset(new raw_string_ostream(stemp));
-    ClassDetails cls(*C);
+    ClassDetails cls(*C, tparam_names);
     const auto tmpl = C->getDescribedClassTemplate();
     outh << cls.tpreamble();
     if (cls.tpreamble().empty())

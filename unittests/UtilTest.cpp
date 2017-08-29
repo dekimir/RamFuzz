@@ -33,8 +33,11 @@ using namespace tooling;
 
 class Helper : public MatchFinder::MatchCallback {
   ClassDetails obj;
+  NameGetter ng;
 
 public:
+  Helper() : ng(default_typename) {}
+
   static ClassDetails process(const Twine &code) {
     Helper h;
     MatchFinder MF;
@@ -45,7 +48,7 @@ public:
 
   void run(const MatchFinder::MatchResult &result) {
     if (const auto *C = result.Nodes.getNodeAs<CXXRecordDecl>("class"))
-      obj = ClassDetails(*C);
+      obj = ClassDetails(*C, ng);
   }
 };
 

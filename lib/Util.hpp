@@ -26,13 +26,29 @@
 /// True iff C is visible outside all its parent contexts.
 bool globally_visible(const clang::CXXRecordDecl *C);
 
-/// Returns decl's name, if nonempty; otherwise, returns deflt.
-llvm::StringRef getName(const clang::NamedDecl &decl, const char *deflt);
-
 namespace ramfuzz {
 
 /// RamFuzz printing policy.
 clang::PrintingPolicy RFPP();
+
+/// Gets a name from NamedDecl where it exists.  Where it doesn't, generates a
+/// unique placeholder name to be used for that NamedDecl.
+class NameGetter {
+public:
+  /// Copies placeholder_prefix internally for later use by get().
+  NameGetter(const std::string &placeholder_prefix)
+      : placeholder_prefix(placeholder_prefix) {}
+
+  /// Gets the NamedDecl's name, if it exists and is non-empty.  If not, returns
+  /// a placeholder prefixed by the constructor's argument.  The placeholder is
+  /// unique to this NamedDecl and permanently associated with it.
+  llvm::StringRef get(const clang::NamedDecl *);
+
+private:
+  const std::string placeholder_prefix;
+  std::map<const clang::NamedDecl *, std::string> placeholders;
+  unsigned watermark = 0;
+};
 
 /// Keeps class details permanently, even after AST is deleted.  Has enough
 /// information to allow various ways of referencing the class in generated
@@ -46,8 +62,8 @@ class ClassDetails {
 public:
   ClassDetails() = default;
 
-  /// CXXRecordDecl object needn't survive past this constructor.
-  explicit ClassDetails(const clang::CXXRecordDecl &);
+  /// Parameters needn't survive past this constructor.
+  explicit ClassDetails(const clang::CXXRecordDecl &, NameGetter &);
 
   /// The class's fully qualified name.  Meant to uniquely identify this object.
   const std::string &qname() const { return qname_; };
