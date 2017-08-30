@@ -560,7 +560,7 @@ void RamFuzz::gen_submakers_defs(const Inheritance &sc) {
           referenced_classes.insert(subcls);
         }
       *outt << "} // anonymous namespace\n";
-      *outt << name << "*(*const harness<" << name
+      *outt << tmpl_preamble << name << "*(*const harness<" << name
             << ">::submakers[])(runtime::gen&) = { ";
       for (auto i = first_maker_fn; i < next_maker_fn; ++i)
         *outt << (i == first_maker_fn ? "" : ",") << "submakerfn" << i;
