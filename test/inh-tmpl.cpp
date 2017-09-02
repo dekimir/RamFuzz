@@ -21,6 +21,9 @@ int main(int argc, char *argv[]) {
   gen g(argc, argv);
   while (g.make<Base<int>>()->f() != 0xba)
     ;
+  // A's only subclass is a template, which is ignored.  Therefore, its subcount
+  // should be 0.
+  return harness<A>::subcount;
 }
 
 unsigned ::ramfuzz::runtime::spinlimit = 3;

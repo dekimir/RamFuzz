@@ -12,9 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-/// Tests inheritance from template classes.
+/// Tests inheritance from and by template classes.
 
-template <typename T> class Base {
+class A {};
+
+template <typename T> class Base : public A {
 public:
   virtual int f() { return 0xba; }
 };
@@ -22,4 +24,12 @@ public:
 class Sub : public Base<int> {
 public:
   int f() override { return 0x5c; }
+};
+
+struct B {
+  // These instantiations used to erroneously count as separate subclasses of A:
+  Base<int> bint;
+  Base<short> bshort;
+  Base<long> blong;
+  Base<float> bfloat;
 };

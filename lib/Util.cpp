@@ -110,7 +110,8 @@ ClassDetails::ClassDetails(const clang::CXXRecordDecl &decl, NameGetter &ng)
     : name_(decl.getNameAsString()), qname_(decl.getQualifiedNameAsString()),
       prefix_(template_preamble(decl.getDescribedClassTemplate(), ng)),
       suffix_(parameters(decl.getDescribedClassTemplate(), ng)),
-      is_template_(decl.getDescribedClassTemplate()),
+      is_template_(isa<ClassTemplateSpecializationDecl>(decl) ||
+                   decl.getDescribedClassTemplate()),
       is_visible_(globally_visible(&decl)) {}
 
 PrintingPolicy RFPP() {
