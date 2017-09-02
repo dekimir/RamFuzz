@@ -66,7 +66,7 @@ gen::gen(const string &ilogname, const string &ologname)
 }
 
 gen::gen(int argc, const char *const *argv, size_t k) {
-  if (k < argc && argv[k]) {
+  if (k < static_cast<size_t>(argc) && argv[k]) {
     runmode = replay;
     const string argstr(argv[k]);
     ilog.open(argstr);
