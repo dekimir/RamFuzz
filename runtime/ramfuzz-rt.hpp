@@ -134,11 +134,31 @@ public:
     else
       ilog.read(reinterpret_cast<char *>(&val), sizeof(val));
     olog.write(reinterpret_cast<char *>(&val), sizeof(val));
-    olog2 << val << ' ' << lo << ' ' << hi << ' ' << valueid() << std::endl;
+    digits(olog2, val, lo, hi) << ' ' << valueid() << std::endl;
     return val;
   }
 
 private:
+  /// Streams val, lo, and hi to os, then returns it.
+  template <typename U>
+  std::ofstream &digits(std::ofstream &os, U val, U lo, U hi) {
+    os << val << ' ' << lo << ' ' << hi;
+    return os;
+  }
+
+  /// Streams integer representations of val, lo, and hi to os, then returns it.
+  std::ofstream &digits(std::ofstream &os, char val, char lo, char hi) {
+    os << int{val} << ' ' << int{lo} << ' ' << int{hi};
+    return os;
+  }
+
+  /// Streams integer representations of val, lo, and hi to os, then returns it.
+  std::ofstream &digits(std::ofstream &os, unsigned char val, unsigned char lo,
+                        unsigned char hi) {
+    os << int{val} << ' ' << int{lo} << ' ' << int{hi};
+    return os;
+  }
+
   /// Stores p as the newest element in T's storage.  Returns p.
   template <typename T> T *store(T *p) {
     storage[std::type_index(typeid(T))].push_back(p);
