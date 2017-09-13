@@ -228,10 +228,6 @@ private:
   /// valueid() will be relative to this value, which will make them
   /// position-independent.
   unw_word_t base_pc;
-
-  /// How many times an execution state (see valueid() blurb) has been
-  /// encountered already.
-  std::unordered_map<size_t, size_t> state_count;
 };
 
 /// Limit on the call-stack depth in generated RamFuzz methods.  Without such a

@@ -123,16 +123,7 @@ size_t gen::valueid() {
     stacktrace_hash ^= pc - base_pc + 0x9e3779b9 + (stacktrace_hash << 6) +
                        (stacktrace_hash >> 2);
   }
-  // A stack trace doesn't uniquely identify the value currently being
-  // generated.  Loops in the program may execute the same location multiple
-  // times, yielding multiple dynamic instances of the same stack trace.  Since
-  // a value ID should be unique, add the stacktrace's dynamic count to its
-  // hash.
-  //
-  // TODO: this doesn't actually guarantee unique value IDs, as this sum may
-  // happen to be identical for two different stack traces.  Fix this if it
-  // proves a problem in practice.
-  return stacktrace_hash + state_count[stacktrace_hash]++;
+  return stacktrace_hash;
 }
 
 template <> bool gen::uniform_random<bool>(bool lo, bool hi) {
