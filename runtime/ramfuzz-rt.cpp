@@ -84,7 +84,7 @@ gen::gen(int argc, const char *const *argv, size_t k) {
 }
 
 template <> bool gen::uniform_random<bool>(bool lo, bool hi) {
-  return ibetween(lo, hi, rgen);
+  return uniform_int_distribution<int>{lo, hi}(rgen);
 }
 
 template <> double gen::uniform_random<double>(double lo, double hi) {

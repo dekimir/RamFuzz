@@ -18,6 +18,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <exception>
+#include <functional>
 #include <fstream>
 #include <limits>
 #include <ostream>
