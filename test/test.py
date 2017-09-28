@@ -80,8 +80,11 @@ for case in glob(path.join(scriptdir, '*.hpp')):
     try:
         chdir(temp)
         check_call([path.join(bindir, 'ramfuzz'), hfile, '--', '-std=c++11'])
-        check_call([path.join(bindir, 'clang++'), '-std=c++11', '-or', '-g',
-                    cfile, 'fuzz.cpp', 'ramfuzz-rt.cpp', '-lunwind'])
+        build_cmd = [path.join(bindir, 'clang++'), '-std=c++11', '-or', '-g',
+                     cfile, 'fuzz.cpp', 'ramfuzz-rt.cpp']
+        if sys.platform != 'darwin':
+            build_cmd.append('-lunwind')
+        check_call(build_cmd)
         check_call(path.join(temp, 'r'))
         chdir(bindir)  # Just a precaution to guarantee rmtree success.
         shutil.rmtree(path.realpath(temp))
