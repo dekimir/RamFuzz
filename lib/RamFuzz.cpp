@@ -195,7 +195,7 @@ public:
   }
 
 private:
-  const QualType &ty;
+  const QualType ty;
   const PrintingPolicy &prtpol;
 };
 
