@@ -729,7 +729,8 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
       const auto ty = f->getType();
       if (f->getAccess() == AS_public && !ty.isConstQualified() &&
           !ty->getAsCXXRecordDecl()) {
-        const Twine name = Twine("random_") + f->getName();
+        StringRef fname = f->getName(); // Keep StringRef existing.
+        const Twine name = Twine("random_") + fname;
         outh << "  void " << name << namecount[name.str()] << "();\n";
         *outt << cls.tpreamble() << "void harness<" << cls << ">::" << name
               << namecount[name.str()] << "() {\n";
