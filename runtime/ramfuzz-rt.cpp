@@ -127,7 +127,7 @@ size_t gen::valueid() {
 }
 
 template <> bool gen::uniform_random<bool>(bool lo, bool hi) {
-  return ibetween(lo, hi, rgen);
+  return uniform_int_distribution<int>{lo, hi}(rgen);
 }
 
 template <> double gen::uniform_random<double>(double lo, double hi) {
