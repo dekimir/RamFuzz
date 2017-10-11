@@ -14,9 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from keras.layers import BatchNormalization, Dense, Embedding, Flatten, Input
-from keras.layers.merge import concatenate, multiply
-from keras.metrics import mse
+from keras.layers import BatchNormalization, Conv1D, Dense, Dropout
+from keras.layers import Embedding, Flatten, Input, MaxPooling1D
+from keras.layers.merge import concatenate
+from keras.metrics import binary_crossentropy
 from keras.models import Model
 from keras.optimizers import Adam
 import fileinput
@@ -24,7 +25,6 @@ import glob
 import keras.backend as K
 import numpy as np
 import os.path
-import sys
 
 
 class indexes:
@@ -60,35 +60,46 @@ def read_data(files, poscount, locidx):
     labels = []  # One element per file: true for '.s', false for '.f'.
     for f in gl:
         flocs = np.zeros(poscount, np.int_)
-        fvals = np.zeros(poscount, np.float_)
+        fvals = np.zeros((poscount, 1), np.float_)
         for ln in fileinput.input(f):
             br = ln.split(' ')
             if len(br) > 3:
                 pos = fileinput.filelineno() - 1
                 flocs[pos] = locidx.get(br[3])
-                fvals[pos] = br[0]
+                fvals[pos] = [br[0]]
         locs.append(flocs)
         vals.append(fvals)
         labels.append(f.endswith('.s'))
     return np.array(locs), np.array(vals), np.array(labels)
 
 
-dense_count = int(sys.argv[1]) if len(sys.argv) > 1 else 5
-batch_size = int(sys.argv[2]) if len(sys.argv) > 2 else 500
 gl = glob.glob(os.path.join('train', '*.[sf]'))
 poscount, locidx = count_locpos(gl)
-# Model:
+
+embedding_dim = 50
+filter_sizes = (3, 8)
+num_filters = 10
+dropout_prob = (0.5, 0.8)
+hidden_dims = 50
+
 K.set_floatx('float64')
-in_vals = Input((poscount, ), name='vals', dtype='int64')
+
+in_vals = Input((poscount, 1), name='vals', dtype='int64')
 in_locs = Input((poscount, ), name='locs', dtype='float64')
-embed_locs = Embedding(locidx.watermark, 32)(in_locs)
-merged = concatenate([in_vals, Flatten()(embed_locs)])
+embed_locs = Embedding(
+    locidx.watermark, embedding_dim, input_length=poscount)(in_locs)
+merged = concatenate([embed_locs, in_vals])
 normd = BatchNormalization()(merged)
-dense_list = []
-for i in range(dense_count):
-    dense_list.append(Dense(1, activation='sigmoid')(normd))
-mult = multiply(dense_list)
-ml = Model(inputs=[in_locs, in_vals], outputs=mult)
-ml.compile(Adam(lr=0.01), metrics=['acc'], loss=mse)
+drop = Dropout(dropout_prob[0])(merged)
+conv_list = []
+for filtsz in filter_sizes:
+    tmp = Conv1D(num_filters, filtsz, activation='relu')(drop)
+    tmp = Flatten()(MaxPooling1D()(tmp))
+    conv_list.append(tmp)
+out = Dense(
+    1, activation='sigmoid')(Dense(hidden_dims, activation='relu')(Dropout(
+        dropout_prob[1])(concatenate(conv_list))))
+ml = Model(inputs=[in_locs, in_vals], outputs=out)
+ml.compile(Adam(lr=0.01), metrics=['acc'], loss=binary_crossentropy)
 locs, vals, labels = read_data(gl, poscount, locidx)
-ml.fit([locs, vals], labels, batch_size=batch_size, epochs=10)
+ml.fit([locs, vals], labels, batch_size=500, epochs=10)
