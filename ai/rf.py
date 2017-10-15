@@ -80,7 +80,7 @@ poscount, locidx = count_locpos(gl)
 embedding_dim = 4
 filter_sizes = (3, 8)
 num_filters = 10
-dropout_prob = (0.5, 0.8)
+dropout_prob = (0.01, 0.01)
 hidden_dims = 10
 
 K.set_floatx('float64')
