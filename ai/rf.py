@@ -77,11 +77,11 @@ def read_data(files, poscount, locidx):
 gl = glob.glob(os.path.join('train', '*.[sf]'))
 poscount, locidx = count_locpos(gl)
 
-embedding_dim = 50
+embedding_dim = 4
 filter_sizes = (3, 8)
 num_filters = 10
 dropout_prob = (0.5, 0.8)
-hidden_dims = 50
+hidden_dims = 10
 
 K.set_floatx('float64')
 
