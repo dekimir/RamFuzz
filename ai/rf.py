@@ -103,7 +103,11 @@ out = Dense(
 ml = Model(inputs=[in_locs, in_vals], outputs=out)
 ml.compile(Adam(lr=0.01), metrics=['acc'], loss=binary_crossentropy)
 locs, vals, labels = read_data(gl, poscount, locidx)
-bsz = int(sys.argv[1]) if len(sys.argv) > 1 else 500
-eps = int(sys.argv[2]) if len(sys.argv) > 2 else 1
 
-ml.fit([locs, vals], labels, batch_size=bsz, epochs=eps)
+
+def fit(bsz=int(sys.argv[1]) if len(sys.argv) > 1 else 500,
+        eps=int(sys.argv[2]) if len(sys.argv) > 2 else 1):
+    ml.fit([locs, vals], labels, batch_size=bsz, epochs=eps)
+
+
+fit()
