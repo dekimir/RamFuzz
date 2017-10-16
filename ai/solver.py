@@ -13,6 +13,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""A simple experiment that simulates a RamFuzz test run by randomly generating
+four parameter values and the corresponding success/failure status.  It forms a
+deep-learning corpus from thousands of such simulations, trains an N-dense
+network on that corpus, feeds the network knowledge back to the generation
+process, and compares how much better the process then becomes at generating
+successes instead of failures.
+
+The name 'solver.py' comes from the fact that the feedback process treats the
+network's knowledge as a system of inequalities to be solved, or at least kept
+satisfied during parameter-value generation.
+
+"""
 
 import copy
 import numpy as np
