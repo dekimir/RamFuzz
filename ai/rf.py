@@ -105,8 +105,8 @@ ml.compile(Adam(lr=0.01), metrics=['acc'], loss=binary_crossentropy)
 locs, vals, labels = read_data(gl, poscount, locidx)
 
 
-def fit(bsz=int(sys.argv[1]) if len(sys.argv) > 1 else 500,
-        eps=int(sys.argv[2]) if len(sys.argv) > 2 else 1):
+def fit(eps=int(sys.argv[1]) if len(sys.argv) > 1 else 1,
+        bsz=int(sys.argv[2]) if len(sys.argv) > 2 else 500):
     ml.fit([locs, vals], labels, batch_size=bsz, epochs=eps)
 
 
