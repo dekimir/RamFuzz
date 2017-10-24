@@ -70,21 +70,15 @@ namespace ramfuzz {
 namespace runtime {
 
 gen::gen(const string &ologname)
-    : runmode(generate), olog(ologname), olog2(ologname + "-ai"),
-      base_pc(get_pc()) {
+    : runmode(generate), olog(ologname), base_pc(get_pc()) {
   if (!olog)
     throw file_error("Cannot open " + ologname);
-  if (!olog2)
-    throw file_error("Cannot open " + ologname + "-ai");
 }
 
 gen::gen(const string &ilogname, const string &ologname)
-    : runmode(replay), olog(ologname), olog2(ologname + "-ai"), ilog(ilogname),
-      base_pc(get_pc()) {
+    : runmode(replay), olog(ologname), ilog(ilogname), base_pc(get_pc()) {
   if (!olog)
     throw file_error("Cannot open " + ologname);
-  if (!olog2)
-    throw file_error("Cannot open " + ologname + "-ai");
   if (!ilog)
     throw file_error("Cannot open " + ilogname);
 }
@@ -99,17 +93,11 @@ gen::gen(int argc, const char *const *argv, size_t k) : base_pc(get_pc()) {
     olog.open(argstr + "+");
     if (!olog)
       throw file_error("Cannot open " + argstr + "+");
-    olog2.open(argstr + "+ai");
-    if (!olog2)
-      throw file_error("Cannot open " + argstr + "+ai");
   } else {
     runmode = generate;
     olog.open("fuzzlog");
     if (!olog)
       throw file_error("Cannot open fuzzlog");
-    olog2.open("fuzzlog-ai");
-    if (!olog2)
-      throw file_error("Cannot open fuzzlog-ai");
   }
 }
 

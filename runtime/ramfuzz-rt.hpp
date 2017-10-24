@@ -18,8 +18,8 @@
 #include <cstdint>
 #include <cstdlib>
 #include <exception>
-#include <functional>
 #include <fstream>
+#include <functional>
 #include <limits>
 #include <ostream>
 #include <random>
@@ -133,31 +133,21 @@ public:
     if (runmode == generate)
       val = uniform_random(lo, hi);
     else
-      ilog.read(reinterpret_cast<char *>(&val), sizeof(val));
-    olog.write(reinterpret_cast<char *>(&val), sizeof(val));
-    digits(olog2, val, lo, hi) << ' ' << valueid() << std::endl;
+      input(val);
+    output(val, valueid());
     return val;
   }
 
 private:
-  /// Streams val, lo, and hi to os, then returns it.
-  template <typename U>
-  std::ofstream &digits(std::ofstream &os, U val, U lo, U hi) {
-    os << val << ' ' << lo << ' ' << hi;
-    return os;
+  template <typename U> void output(U val, size_t id) {
+    olog.write(reinterpret_cast<char *>(&val), sizeof(val));
+    olog.write(reinterpret_cast<char *>(&id), sizeof(id));
   }
 
-  /// Streams integer representations of val, lo, and hi to os, then returns it.
-  std::ofstream &digits(std::ofstream &os, char val, char lo, char hi) {
-    os << int{val} << ' ' << int{lo} << ' ' << int{hi};
-    return os;
-  }
-
-  /// Streams integer representations of val, lo, and hi to os, then returns it.
-  std::ofstream &digits(std::ofstream &os, unsigned char val, unsigned char lo,
-                        unsigned char hi) {
-    os << int{val} << ' ' << int{lo} << ' ' << int{hi};
-    return os;
+  template <typename T> void input(T &val) {
+    ilog.read(reinterpret_cast<char *>(&val), sizeof(val));
+    size_t id;
+    ilog.read(reinterpret_cast<char *>(&id), sizeof(id));
   }
 
   /// Stores p as the newest element in T's storage.  Returns p.
@@ -237,7 +227,7 @@ private:
   std::ranlux24 rgen = std::ranlux24(std::random_device{}());
 
   /// Output log.
-  std::ofstream olog, olog2;
+  std::ofstream olog;
 
   /// Input log in replay mode.
   std::ifstream ilog;
