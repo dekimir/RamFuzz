@@ -17,14 +17,16 @@
 
 Usage: $0 <executable> <count>
 
-Runs <executable> and assumes it creates fuzzlog-ai.  If the executable's exit
-status is 0, renames fuzzlog-ai to 1.s.  Otherwise, renames fuzzlog-ai to 1.f.
-Repeats <count> times, incrementing the number in the .s/.f file name.
+Runs <executable> and assumes it creates a file named fuzzlog.  If the
+executable's exit status is 0, renames fuzzlog to 1.s.  Otherwise, renames
+fuzzlog to 1.f.  Repeats <count> times, incrementing the number in the .s/.f
+file name.
 
 After <count> runs, this leaves a set of .s (for success) and .f (for failure)
 files in the current directory.  This represents a corpus on which to train an
 AI that divines how ramfuzz::runtime::gen should generate values in order to
 avoid failures.
+
 """
 
 import os
@@ -39,8 +41,8 @@ succ = 0
 fail = 0
 for _ in xrange(int(sys.argv[2])):
     if (subprocess.call(sys.argv[1]) == 0):
-        os.rename('fuzzlog-ai', '%d.s' % succ)
+        os.rename('fuzzlog', '%d.s' % succ)
         succ += 1
     else:
-        os.rename('fuzzlog-ai', '%d.f' % fail)
+        os.rename('fuzzlog', '%d.f' % fail)
         fail += 1
