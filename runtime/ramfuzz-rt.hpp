@@ -148,6 +148,7 @@ private:
     olog.put(typetag(val));
     olog.write(reinterpret_cast<char *>(&val), sizeof(val));
     olog.write(reinterpret_cast<char *>(&id), sizeof(id));
+    olog.flush();
   }
 
   /// Reads val from ilog and advances ilog to the beginning of the next value.
