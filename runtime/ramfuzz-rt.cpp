@@ -196,5 +196,19 @@ unsigned char gen::uniform_random<unsigned char>(unsigned char lo,
   return ibetween(lo, hi, rgen);
 }
 
+template <> char typetag<bool>(bool) { return 0; }
+template <> char typetag<char>(char) { return 1; }
+template <> char typetag<unsigned char>(unsigned char) { return 2; }
+template <> char typetag<short>(short) { return 3; }
+template <> char typetag<unsigned short>(unsigned short) { return 4; }
+template <> char typetag<int>(int) { return 5; }
+template <> char typetag<unsigned int>(unsigned int) { return 6; }
+template <> char typetag<long>(long) { return 7; }
+template <> char typetag<unsigned long>(unsigned long) { return 8; }
+template <> char typetag<long long>(long long) { return 9; }
+template <> char typetag<unsigned long long>(unsigned long long) { return 10; }
+template <> char typetag<float>(float) { return 11; }
+template <> char typetag<double>(double) { return 12; }
+
 } // namespace runtime
 } // namespace ramfuzz

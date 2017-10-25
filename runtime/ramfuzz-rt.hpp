@@ -15,6 +15,7 @@
 #pragma once
 
 #include <algorithm>
+#include <cassert>
 #include <cstdint>
 #include <cstdlib>
 #include <exception>
@@ -82,6 +83,9 @@ struct file_error : public std::runtime_error {
   explicit file_error(const char *s) : runtime_error(s) {}
 };
 
+/// Returns T's type tag to put into RamFuzz logs.
+template <typename T> char typetag(T);
+
 /// Generates values for RamFuzz code.  Can be used in the "generate" or
 /// "replay" mode.  In "generate" mode, values are created at random and logged.
 /// In "replay" mode, values are read from a previously generated log.  This
@@ -139,12 +143,17 @@ public:
   }
 
 private:
+  /// Logs val and id to olog.
   template <typename U> void output(U val, size_t id) {
+    olog.put(typetag(val));
     olog.write(reinterpret_cast<char *>(&val), sizeof(val));
     olog.write(reinterpret_cast<char *>(&id), sizeof(id));
   }
 
+  /// Reads val from ilog and advances ilog to the beginning of the next value.
   template <typename T> void input(T &val) {
+    const char ty = ilog.get();
+    assert(ty == typetag(val));
     ilog.read(reinterpret_cast<char *>(&val), sizeof(val));
     size_t id;
     ilog.read(reinterpret_cast<char *>(&id), sizeof(id));
