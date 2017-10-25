@@ -23,9 +23,11 @@ using namespace std;
 /// reading the value, reads its id and returns a Python tuple (value, id).
 template <typename T> PyObject *logread(int fd) {
   T val;
-  read(fd, &val, sizeof(val));
+  if (read(fd, &val, sizeof(val)) < sizeof(val))
+    return Py_BuildValue("");
   size_t id;
-  read(fd, &id, sizeof(id));
+  if (read(fd, &id, sizeof(id)) < sizeof(id))
+    return Py_BuildValue("");
   unsigned long long lid(id);
   return Py_BuildValue("d K", double(val), lid);
 }
