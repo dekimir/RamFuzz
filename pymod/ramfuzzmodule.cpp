@@ -23,10 +23,10 @@ using namespace std;
 /// reading the value, reads its id and returns a Python tuple (value, id).
 template <typename T> PyObject *logread(int fd) {
   T val;
-  if (read(fd, &val, sizeof(val)) < sizeof(val))
+  if (size_t(read(fd, &val, sizeof(val))) < sizeof(val))
     return Py_BuildValue("");
   size_t id;
-  if (read(fd, &id, sizeof(id)) < sizeof(id))
+  if (size_t(read(fd, &id, sizeof(id))) < sizeof(id))
     return Py_BuildValue("");
   unsigned long long lid(id);
   return Py_BuildValue("d K", double(val), lid);
@@ -38,7 +38,8 @@ static PyObject *ramfuzz_load(PyObject *self, PyObject *args) {
   if (!PyArg_ParseTuple(args, "i", &fd) || fd < 0)
     return NULL;
   char tag;
-  read(fd, &tag, 1);
+  if (read(fd, &tag, 1) < 1)
+    return Py_BuildValue("");
   switch (tag) {
   // The following must match the specializations of
   // ramfuzz::runtime::typetag.
