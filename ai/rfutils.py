@@ -19,6 +19,8 @@ import ramfuzz
 
 
 def logparse(f):
+    """Parses a RamFuzz run log and yields each entry (a value/location pair) in
+       turn."""
     fd = f.fileno()
     while True:
         entry = ramfuzz.load(fd)
