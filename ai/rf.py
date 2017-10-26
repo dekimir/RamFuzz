@@ -20,11 +20,11 @@ from keras.layers.merge import concatenate
 from keras.metrics import binary_crossentropy
 from keras.models import Model
 from keras.optimizers import Adam
-import fileinput
 import glob
 import keras.backend as K
 import numpy as np
 import os.path
+import rfutils
 import sys
 
 
@@ -43,15 +43,14 @@ class indexes:
 # Counts distinct positions and locations in a list of files.  Returns a pair
 # (position count, location indexes object).
 def count_locpos(files):
-    poscount = 0
+    posmax = 0
     locidx = indexes()
-    for f in files:
-        for ln in fileinput.input(f):
-            br = ln.split(' ')
-            if len(br) > 3:
-                locidx.get(br[3])
-        poscount = max(poscount, fileinput.filelineno())
-    return poscount, locidx
+    for fname in files:
+        with open(fname) as f:
+            for (pos, (val, loc)) in enumerate(rfutils.logparse(f)):
+                locidx.get(loc)
+                posmax = max(posmax, pos)
+    return posmax + 1, locidx
 
 
 # Builds input data from a files list.
@@ -59,18 +58,16 @@ def read_data(files, poscount, locidx):
     locs = []  # One element per file; each is a list of location indexes.
     vals = []  # One element per file; each is a parallel list of values.
     labels = []  # One element per file: true for '.s', false for '.f'.
-    for f in gl:
-        flocs = np.zeros(poscount, np.int_)
-        fvals = np.zeros((poscount, 1), np.float_)
-        for ln in fileinput.input(f):
-            br = ln.split(' ')
-            if len(br) > 3:
-                pos = fileinput.filelineno() - 1
-                flocs[pos] = locidx.get(br[3])
-                fvals[pos] = [br[0]]
+    for fname in gl:
+        flocs = np.zeros(poscount, np.uint64)
+        fvals = np.zeros((poscount, 1), np.float64)
+        with open(fname) as f:
+            for (p, (v, l)) in enumerate(rfutils.logparse(f)):
+                flocs[p] = locidx.get(l)
+                fvals[p] = v
         locs.append(flocs)
         vals.append(fvals)
-        labels.append(f.endswith('.s'))
+        labels.append(fname.endswith('.s'))
     return np.array(locs), np.array(vals), np.array(labels)
 
 
@@ -85,8 +82,8 @@ hidden_dims = 10
 
 K.set_floatx('float64')
 
-in_vals = Input((poscount, 1), name='vals', dtype='int64')
-in_locs = Input((poscount, ), name='locs', dtype='float64')
+in_vals = Input((poscount, 1), name='vals', dtype='float64')
+in_locs = Input((poscount, ), name='locs', dtype='uint64')
 embed_locs = Embedding(
     locidx.watermark, embedding_dim, input_length=poscount)(in_locs)
 merged = concatenate([embed_locs, in_vals])
