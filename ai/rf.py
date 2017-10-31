@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from keras.constraints import min_max_norm
 from keras.layers import BatchNormalization, Conv1D, Dense, Dropout
 from keras.layers import Embedding, Flatten, Input, MaxPooling1D
 from keras.layers.merge import concatenate
@@ -83,11 +84,13 @@ hidden_dims = 10
 K.set_floatx('float64')
 
 in_vals = Input((poscount, 1), name='vals', dtype='float64')
+normd = BatchNormalization(
+    axis=1, gamma_constraint=min_max_norm(),
+    beta_constraint=min_max_norm())(in_vals)
 in_locs = Input((poscount, ), name='locs', dtype='uint64')
 embed_locs = Embedding(
     locidx.watermark, embedding_dim, input_length=poscount)(in_locs)
-merged = concatenate([embed_locs, in_vals])
-normd = BatchNormalization()(merged)
+merged = concatenate([embed_locs, normd])
 drop = Dropout(dropout_prob[0])(merged)
 conv_list = []
 for filtsz in filter_sizes:
@@ -103,7 +106,7 @@ locs, vals, labels = read_data(gl, poscount, locidx)
 
 
 def fit(eps=int(sys.argv[1]) if len(sys.argv) > 1 else 1,
-        bsz=int(sys.argv[2]) if len(sys.argv) > 2 else 500):
+        bsz=int(sys.argv[2]) if len(sys.argv) > 2 else 50):
     ml.fit([locs, vals], labels, batch_size=bsz, epochs=eps)
 
 
