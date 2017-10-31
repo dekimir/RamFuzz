@@ -13,6 +13,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""A sample Keras model trainable on the output of ./gencorp.py.  It tries to
+predict the test success or failure based on the logged RamFuzz values during
+the test run.  Using a simple CNN, it can achieve >99% accuracy.
+
+"""
 
 from keras.constraints import min_max_norm
 from keras.layers import BatchNormalization, Conv1D, Dense, Dropout
@@ -106,6 +111,7 @@ locs, vals, labels = read_data(gl, poscount, locidx)
 
 
 def fit(eps=int(sys.argv[1]) if len(sys.argv) > 1 else 1,
+        # Large batches tend to cause NaNs in batch normalization.
         bsz=int(sys.argv[2]) if len(sys.argv) > 2 else 50):
     ml.fit([locs, vals], labels, batch_size=bsz, epochs=eps)
 

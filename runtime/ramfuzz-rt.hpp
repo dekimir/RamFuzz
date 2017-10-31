@@ -90,6 +90,15 @@ template <typename T> char typetag(T);
 /// "replay" mode.  In "generate" mode, values are created at random and logged.
 /// In "replay" mode, values are read from a previously generated log.  This
 /// allows debugging of failed tests.
+///
+/// Depends on test code that RamFuzz generates (see ../main.cpp) -- in fact,
+/// the generated fuzz.hpp file contains `#include "ramfuzz-rt.hpp"`, because
+/// they'll always be used together.
+///
+/// It is recommended to use the same gen object for generating all parameters
+/// in one test run.  That captures them all in the log file, so the test can be
+/// easily replayed, and the log can be processed by AI tools in ../ai.  See
+/// also the constructor gen(argc, argv, k) below.
 class gen {
   /// Are we generating values or replaying a previous run?
   enum { generate, replay } runmode;

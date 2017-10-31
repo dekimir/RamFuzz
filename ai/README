@@ -1,4 +1,6 @@
 Utilities for running artificial-intelligence operations on top of RamFuzz, eg,
-generation of training corpuses, neural network architectures, mechanisms to
-feed the learned knowledge back to RamFuzz runtime, etc.  Each source file here
-should have self-describing comments.
+generation of training corpuses, parsing RamFuzz binary logs from Python, sample
+neural-network architectures, etc.  Each source file here should have
+self-describing comments.
+
+Most utilities here depend on ../pymod being built and installed.

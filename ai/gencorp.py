@@ -17,15 +17,14 @@
 
 Usage: $0 <executable> <count>
 
-Runs <executable> and assumes it creates a file named fuzzlog.  If the
-executable's exit status is 0, renames fuzzlog to 1.s.  Otherwise, renames
-fuzzlog to 1.f.  Repeats <count> times, incrementing the number in the .s/.f
-file name.
+Runs <executable> and assumes it creates a file named fuzzlog (which is where
+ramfuzz::runtime::gen logs generated values).  If the executable's exit status
+is 0, renames fuzzlog to 1.s.  Otherwise, renames fuzzlog to 1.f.  Repeats
+<count> times, incrementing the number in the .s/.f file name.
 
 After <count> runs, this leaves a set of .s (for success) and .f (for failure)
-files in the current directory.  This represents a corpus on which to train an
-AI that divines how ramfuzz::runtime::gen should generate values in order to
-avoid failures.
+files in the current directory.  These files now represents a corpus on which
+AI can be trained (using rfutils.logparse() to read the generated values).
 
 """
 
