@@ -769,8 +769,10 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
 
 void RamFuzz::finish(const Inheritance &sc) {
   for (auto e : referenced_enums) {
-    outh << "template<> " << e.first << "* ramfuzz::runtime::gen::make<"
+    outh << "  namespace runtime {\n";
+    outh << "    template<> " << e.first << "* gen::make<"
          << e.first << ">(bool);\n";
+    outh << "  } // namespace runtime\n";
     outc << "template<> " << e.first << "* ramfuzz::runtime::gen::make<"
          << e.first << ">(bool) {\n";
     outc << "  static " << e.first << " a[] = {\n    ";

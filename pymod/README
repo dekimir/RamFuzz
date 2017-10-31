@@ -1,0 +1,2 @@
+A Python module to read RamFuzz logs.  Implemented in C++ in ramfuzzmodule.cpp,
+while setup.py builds and installs it using distutils.

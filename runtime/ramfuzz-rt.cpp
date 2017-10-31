@@ -47,25 +47,43 @@ template <typename RealT> RealT rbetween(RealT lo, RealT hi, ranlux24 &gen) {
   return uniform_real_distribution<RealT>{lo, hi}(gen);
 }
 
+/// Declares and initializes an unwind context and cursor.
+#define CURSORINIT(context_var, cursor_var)                                    \
+  unw_context_t context_var;                                                   \
+  unw_getcontext(&context_var);                                                \
+  unw_cursor_t cursor_var;                                                     \
+  unw_init_local(&cursor_var, &context_var);
+
+/// Returns the value of the PC (program counter) register inside itself.
+/// Useful as an arbitrary base PC from which to calculate relative offsets of
+/// all other code's PCs.
+unw_word_t get_pc() {
+  CURSORINIT(ctx, curs);
+  unw_word_t pc;
+  unw_get_reg(&curs, UNW_REG_IP, &pc);
+  return pc;
+}
+
 } // anonymous namespace
 
 namespace ramfuzz {
 namespace runtime {
 
-gen::gen(const string &ologname) : runmode(generate), olog(ologname) {
+gen::gen(const string &ologname)
+    : runmode(generate), olog(ologname), base_pc(get_pc()) {
   if (!olog)
     throw file_error("Cannot open " + ologname);
 }
 
 gen::gen(const string &ilogname, const string &ologname)
-    : runmode(replay), olog(ologname), ilog(ilogname) {
+    : runmode(replay), olog(ologname), ilog(ilogname), base_pc(get_pc()) {
   if (!olog)
     throw file_error("Cannot open " + ologname);
   if (!ilog)
     throw file_error("Cannot open " + ilogname);
 }
 
-gen::gen(int argc, const char *const *argv, size_t k) {
+gen::gen(int argc, const char *const *argv, size_t k) : base_pc(get_pc()) {
   if (k < static_cast<size_t>(argc) && argv[k]) {
     runmode = replay;
     const string argstr(argv[k]);
@@ -81,6 +99,19 @@ gen::gen(int argc, const char *const *argv, size_t k) {
     if (!olog)
       throw file_error("Cannot open fuzzlog");
   }
+}
+
+size_t gen::valueid() {
+  CURSORINIT(ctx, curs);
+  size_t stacktrace_hash = 0; // "Stack trace" = a vector of all callers' PCs.
+  while (unw_step(&curs)) {
+    unw_word_t pc;
+    unw_get_reg(&curs, UNW_REG_IP, &pc);
+    // Cribbed from boost::hash_combine().
+    stacktrace_hash ^= pc - base_pc + 0x9e3779b9 + (stacktrace_hash << 6) +
+                       (stacktrace_hash >> 2);
+  }
+  return stacktrace_hash;
 }
 
 template <> bool gen::uniform_random<bool>(bool lo, bool hi) {
@@ -164,6 +195,20 @@ unsigned char gen::uniform_random<unsigned char>(unsigned char lo,
                                                  unsigned char hi) {
   return ibetween(lo, hi, rgen);
 }
+
+template <> char typetag<bool>(bool) { return 0; }
+template <> char typetag<char>(char) { return 1; }
+template <> char typetag<unsigned char>(unsigned char) { return 2; }
+template <> char typetag<short>(short) { return 3; }
+template <> char typetag<unsigned short>(unsigned short) { return 4; }
+template <> char typetag<int>(int) { return 5; }
+template <> char typetag<unsigned int>(unsigned int) { return 6; }
+template <> char typetag<long>(long) { return 7; }
+template <> char typetag<unsigned long>(unsigned long) { return 8; }
+template <> char typetag<long long>(long long) { return 9; }
+template <> char typetag<unsigned long long>(unsigned long long) { return 10; }
+template <> char typetag<float>(float) { return 11; }
+template <> char typetag<double>(double) { return 12; }
 
 } // namespace runtime
 } // namespace ramfuzz

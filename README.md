@@ -1,4 +1,4 @@
-# RamFuzz
+# RamFuzz: Combining Unit Tests, Fuzzing, and AI
 
 RamFuzz is a fuzzer for individual method parameters in unit tests.  A unit test can use RamFuzz to generate random parameter values for methods under test.  The values are logged, and the log can be replayed to repeat the exact same test scenario.  But random parameter values aren't limited to just fundamental types: RamFuzz can also automatically produce random objects of any class from the user's code. This allows the user to fuzz methods that accept class parameters. For example, if a method takes an `int`, a `struct S`, and a `class C` as parameters, RamFuzz can randomly generate them all!  The test writer needn't worry about the technicalities of creating `S` and `C` objects; RamFuzz will do it automatically.
 
@@ -6,7 +6,9 @@ To accomplish this, RamFuzz includes a code generator that reads the C++ source 
 
 Of course, this produces superficial tests that likely aren't very useful on average -- most methods don't take completely random parameters but constrain them in some way.  The intent is that these constraints can be inferred automatically from the logs of many RamFuzz test runs.  Because tests are randomized, each run is a different scenario that adds coverage of the code under test.  If the quality of randomness is good, then running tests repeatedly for a long time will cover a wide range of possible parameter values, likely including some perfectly valid tests.  These logs can then be used, for example, to train an AI to recognize which parameter values are valid.  Alternatively, fuzzing strategies can be used to steer the evolution of parameter-value generation towards valid tests.
 
-RamFuzz itself doesn't include any specific ways of using logs to tune the parameter-value generation -- it only aims to provide logs sufficiently varied to be useful.  Similarly, RamFuzz doesn't automatically generate test assertions on the results of method invocations.  Other projects will be created to accomplish that automatically, but RamFuzz will make it possible by conveniently handling parameter fuzzing and logging.
+RamFuzz provides some Python tools to make it easy to train AI on the logs it generates -- see the [`ai`](ai) directory.  It is possible, for instance, to train a neural network to accurately predict the outcome of a test run based on its RamFuzz log.  This is possible because RamFuzz manages to provide test runs sufficiently varied to be useful for discerning what succeeds and what does not.
+
+Note, however, that RamFuzz doesn't automatically generate test assertions on the results of method invocations.  Other projects will be created to accomplish that automatically, but RamFuzz will make it possible by conveniently handling parameter fuzzing and logging.
 
 RamFuzz is provided under the Apache 2.0 license.  It currently supports only C++ on input (please see "Known Limitations" below), and it requires C++11 support for compiling its output code and runtime.
 
@@ -84,6 +86,8 @@ C++ is a huge language, so the code generator is a work in progress.  Although i
 - variadic templates
 - STL containers other than `vector` and `string`
 - array parameters
+- function pointers
+- parameter values that must equal some method's return value
 
 These limitations will typically manifest themselves as ill-formed C++ on the output.
 
