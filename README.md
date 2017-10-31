@@ -84,6 +84,8 @@ C++ is a huge language, so the code generator is a work in progress.  Although i
 - variadic templates
 - STL containers other than `vector` and `string`
 - array parameters
+- function pointers
+- parameter values that must equal some method's return value
 
 These limitations will typically manifest themselves as ill-formed C++ on the output.
 
