@@ -46,9 +46,11 @@ class indexes:
         return self.d[x]
 
 
-# Counts distinct positions and locations in a list of files.  Returns a pair
-# (position count, location indexes object).
 def count_locpos(files):
+    """Counts distinct positions and locations in a list of files.
+
+    Returns a pair (position count, location indexes object)self.
+    """
     posmax = 0
     locidx = indexes()
     for fname in files:
@@ -59,8 +61,8 @@ def count_locpos(files):
     return posmax + 1, locidx
 
 
-# Builds input data from a files list.
 def read_data(files, poscount, locidx):
+    """Builds input data from a files list."""
     locs = []  # One element per file; each is a list of location indexes.
     vals = []  # One element per file; each is a parallel list of values.
     labels = []  # One element per file: true for '.s', false for '.f'.
@@ -110,7 +112,8 @@ ml.compile(Adam(lr=0.01), metrics=['acc'], loss=binary_crossentropy)
 locs, vals, labels = read_data(gl, poscount, locidx)
 
 
-def fit(eps=int(sys.argv[1]) if len(sys.argv) > 1 else 1,
+def fit(
+        eps=int(sys.argv[1]) if len(sys.argv) > 1 else 1,
         # Large batches tend to cause NaNs in batch normalization.
         bsz=int(sys.argv[2]) if len(sys.argv) > 2 else 50):
     ml.fit([locs, vals], labels, batch_size=bsz, epochs=eps)
