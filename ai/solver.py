@@ -36,7 +36,6 @@ from keras.layers.normalization import BatchNormalization
 from keras.metrics import mse
 from keras.models import Model
 from keras.optimizers import Adam
-from theano import tensor as T
 
 
 maxint = 99999
