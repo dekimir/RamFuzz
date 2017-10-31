@@ -35,6 +35,12 @@ import sys
 
 
 class indexes:
+    """Assigns unique indexes to input values.
+
+    An index is generated for each distinct value given to get().  In the
+    object's lifetime, the same value always gets the same index.
+    """
+
     def __init__(self):
         self.d = dict()
         self.watermark = 1
