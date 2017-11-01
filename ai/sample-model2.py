@@ -44,10 +44,9 @@ gl = glob.glob(os.path.join('train', '*.[sf]'))
 poscount, locidx = rfutils.count_locpos(gl)
 
 embedding_dim = 4
-filter_sizes = (3, 8)
-num_filters = 1
-dropout_prob = (0.01, 0.01)
-hidden_dims = 10
+dropout_prob = 0.4
+dense_count = int(sys.argv[3]) if len(sys.argv) > 3 else 50
+optr = Adam(lr=0.03)
 
 K.set_floatx('float64')
 
@@ -59,14 +58,14 @@ in_locs = Input((poscount, ), name='locs', dtype='uint64')
 embed_locs = Embedding(
     locidx.watermark, embedding_dim, input_length=poscount)(in_locs)
 merged = concatenate([embed_locs, normd])
-dense_count = int(sys.argv[3]) if len(sys.argv) > 3 else 50
 dense_list = []
 for i in range(dense_count):
     dense_list.append(
-        Dropout(0.4)(Dense(1, activation='sigmoid')(Flatten()(merged))))
+        Dropout(dropout_prob)(Dense(1, activation='sigmoid')(Flatten()(
+            merged))))
 mult = multiply(dense_list)
 ml = Model(inputs=[in_locs, in_vals], outputs=mult)
-ml.compile(Adam(lr=0.03), metrics=['acc'], loss=mse)
+ml.compile(optr, metrics=['acc'], loss=mse)
 
 locs, vals, labels = rfutils.read_data(gl, poscount, locidx)
 
