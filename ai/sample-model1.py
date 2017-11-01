@@ -17,6 +17,9 @@
 predict the test success or failure based on the logged RamFuzz values during
 the test run.  Using a simple CNN, it can achieve >99% accuracy.
 
+Usage: $0 [epochs] [batch_size]
+Defaults: epochs=1, batch_size=50
+
 """
 
 from keras.constraints import min_max_norm
