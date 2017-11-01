@@ -36,59 +36,12 @@ from keras.models import Model
 from keras.optimizers import Adam
 import glob
 import keras.backend as K
-import numpy as np
 import os.path
 import rfutils
 import sys
 
-
-class indexes:
-    def __init__(self):
-        self.d = dict()
-        self.watermark = 1
-
-    def get(self, x):
-        if x not in self.d:
-            self.d[x] = self.watermark
-            self.watermark += 1
-        return self.d[x]
-
-
-def count_locpos(files):
-    """Counts distinct positions and locations in a list of files.
-
-    Returns a pair (position count, location indexes object)self.
-    """
-    posmax = 0
-    locidx = indexes()
-    for fname in files:
-        with open(fname) as f:
-            for (pos, (val, loc)) in enumerate(rfutils.logparse(f)):
-                locidx.get(loc)
-                posmax = max(posmax, pos)
-    return posmax + 1, locidx
-
-
-def read_data(files, poscount, locidx):
-    """Builds input data from a files list."""
-    locs = []  # One element per file; each is a list of location indexes.
-    vals = []  # One element per file; each is a parallel list of values.
-    labels = []  # One element per file: true for '.s', false for '.f'.
-    for fname in gl:
-        flocs = np.zeros(poscount, np.uint64)
-        fvals = np.zeros((poscount, 1), np.float64)
-        with open(fname) as f:
-            for (p, (v, l)) in enumerate(rfutils.logparse(f)):
-                flocs[p] = locidx.get(l)
-                fvals[p] = v
-        locs.append(flocs)
-        vals.append(fvals)
-        labels.append(fname.endswith('.s'))
-    return np.array(locs), np.array(vals), np.array(labels)
-
-
 gl = glob.glob(os.path.join('train', '*.[sf]'))
-poscount, locidx = count_locpos(gl)
+poscount, locidx = rfutils.count_locpos(gl)
 
 embedding_dim = 4
 filter_sizes = (3, 8)
@@ -115,7 +68,7 @@ mult = multiply(dense_list)
 ml = Model(inputs=[in_locs, in_vals], outputs=mult)
 ml.compile(Adam(lr=0.03), metrics=['acc'], loss=mse)
 
-locs, vals, labels = read_data(gl, poscount, locidx)
+locs, vals, labels = rfutils.read_data(gl, poscount, locidx)
 
 
 def fit(
