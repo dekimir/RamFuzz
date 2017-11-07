@@ -24,6 +24,7 @@ Unfortunately, this model can currently only reach ~56% accuracy.
 
 Usage: $0 [epochs] [batch_size] [N]
 Defaults: epochs=1, batch_size=50, N=50
+Expects a train/ subdirectory containing the output of ./gencorp.py.
 
 """
 

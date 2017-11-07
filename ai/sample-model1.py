@@ -15,13 +15,13 @@
 # limitations under the License.
 """A sample Keras model trainable on the output of ./gencorp.py.  It tries to
 predict the test success or failure based on the logged RamFuzz values during
-the test run.  Using a simple CNN, it can achieve >99% accuracy.
+the test run.  Using a simple CNN, it can achieve >99% accuracy.  The model is
+adapted from Alexander Rakhlin's sample implementation of NLP CNN:
+https://github.com/alexander-rakhlin/CNN-for-Sentence-Classification-in-Keras
 
 Usage: $0 [epochs] [batch_size]
 Defaults: epochs=1, batch_size=50
-
-The model is adapted from Alexander Rakhlin's sample implementation of NLP CNN:
-https://github.com/alexander-rakhlin/CNN-for-Sentence-Classification-in-Keras
+Expects a train/ subdirectory containing the output of ./gencorp.py.
 
 """
 
