@@ -51,7 +51,7 @@ class indexes:
 def count_locpos(files):
     """Counts distinct positions and locations in a list of files.
 
-    Returns a pair (position count, location indexes object)self.
+    Returns a pair (position count, location indexes object).
     """
     posmax = 0
     locidx = indexes()
