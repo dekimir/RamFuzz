@@ -20,6 +20,9 @@ the test run.  Using a simple CNN, it can achieve >99% accuracy.
 Usage: $0 [epochs] [batch_size]
 Defaults: epochs=1, batch_size=50
 
+The model is adapted from Alexander Rakhlin's sample implementation of NLP CNN:
+https://github.com/alexander-rakhlin/CNN-for-Sentence-Classification-in-Keras
+
 """
 
 from keras.constraints import min_max_norm
