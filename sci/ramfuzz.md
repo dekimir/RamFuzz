@@ -43,11 +43,13 @@ Due to the wealth of deep-learning libraries available in Python, the best way t
 
 To enhance the quality of deep-learning analysis, we log not just the values themselves but also where in the program they were generated.  This enriches the input information and allows deep-learning algorithms to take into account what happens at different program locations.  The RamFuzz runtime library calculates the program location as a hash of all program-counter registers currently on the call stack.  This somewhat arbitrary definition works well enough to achieve high classification accuracy, but it is not hardcoded; a different definition could be substituted in without changing the rest of the framework.
 
-We now describe an experiment where we generate 10,000 logs of the same randomized test run and use them as a training corpus for a neural network aiming to discern failing from successful runs.  The network model is adapted from a public Keras [implementation](https://github.com/alexander-rakhlin/CNN-for-Sentence-Classification-in-Keras) of Kim's convolutional network for sentence classification [1] -- the idea is that a RamFuzz log is analogous to a sentence describing the test run in a very particular language.  This idea seems to have merit, as the model in question performs much better than other models we tried.
+### Experimental Setup
 
-We started with the Mesos source code and applied the RamFuzz code generator to the header file [`include/mesos/resources.hpp`](https://github.com/apache/mesos/blob/master/include/mesos/resources.hpp).  We then manually implemented a [new Mesos unit test](https://github.com/dekimir/mesos/blob/ramfuzz/src/tests/ramfuzz/http_tests.cpp) leveraging the generated code.  The test is quite simple: it just creates a random `Resources` object.  If this creation is successful, the test passes.  If, on the other hand, the creation process crashes or fails an internal assertion due to invalid random parameter values, the test fails.  While this is a shallow test, it is cheap to make (even by software), and it produces good training data for deep learning.  The test's technical details are publicly available in our [Mesos fork](https://github.com/dekimir/mesos/tree/ramfuzz/ramfuzz) on GitHub.
+We now describe an experiment where we generate 10,000 logs of the same randomized test run and use them as a training corpus for a neural network aiming to discern failing from successful runs.  We started with the Mesos source code and applied the RamFuzz code generator to the header file [`include/mesos/resources.hpp`](https://github.com/apache/mesos/blob/master/include/mesos/resources.hpp).  We then manually implemented a [new Mesos unit test](https://github.com/dekimir/mesos/blob/ramfuzz/src/tests/ramfuzz/http_tests.cpp) leveraging the generated code.  The test is quite simple: it just creates a random `Resources` object.  If this creation is successful, the test passes.  If, on the other hand, the creation process crashes or fails an internal assertion due to invalid random parameter values, the test fails.  While this is a shallow test, it is cheap to make (even by software), and it produces good training data for deep learning.  The test's technical details are publicly available in our [Mesos fork](https://github.com/dekimir/mesos/tree/ramfuzz/ramfuzz) on GitHub.
 
 We extended Mesos makefiles to build the new unit test and produce an executable that includes the RamFuzz-generated test code and runtime library.  RamFuzz provides a [script](https://github.com/dekimir/RamFuzz/blob/master/ai/gencorp.py) to run this executable many times and save all run logs, classifying them as success or failure based on the executable's exit status.  This prepares a training corpus for the deep-learning model.  We performed 10,000 runs of the RamFuzz-powered test.  About 56% of the runs were failures, 44% successes (we repeated the experiment several times, both on Linux and Mac OS, with consistent results).
+
+### Preparing Data
 
 RamFuzz provides a [Python library](https://github.com/dekimir/RamFuzz/blob/master/ai/rfutils.py) to parse the logs and load the data into a NumPy matrix.  For network-training purposes, the data is organized as follows:
 
@@ -57,9 +59,17 @@ RamFuzz provides a [Python library](https://github.com/dekimir/RamFuzz/blob/mast
 
 - All values are converted to a single type, so they can be packed into a NumPy array.  The type is `np.float64`, to ensure the maximum possible range for receiving logged values.  Location indices are of type `np.uint64` for the same reasons.
 
+### Training
+
+The network model is adapted from a public Keras [implementation](https://github.com/alexander-rakhlin/CNN-for-Sentence-Classification-in-Keras) of Kim's convolutional network for sentence classification [1] -- the idea is that a RamFuzz log is analogous to a sentence describing the test run in a very particular language.  This idea seems to have merit, as the model in question performs much better than other models we tried.  The model's output is a single number, indicating the confidence that the input comes from a successful test run.
+
 Because the ranges of generated values can be extremely wide, the original model's training was not effective: its weights would reach extreme values or NaNs, resulting in low accuracy.  We introduced a batch-normalization layer to reduce the values before any further processing.  We also had to significantly lower the batch size to avoid NaNs in batch-normalizer's mean calculation.  The resulting model is also [available on GitHub](https://github.com/dekimir/RamFuzz/blob/master/ai/sample-model1.py).
 
-After these preparations, we were able to train the model to predict whether a test was successful or not from the contents of its log.  The training achieved over 99% prediction accuracy within five epochs.  These results were consistent across multiple runs on both Linux and Mac OS.  In one Linux run, the training actually achieved 100% accuracy.
+With the above adaptations, the training achieved over 99% prediction accuracy within five epochs.  These results were consistent across multiple runs on both Linux and Mac OS.  In one Linux run, the training actually achieved 100% accuracy.
+
+### Validation
+
+After training the model, we validated it against a separate set of test runs.  In various experiments, we performed between 2,000 and 4,500 additional test runs and checked the model's prediction for those logs.  Any previously unseen program locations in the new logs were simply skipped, ignoring the corresponding values.  In all cases, the prediction accuracy was over 90%.
 
 ## Conclusions
 
