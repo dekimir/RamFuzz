@@ -21,7 +21,10 @@ https://github.com/alexander-rakhlin/CNN-for-Sentence-Classification-in-Keras
 
 Usage: $0 [epochs] [batch_size]
 Defaults: epochs=1, batch_size=50
-Expects a train/ subdirectory containing the output of ./gencorp.py.
+
+Expects a train/ subdirectory containing the output of ./gencorp.py.  If there
+is also a valn/ subdirectory with output of another ./gencorp.py run, validates
+the model against its contents.
 
 """
 
@@ -71,11 +74,26 @@ ml.compile(Adam(lr=0.01), metrics=['acc'], loss=binary_crossentropy)
 locs, vals, labels = rfutils.read_data(gl, poscount, locidx)
 
 
-def fit(
-        eps=int(sys.argv[1]) if len(sys.argv) > 1 else 1,
-        # Large batches tend to cause NaNs in batch normalization.
-        bsz=int(sys.argv[2]) if len(sys.argv) > 2 else 50):
+def fit(eps, bsz):
     ml.fit([locs, vals], labels, batch_size=bsz, epochs=eps)
 
 
-fit()
+def validate(valn_files):
+    """Validates ml against valn_files, a list of log file names.
+
+    Returns indices of correct predictions.
+    """
+    locsv, valsv, labelsv = rfutils.read_data(valn_files, poscount, locidx)
+    pred = ml.predict([locsv, valsv])[:, 0]
+    return ((pred > 0.7) == labelsv).nonzero()[0]
+
+
+fit(
+    eps=int(sys.argv[1]) if len(sys.argv) > 1 else 1,
+    # Large batches tend to cause NaNs in batch normalization.
+    bsz=int(sys.argv[2]) if len(sys.argv) > 2 else 50)
+
+glval = glob.glob(os.path.join('valn', '*.[sf]'))
+if glval:
+    corr = validate(glval)
+    print "Validation: ", float(len(corr)) / len(glval)
