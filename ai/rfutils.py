@@ -33,15 +33,23 @@ def logparse(f):
 class indexes:
     """Assigns unique indexes to input values.
 
-    An index is generated for each distinct value given to get().  In the
-    object's lifetime, the same value always gets the same index.
+    An index is generated for each distinct value given to make_index().  In
+    the object's lifetime, the same value always gets the same index.
     """
 
     def __init__(self):
         self.d = dict()
         self.watermark = 1
 
-    def get(self, x):
+    def get_index(self, x):
+        """Returns x's index, if it exists, otherwise None."""
+        if x in self.d:
+            return self.d[x]
+        else:
+            return None
+
+    def make_index(self, x):
+        """Like get_index, but makes a new index if it doesn't exist."""
         if x not in self.d:
             self.d[x] = self.watermark
             self.watermark += 1
@@ -58,7 +66,7 @@ def count_locpos(files):
     for fname in files:
         with open(fname) as f:
             for (pos, (val, loc)) in enumerate(logparse(f)):
-                locidx.get(loc)
+                locidx.make_index(loc)
                 posmax = max(posmax, pos)
     return posmax + 1, locidx
 
@@ -73,8 +81,10 @@ def read_data(files, poscount, locidx):
         fvals = np.zeros((poscount, 1), np.float64)
         with open(fname) as f:
             for (p, (v, l)) in enumerate(logparse(f)):
-                flocs[p] = locidx.get(l)
-                fvals[p] = v
+                idx = locidx.get_index(l)
+                if idx:
+                    flocs[p] = idx
+                    fvals[p] = v
         locs.append(flocs)
         vals.append(fvals)
         labels.append(fname.endswith('.s'))
