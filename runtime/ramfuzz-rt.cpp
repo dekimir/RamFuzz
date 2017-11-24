@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cstddef>
+#include <cstring>
 #include <iostream>
 #include <limits>
 
@@ -62,6 +63,14 @@ unw_word_t get_pc() {
   unw_word_t pc;
   unw_get_reg(&curs, UNW_REG_IP, &pc);
   return pc;
+}
+
+/// True iff the frame *curs is for the procedure named exp_name.
+bool name_is(unw_cursor_t *curs, const char *exp_name) {
+  char name[256];
+  unw_word_t offset;
+  return !unw_get_proc_name(curs, name, sizeof(name), &offset) &&
+         !strcmp(exp_name, name);
 }
 
 } // anonymous namespace
@@ -110,6 +119,9 @@ size_t gen::valueid() {
     // Cribbed from boost::hash_combine().
     stacktrace_hash ^= pc - base_pc + 0x9e3779b9 + (stacktrace_hash << 6) +
                        (stacktrace_hash >> 2);
+    // On some machines, main's caller has an unstable memory location.
+    if (name_is(&curs, "main"))
+      break;
   }
   return stacktrace_hash;
 }
