@@ -37,6 +37,7 @@ from keras.models import Model
 from keras.optimizers import Adam
 import glob
 import keras.backend as K
+import numpy as np
 import os.path
 import rfutils
 import sys
@@ -97,3 +98,22 @@ glval = glob.glob(os.path.join('valn', '*.[sf]'))
 if glval:
     corr = validate(glval)
     print "Validation: ", float(len(corr)) / len(glval)
+
+
+def layerfun(i):
+    """Returns a backend function calculating the output of i-th layer."""
+    return K.function(
+        [ml.layers[0].input, ml.layers[1].input,
+         K.learning_phase()], [ml.layers[i].output])
+
+
+def layer_output(l, i):
+    """Returns the output of layer l on input i."""
+    return layerfun(l)([locs[i:i+1], vals[i:i+1], 0])[0]
+
+
+def convo(layer, input, i):
+    """Convolves the Conv1D layer's weights with input at position i."""
+    wts = layer.get_weights()[0][::-1]
+    bias = layer.get_weights()[1]
+    return np.sum([np.dot(input[i + j], w) for j, w in enumerate(wts)]) + bias
