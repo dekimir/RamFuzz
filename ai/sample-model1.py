@@ -89,6 +89,14 @@ def validate(valn_files):
     return ((pred > 0.7) == labelsv).nonzero()[0]
 
 
+def corrfrac(filelist):
+    """Invokes validate() on the given list of file names.
+
+    Returns the fraction of correct predictions.
+    """
+    return float(len(validate(filelist))) / len(filelist)
+
+
 fit(
     eps=int(sys.argv[1]) if len(sys.argv) > 1 else 1,
     # Large batches tend to cause NaNs in batch normalization.
@@ -96,8 +104,7 @@ fit(
 
 glval = glob.glob(os.path.join('valn', '*.[sf]'))
 if glval:
-    corr = validate(glval)
-    print "Validation: ", float(len(corr)) / len(glval)
+    print "Validation: ", corrfrac(glval)
 
 
 def layerfun(i):
@@ -109,7 +116,7 @@ def layerfun(i):
 
 def layer_output(l, i):
     """Returns the output of layer l on input i."""
-    return layerfun(l)([locs[i:i+1], vals[i:i+1], 0])[0]
+    return layerfun(l)([locs[i:i + 1], vals[i:i + 1], 0])[0]
 
 
 def convo(layer, input, i):
