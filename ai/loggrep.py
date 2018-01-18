@@ -13,9 +13,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Dumps the contents of a RamFuzz run log. Usage: logdump.py <filename>.
+"""Greps the contents of one or more RamFuzz run logs.
 
-See ../runtime/ramfuzz-rt.hpp for a description of the log contents.
+Usage: $0 <location> [<filename> ...]
+
+where <location> is a location number as reported by ./logdump.py.
 
 """
 
@@ -23,9 +25,12 @@ import rfutils
 import sys
 
 if len(sys.argv) < 2:
-    print 'usage: %s <filename>' % sys.argv[0]
+    print 'usage: %s <location> [<filename> ...]' % sys.argv[0]
     exit(1)
 
-with open(sys.argv[1]) as f:
-    for entry in rfutils.logparse(f):
-        print entry
+loc = long(sys.argv[1])
+for fn in sys.argv[2:]:
+    with open(fn) as f:
+        for line, entry in enumerate(rfutils.logparse(f)):
+            if entry[1] == loc:
+                print '%s:%d %r' % (fn, line, entry)
