@@ -99,6 +99,13 @@ template <typename T> char typetag(T);
 /// in one test run.  That captures them all in the log file, so the test can be
 /// easily replayed, and the log can be processed by AI tools in ../ai.  See
 /// also the constructor gen(argc, argv, k) below.
+///
+/// The log is in binary format, to ensure replay precision.  Each log entry
+/// contains the value generated and an ID for that value.  The ID is currently
+/// based on the program's execution state, indicating the program location at
+/// which the value is generated.  Different program runs may generate different
+/// values at the same location; this is useful for AI analysis of the logs and
+/// program outcomes.
 class gen {
   /// Are we generating values or replaying a previous run?
   enum { generate, replay } runmode;
