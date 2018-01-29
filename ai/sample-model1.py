@@ -124,3 +124,17 @@ def convo(layer, input, i):
     wts = layer.get_weights()[0][::-1]
     bias = layer.get_weights()[1]
     return np.sum([np.dot(input[i + j], w) for j, w in enumerate(wts)]) + bias
+
+
+def convo_elements(layer_input, weights, offset):
+    """Prints individual convolution elements at given offset.
+
+    Returns their sum.
+
+    """
+    sum = 0
+    for i in range(0, 8):
+        e = np.dot(weights[i], layer_input[0, offset + i])
+        print ' %20.18f #o%dw%d' % (e, offset + i, i)
+        sum += e
+    return sum
