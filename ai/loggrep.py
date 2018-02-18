@@ -33,4 +33,4 @@ for fn in sys.argv[2:]:
     with open(fn) as f:
         for line, entry in enumerate(rfutils.logparse(f)):
             if entry[1] == loc:
-                print '%s:%d %r' % (fn, line, entry)
+                print '%s:%d %r' % (fn, line + 1, entry)
