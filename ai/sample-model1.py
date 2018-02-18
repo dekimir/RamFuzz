@@ -97,16 +97,6 @@ def corrfrac(filelist):
     return float(len(validate(filelist))) / len(filelist)
 
 
-fit(
-    eps=int(sys.argv[1]) if len(sys.argv) > 1 else 1,
-    # Large batches tend to cause NaNs in batch normalization.
-    bsz=int(sys.argv[2]) if len(sys.argv) > 2 else 50)
-
-glval = glob.glob(os.path.join('valn', '*.[sf]'))
-if glval:
-    print "Validation: ", corrfrac(glval)
-
-
 def layerfun(i):
     """Returns a backend function calculating the output of i-th layer."""
     return K.function(
@@ -138,3 +128,13 @@ def convo_elements(layer_input, weights, offset):
         print ' %20.18f #o%dw%d' % (e, offset + i, i)
         sum += e
     return sum
+
+
+fit(
+    eps=int(sys.argv[1]) if len(sys.argv) > 1 else 1,
+    # Large batches tend to cause NaNs in batch normalization.
+    bsz=int(sys.argv[2]) if len(sys.argv) > 2 else 50)
+
+glval = glob.glob(os.path.join('valn', '*.[sf]'))
+if glval:
+    print "Validation: ", corrfrac(glval)
