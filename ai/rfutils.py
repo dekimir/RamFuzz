@@ -30,6 +30,10 @@ def logparse(f):
         yield entry
 
 
+def loc2val(f):
+    return {loc: val for (val, loc) in logparse(f)}
+
+
 class indexes:
     """Assigns unique indexes to input values.
 
