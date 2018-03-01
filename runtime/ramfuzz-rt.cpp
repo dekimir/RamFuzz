@@ -222,5 +222,10 @@ template <> char typetag<unsigned long long>(unsigned long long) { return 10; }
 template <> char typetag<float>(float) { return 11; }
 template <> char typetag<double>(double) { return 12; }
 
+template <> unsigned long newhi(unsigned long oldhi) {
+  return std::min(oldhi,
+		  379586047ul);
+}
+
 } // namespace runtime
 } // namespace ramfuzz

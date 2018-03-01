@@ -86,6 +86,9 @@ struct file_error : public std::runtime_error {
 /// Returns T's type tag to put into RamFuzz logs.
 template <typename T> char typetag(T);
 
+template <typename T> T newlo(T oldlo) { return oldlo; }
+template <typename T> T newhi(T oldhi) { return oldhi; }
+
 /// Generates values for RamFuzz code.  Can be used in the "generate" or
 /// "replay" mode.  In "generate" mode, values are created at random and logged.
 /// In "replay" mode, values are read from a previously generated log.  This
@@ -149,12 +152,18 @@ public:
   /// it.  The value is random in "generate" mode but read from the input log in
   /// "replay" mode.
   template <typename T> T between(T lo, T hi) {
+    const auto id = valueid();
     T val;
     if (runmode == generate)
       val = uniform_random(lo, hi);
-    else
+    else {
+      if (id == 11324722108746820276ul) {
+	runmode = generate;
+        return between(newlo(lo), newhi(hi));
+      }
       input(val);
-    output(val, valueid());
+    }
+    output(val, id);
     return val;
   }
 
