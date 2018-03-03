@@ -182,6 +182,15 @@ private:
     return p;
   }
 
+  /// Provides a static const member named `value` that's true iff T is a char*
+  /// (modulo const/volatile).
+  template <typename T> struct is_char_ptr {
+    static const auto value =
+        std::is_pointer<T>::value &&
+        std::is_same<char, typename std::remove_cv<typename std::remove_pointer<
+                               T>::type>::type>::value;
+  };
+
   /// Like the public make(), but creates a brand new object and never returns
   /// previously created ones.
   ///
@@ -220,11 +229,27 @@ private:
   }
 
   template <typename T>
-  T *makenew(typename std::enable_if<std::is_pointer<T>::value, bool>::type
-                 allow_subclass = false) {
+  T *makenew(typename std::enable_if<std::is_pointer<T>::value &&
+                                         !is_char_ptr<T>::value,
+                                     bool>::type allow_subclass = false) {
     using pointee = typename std::remove_pointer<T>::type;
     return store(
         new T(make<typename std::remove_cv<pointee>::type>(allow_subclass)));
+  }
+
+  /// Most of the time, char* should be a null-terminated string, so it gets its
+  /// own overload.
+  template <typename T>
+  T *makenew(typename std::enable_if<is_char_ptr<T>::value, bool>::type
+                 allow_subclass = false) {
+    auto r = new char *;
+    const auto sz = between(0u, 1000u);
+    *r = new char[sz + 1];
+    (*r)[sz] = '\0';
+    for (size_t i = 0; i < sz; ++i)
+      (*r)[i] = between(std::numeric_limits<char>::min(),
+                        std::numeric_limits<char>::max());
+    return r;
   }
 
   template <typename T>
