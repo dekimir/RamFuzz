@@ -249,7 +249,7 @@ private:
     for (size_t i = 0; i < sz; ++i)
       (*r)[i] = between(std::numeric_limits<char>::min(),
                         std::numeric_limits<char>::max());
-    return r;
+    return const_cast<T *>(r);
   }
 
   template <typename T>
