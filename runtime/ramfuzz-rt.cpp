@@ -27,6 +27,7 @@ using std::generate;
 using std::hex;
 using std::isprint;
 using std::istream;
+using std::min;
 using std::numeric_limits;
 using std::ofstream;
 using std::ranlux24;
@@ -113,7 +114,8 @@ gen::gen(int argc, const char *const *argv, size_t k) : base_pc(get_pc()) {
 size_t gen::valueid() {
   CURSORINIT(ctx, curs);
   size_t stacktrace_hash = 0; // "Stack trace" = a vector of all callers' PCs.
-  while (unw_step(&curs)) {
+  int countdown = 4;
+  while (unw_step(&curs) && countdown--) {
     unw_word_t pc;
     unw_get_reg(&curs, UNW_REG_IP, &pc);
     // Cribbed from boost::hash_combine().
@@ -175,7 +177,7 @@ template <> long gen::uniform_random<long>(long lo, long hi) {
 template <>
 unsigned long gen::uniform_random<unsigned long>(unsigned long lo,
                                                  unsigned long hi) {
-  return ibetween(lo, hi, rgen);
+  return ibetween(lo, min(hi, 500UL), rgen);
 }
 
 template <>

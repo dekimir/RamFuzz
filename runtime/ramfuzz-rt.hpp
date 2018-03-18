@@ -149,12 +149,13 @@ public:
   /// it.  The value is random in "generate" mode but read from the input log in
   /// "replay" mode.
   template <typename T> T between(T lo, T hi) {
+    const auto vid = valueid();
     T val;
     if (runmode == generate)
       val = uniform_random(lo, hi);
     else
       input(val);
-    output(val, valueid());
+    output(val, vid);
     return val;
   }
 
@@ -243,7 +244,7 @@ private:
   T *makenew(typename std::enable_if<is_char_ptr<T>::value, bool>::type
                  allow_subclass = false) {
     auto r = new char *;
-    const auto sz = between(0u, 1000u);
+    const auto sz = *make<size_t>();
     *r = new char[sz + 1];
     (*r)[sz] = '\0';
     for (size_t i = 0; i < sz; ++i)
@@ -267,7 +268,7 @@ private:
 
   /// Whether make() should reuse a previously created value or create a fresh
   /// one.  Decided randomly.
-  bool reuse() { return between(false, true); }
+  bool reuse() { return false /*between(false, true)*/; }
 
   /// Uniquely identifies the numeric value currently being generated and
   /// logged.  The identity is derived from the program's current execution
@@ -317,12 +318,13 @@ template <typename Tp, typename Alloc> class harness<std::vector<Tp, Alloc>> {
 private:
   // Declare first to initialize early; constructors may use it.
   runtime::gen &g;
+  using Vec = std::vector<Tp, Alloc>;
 
 public:
-  std::vector<Tp, Alloc> *obj;
+  Vec *obj;
 
   harness(runtime::gen &g)
-      : g(g), obj(new std::vector<Tp, Alloc>(g.between(0u, 1000u))) {
+      : g(g), obj(new Vec(*g.make<typename Vec::size_type>())) {
     for (size_t i = 0; i < obj->size(); ++i)
       (*obj)[i] = *g.make<typename std::remove_cv<Tp>::type>();
   }
@@ -333,7 +335,7 @@ public:
   static constexpr mptr mroulette[] = {};
   static constexpr unsigned ccount = 1;
   static constexpr size_t subcount = 0;
-  static constexpr std::vector<Tp, Alloc> *(*submakers[])(runtime::gen &) = {};
+  static constexpr Vec *(*submakers[])(runtime::gen &) = {};
 };
 
 template <class CharT, class Traits, class Allocator>
@@ -346,7 +348,7 @@ public:
   std::basic_string<CharT, Traits, Allocator> *obj;
   harness(runtime::gen &g)
       : g(g), obj(new std::basic_string<CharT, Traits, Allocator>(
-                  g.between(1u, 1000u), CharT())) {
+                  *g.make<size_t>(), CharT())) {
     for (size_t i = 0; i < obj->size() - 1; ++i)
       obj[i] = g.between<CharT>(1, std::numeric_limits<CharT>::max());
     obj->back() = CharT(0);
