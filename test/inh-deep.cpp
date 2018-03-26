@@ -19,9 +19,9 @@ using namespace runtime;
 
 int main(int argc, char *argv[]) {
   gen g(argc, argv);
-  while (g.make<ClientByRef>()->trace != (0xba0 | 0x5c1 | 0x5c2))
+  while (g.make<ClientByRef>(101)->trace != (0xba0 | 0x5c1 | 0x5c2))
     ;
-  while (g.make<ClientByPtr>()->trace != (0xba0 | 0x5c1 | 0x5c2))
+  while (g.make<ClientByPtr>(102)->trace != (0xba0 | 0x5c1 | 0x5c2))
     ;
 }
 

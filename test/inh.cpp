@@ -19,13 +19,13 @@ using namespace runtime;
 
 int main(int argc, char *argv[]) {
   gen g(argc, argv);
-  while (g.make<Base>(g.or_subclass)->id() != 0x5c)
+  while (g.make<Base>(101, g.or_subclass)->id() != 0x5c)
     ;
-  while (g.make<ClientByRef>()->trace != (0xba | 0x5c))
+  while (g.make<ClientByRef>(102)->trace != (0xba | 0x5c))
     ;
-  while (g.make<ClientByPtr>()->trace != (0xba | 0x5c))
+  while (g.make<ClientByPtr>(103)->trace != (0xba | 0x5c))
     ;
-  return g.make<Base>()->id() != 0xba;
+  return g.make<Base>(104)->id() != 0xba;
 }
 
 unsigned ::ramfuzz::runtime::spinlimit = 3;

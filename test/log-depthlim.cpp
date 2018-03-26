@@ -20,9 +20,9 @@ int main() {
   using namespace ramfuzz::runtime;
   using namespace std;
   unique_ptr<gen> g(new gen("fuzzlog1"));
-  A a1 = *g->make<A>();
+  A a1 = *g->make<A>(101);
   g.reset(new gen("fuzzlog1", "fuzzlog2"));
-  A a2 = *g->make<A>();
+  A a2 = *g->make<A>(102);
   return a1 != a2;
 }
 

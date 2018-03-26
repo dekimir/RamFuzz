@@ -18,7 +18,7 @@ using namespace ramfuzz;
 
 int main(int argc, char *argv[]) {
   runtime::gen g(argc, argv);
-  return g.make<B>()->get() != 123;
+  return g.make<B>(101)->get() != 123;
 }
 
 A::A(B &b) { id = b.get(); }

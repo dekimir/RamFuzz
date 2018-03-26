@@ -16,7 +16,7 @@
 
 int main(int argc, char *argv[]) {
   ramfuzz::runtime::gen g(argc, argv);
-  return g.make<B>()->fun(A()) != 123;
+  return g.make<B>(101)->fun(A()) != 123;
 }
 
 unsigned ::ramfuzz::runtime::spinlimit = 3;

@@ -17,8 +17,8 @@
 using namespace ramfuzz::runtime;
 
 int main() {
-  auto r1 = gen("fuzzlog1").make<A>()->v;
-  return r1 != gen("fuzzlog1", "fuzzlog2").make<A>()->v;
+  auto r1 = gen("fuzzlog1").make<A>(101)->v;
+  return r1 != gen("fuzzlog1", "fuzzlog2").make<A>(102)->v;
 }
 
 unsigned ramfuzz::runtime::spinlimit = 3;

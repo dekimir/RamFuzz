@@ -60,4 +60,4 @@ public:
 };
 
 #include "ramfuzz-rt.hpp"
-template <> NS::ST<int> *ramfuzz::runtime::gen::make<NS::ST<int>>(bool);
+template <> NS::ST<int> *ramfuzz::runtime::gen::make<NS::ST<int>>(size_t, bool);

@@ -15,7 +15,7 @@
 #include "fuzz.hpp"
 
 int main(int argc, char *argv[]) {
-  ramfuzz::runtime::gen(argc, argv).make<U>();
+  ramfuzz::runtime::gen(argc, argv).make<U>(101);
 }
 
 unsigned ramfuzz::runtime::spinlimit = 3;

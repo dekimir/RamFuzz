@@ -66,14 +66,6 @@ unw_word_t get_pc() {
   return pc;
 }
 
-/// True iff the frame *curs is for the procedure named exp_name.
-bool name_is(unw_cursor_t *curs, const char *exp_name) {
-  char name[256];
-  unw_word_t offset;
-  return !unw_get_proc_name(curs, name, sizeof(name), &offset) &&
-         !strcmp(exp_name, name);
-}
-
 } // anonymous namespace
 
 namespace ramfuzz {
@@ -109,23 +101,6 @@ gen::gen(int argc, const char *const *argv, size_t k) : base_pc(get_pc()) {
     if (!olog)
       throw file_error("Cannot open fuzzlog");
   }
-}
-
-size_t gen::valueid() {
-  CURSORINIT(ctx, curs);
-  size_t stacktrace_hash = 0; // "Stack trace" = a vector of all callers' PCs.
-  int countdown = 4;
-  while (unw_step(&curs) && countdown--) {
-    unw_word_t pc;
-    unw_get_reg(&curs, UNW_REG_IP, &pc);
-    // Cribbed from boost::hash_combine().
-    stacktrace_hash ^= pc - base_pc + 0x9e3779b9 + (stacktrace_hash << 6) +
-                       (stacktrace_hash >> 2);
-    // On some machines, main's caller has an unstable memory location.
-    if (name_is(&curs, "main"))
-      break;
-  }
-  return stacktrace_hash;
 }
 
 template <> bool gen::uniform_random<bool>(bool lo, bool hi) {

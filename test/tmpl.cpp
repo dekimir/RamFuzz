@@ -16,11 +16,11 @@
 using namespace ramfuzz::runtime;
 int main(int argc, char *argv[]) {
   gen g(argc, argv);
-  if (g.make<A<int>>()->plus1(123) != 124)
+  if (g.make<A<int>>(101)->plus1(123) != 124)
     return 1;
-  if (g.make<A<float>>()->plus1(11.) != 12.)
+  if (g.make<A<float>>(102)->plus1(11.) != 12.)
     return 1;
-  return g.make<A<unsigned>>()->plus1(0) != 1;
+  return g.make<A<unsigned>>(103)->plus1(0) != 1;
 }
 
 unsigned ::ramfuzz::runtime::spinlimit = 3;

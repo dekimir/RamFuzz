@@ -344,6 +344,8 @@ private:
   unordered_map<string, vector<string>> referenced_enums;
 
   NameGetter tparam_names; ///< Gets template-parameter names.
+
+  size_t valueid_watermark = 100; ///< For generating unique valueid parameters.
 };
 
 /// Valid identifier from a CXXMethodDecl name.
@@ -378,7 +380,7 @@ tuple<QualType, unsigned> ultimate_pointee(QualType ty, const ASTContext &ctx) {
 /// Returns C's qualified name, followed by C's template parameters if C is a
 /// template class.  It's equivalent to constructing ClassDetails(*C) and
 /// concatenating its qname() and suffix().
-string class_under_test(const CXXRecordDecl *C, NameGetter& ng) {
+string class_under_test(const CXXRecordDecl *C, NameGetter &ng) {
   string name = C->getQualifiedNameAsString();
   raw_string_ostream strm(name);
   if (const auto tmpl = C->getDescribedClassTemplate()) {
@@ -448,8 +450,9 @@ void RamFuzz::gen_concrete_methods(const CXXRecordDecl *C, const string &cls,
         outc << "  return *ramfuzzgenuniquename.make<"
              << type_streamer(rety.getNonReferenceType().getUnqualifiedType(),
                               prtpol)
-             << ">("
-             << (rety->isPointerType() || rety->isReferenceType() ? "true" : "")
+             << ">(" << valueid_watermark++
+             << (rety->isPointerType() || rety->isReferenceType() ? ", true"
+                                                                  : "")
              << ");\n";
         reg(*get<0>(ultimate_pointee(rety, ctx)));
       }
@@ -556,7 +559,7 @@ void RamFuzz::gen_submakers_defs(const Inheritance &sc) {
         if (!subcls.is_template() && subcls.is_visible()) {
           *outt << tmpl_preamble << name << "* submakerfn" << next_maker_fn++
                 << "(runtime::gen& g) { return g.make<" << subcls.qname()
-                << ">(true); }\n";
+                << ">(" << valueid_watermark++ << ",true); }\n";
           referenced_classes.insert(subcls);
         }
       *outt << "} // anonymous namespace\n";
@@ -634,8 +637,8 @@ void RamFuzz::gen_method(const Twine &hname, const CXXMethodDecl *M,
                            .getUnqualifiedType();
     *outt << "*g.make<" << type_streamer(strty, prtpol);
     reg(*strty);
-    *outt << ">(" << (ptrcnt || ram->getType()->isReferenceType() ? "true" : "")
-          << ")";
+    *outt << ">(" << valueid_watermark++
+          << (ptrcnt || ram->getType()->isReferenceType() ? ", true" : "") << ")";
     if (is_rvalue_ref)
       *outt << ")";
     if (ptrcnt > 1)
@@ -735,7 +738,7 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
         *outt << cls.tpreamble() << "void harness<" << cls << ">::" << name
               << namecount[name.str()] << "() {\n";
         *outt << "  obj->" << *f << " = *g.make<" << type_streamer(ty, prtpol)
-              << ">();\n";
+              << ">(" << valueid_watermark++ << ");\n";
         reg(*ty);
         *outt << "}\n";
         namecount[name.str()]++;
@@ -752,10 +755,10 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
       else
         outh << "&harness::" << safectr;
       outh << ";\n";
-      *outt
-          << cls.tpreamble() << "harness<" << cls
-          << ">::harness(runtime::gen& g)\n"
-          << "  : g(g), obj((this->*croulette[g.between(0u,ccount-1)])()) {}\n";
+      *outt << cls.tpreamble() << "harness<" << cls
+            << ">::harness(runtime::gen& g)\n"
+            << "  : g(g), obj((this->*croulette[g.between(0u,ccount-1,"
+            << valueid_watermark++ << ")])()) {}\n";
     } else
       outh << "  // No public constructors -- user must provide this:\n";
     outh << "  harness(runtime::gen& g);\n";
@@ -770,18 +773,18 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
 void RamFuzz::finish(const Inheritance &sc) {
   for (auto e : referenced_enums) {
     outh << "  namespace runtime {\n";
-    outh << "    template<> " << e.first << "* gen::make<"
-         << e.first << ">(bool);\n";
+    outh << "    template<> " << e.first << "* gen::make<" << e.first
+         << ">(size_t, bool);\n";
     outh << "  } // namespace runtime\n";
     outc << "template<> " << e.first << "* ramfuzz::runtime::gen::make<"
-         << e.first << ">(bool) {\n";
+         << e.first << ">(size_t valueid, bool) {\n";
     outc << "  static " << e.first << " a[] = {\n    ";
     int comma = 0;
     for (const auto &n : e.second)
       outc << (comma++ ? "," : "") << n;
     outc << "  };\n";
-    outc << "  return &a[between(std::size_t(0), sizeof(a)/sizeof(a[0]) - "
-            "1)];\n";
+    outc << "  return &a[between(std::size_t(0), sizeof(a)/sizeof(a[0]) - 1, "
+            "valueid)];\n";
     outc << "}\n";
   }
 

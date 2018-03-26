@@ -19,7 +19,7 @@ using namespace runtime;
 
 int main(int argc, char *argv[]) {
   gen g(argc, argv);
-  return g.make<Base>()->id() != 0xba;
+  return g.make<Base>(101)->id() != 0xba;
 }
 
 unsigned ::ramfuzz::runtime::spinlimit = 3;

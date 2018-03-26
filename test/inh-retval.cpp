@@ -19,7 +19,7 @@ using namespace runtime;
 
 int main(int argc, char *argv[]) {
   gen g(argc, argv);
-  while (g.make<Base>()->get().id() != 0x5c)
+  while (g.make<Base>(101)->get().id() != 0x5c)
     ;
 }
 

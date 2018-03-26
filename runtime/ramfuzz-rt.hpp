@@ -131,15 +131,15 @@ public:
   /// in "generate" mode but read from the input log in "replay" mode.
   ///
   /// If allow_subclass is true, the result may be an object of T's subclass.
-  template <typename T> T *make(bool allow_subclass = false) {
+  template <typename T> T *make(size_t valueid, bool allow_subclass = false) {
     auto &oldies = storage[std::type_index(typeid(T))];
     if (!oldies.empty() && reuse())
       // Note we don't check allow_subclass here, so T's storage must never hold
       // subclass objects, only actual Ts.
       return reinterpret_cast<T *>(
-          oldies[between<size_t>(0, oldies.size() - 1)]);
+          oldies[between<size_t>(0, oldies.size() - 1, valueid)]);
     else
-      return makenew<T>(allow_subclass);
+      return makenew<T>(valueid, allow_subclass);
   }
 
   /// Handy name for invoking make<T>(or_subclass).
@@ -148,14 +148,13 @@ public:
   /// Returns a value of numeric type T between lo and hi, inclusive, and logs
   /// it.  The value is random in "generate" mode but read from the input log in
   /// "replay" mode.
-  template <typename T> T between(T lo, T hi) {
-    const auto vid = valueid();
+  template <typename T> T between(T lo, T hi, size_t valueid) {
     T val;
     if (runmode == generate)
       val = uniform_random(lo, hi);
     else
       input(val);
-    output(val, vid);
+    output(val, valueid);
     return val;
   }
 
@@ -198,26 +197,29 @@ private:
   /// There are several overloads for different kinds of T: arithmetic types,
   /// classes, pointers, etc.
   template <typename T>
-  T *makenew(typename std::enable_if<std::is_arithmetic<T>::value ||
+  T *makenew(size_t valueid,
+             typename std::enable_if<std::is_arithmetic<T>::value ||
                                          std::is_enum<T>::value,
                                      bool>::type allow_subclass = false) {
-    return store(new T(
-        between(std::numeric_limits<T>::min(), std::numeric_limits<T>::max())));
+    return store(new T(between(std::numeric_limits<T>::min(),
+                               std::numeric_limits<T>::max(), valueid)));
   }
 
   template <typename T>
-  T *makenew(typename std::enable_if<std::is_class<T>::value ||
+  T *makenew(size_t valueid,
+             typename std::enable_if<std::is_class<T>::value ||
                                          std::is_union<T>::value,
                                      bool>::type allow_subclass = false) {
-    if (harness<T>::subcount && allow_subclass && between(0., 1.) > 0.5) {
-      return (
-          *harness<T>::submakers[between(size_t{0}, harness<T>::subcount - 1)])(
-          *this);
+    if (harness<T>::subcount && allow_subclass &&
+        between(0., 1., valueid) > 0.5) {
+      return (*harness<T>::submakers[between(
+          size_t{0}, harness<T>::subcount - 1, valueid)])(*this);
     } else {
       harness<T> h(*this);
       if (h.mcount) {
-        for (auto i = 0u, e = between(0u, runtime::spinlimit); i < e; ++i)
-          (h.*h.mroulette[between(0u, h.mcount - 1)])();
+        for (auto i = 0u, e = between(0u, runtime::spinlimit, valueid); i < e;
+             ++i)
+          (h.*h.mroulette[between(0u, h.mcount - 1, valueid)])();
       }
       return store(h.obj);
     }
@@ -225,36 +227,40 @@ private:
 
   template <typename T>
   T *makenew(
+      size_t valueid,
       typename std::enable_if<std::is_void<T>::value, bool>::type = false) {
-    return store<void>(new char[between(1, 4196)]);
+    return store<void>(new char[between(1, 4196, valueid)]);
   }
 
   template <typename T>
-  T *makenew(typename std::enable_if<std::is_pointer<T>::value &&
+  T *makenew(size_t valueid,
+             typename std::enable_if<std::is_pointer<T>::value &&
                                          !is_char_ptr<T>::value,
                                      bool>::type allow_subclass = false) {
     using pointee = typename std::remove_pointer<T>::type;
-    return store(
-        new T(make<typename std::remove_cv<pointee>::type>(allow_subclass)));
+    return store(new T(
+        make<typename std::remove_cv<pointee>::type>(valueid, allow_subclass)));
   }
 
   /// Most of the time, char* should be a null-terminated string, so it gets its
   /// own overload.
   template <typename T>
-  T *makenew(typename std::enable_if<is_char_ptr<T>::value, bool>::type
+  T *makenew(size_t valueid,
+             typename std::enable_if<is_char_ptr<T>::value, bool>::type
                  allow_subclass = false) {
     auto r = new char *;
-    const auto sz = *make<size_t>();
+    const auto sz = *make<size_t>(1000000 + valueid);
     *r = new char[sz + 1];
     (*r)[sz] = '\0';
     for (size_t i = 0; i < sz; ++i)
       (*r)[i] = between(std::numeric_limits<char>::min(),
-                        std::numeric_limits<char>::max());
+                        std::numeric_limits<char>::max(), valueid);
     return const_cast<T *>(r);
   }
 
   template <typename T>
-  T *makenew(typename std::enable_if<std::is_function<T>::value, bool>::type
+  T *makenew(size_t valueid,
+             typename std::enable_if<std::is_function<T>::value, bool>::type
                  allow_subclass = false) {
     // TODO: implement.  Either capture \c this somehow to make() a value of the
     // return type; or select randomly one of existing functions in the program
@@ -269,11 +275,6 @@ private:
   /// Whether make() should reuse a previously created value or create a fresh
   /// one.  Decided randomly.
   bool reuse() { return false /*between(false, true)*/; }
-
-  /// Uniquely identifies the numeric value currently being generated and
-  /// logged.  The identity is derived from the program's current execution
-  /// state.  Next time the program is run, the same value will get the same ID.
-  size_t valueid();
 
   /// Used for random value generation.
   std::ranlux24 rgen = std::ranlux24(std::random_device{}());
@@ -324,9 +325,9 @@ public:
   Vec *obj;
 
   harness(runtime::gen &g)
-      : g(g), obj(new Vec(*g.make<typename Vec::size_type>())) {
+      : g(g), obj(new Vec(*g.make<typename Vec::size_type>(1))) {
     for (size_t i = 0; i < obj->size(); ++i)
-      (*obj)[i] = *g.make<typename std::remove_cv<Tp>::type>();
+      (*obj)[i] = *g.make<typename std::remove_cv<Tp>::type>(2);
   }
 
   operator bool() const { return true; }
@@ -348,9 +349,9 @@ public:
   std::basic_string<CharT, Traits, Allocator> *obj;
   harness(runtime::gen &g)
       : g(g), obj(new std::basic_string<CharT, Traits, Allocator>(
-                  *g.make<size_t>(), CharT())) {
+                  *g.make<size_t>(3), CharT())) {
     for (size_t i = 0; i < obj->size() - 1; ++i)
-      obj[i] = g.between<CharT>(1, std::numeric_limits<CharT>::max());
+      obj[i] = g.between<CharT>(1, std::numeric_limits<CharT>::max(), 4);
     obj->back() = CharT(0);
   }
   operator bool() const { return true; }
@@ -372,7 +373,7 @@ public:
   std::basic_istringstream<CharT, Traits> *obj;
   harness(runtime::gen &g)
       : g(g), obj(new std::basic_istringstream<CharT, Traits>(
-                  *g.make<std::string>())) {}
+                  *g.make<std::string>(5))) {}
   operator bool() const { return true; }
   using mptr = void (harness::*)();
   static constexpr unsigned mcount = 0;
@@ -404,7 +405,7 @@ public:
   using user_class = std::function<Res(Args...)>;
   user_class *obj;
   harness(runtime::gen &g)
-      : obj(new user_class([&g](Args...) { return *g.make<Res>(); })) {}
+      : obj(new user_class([&g](Args...) { return *g.make<Res>(6); })) {}
   operator bool() const { return true; }
   using mptr = void (harness::*)();
   static constexpr unsigned mcount = 0;

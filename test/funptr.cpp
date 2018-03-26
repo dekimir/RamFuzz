@@ -16,13 +16,13 @@
 
 int main(int argc, char *argv[]) {
   ramfuzz::runtime::gen g(argc, argv);
-  if (const auto f = g.make<A>()->f0)
+  if (const auto f = g.make<A>(101)->f0)
     f();
-  if (const auto f = g.make<A>()->f1)
+  if (const auto f = g.make<A>(102)->f1)
     f(0);
-  if (const auto f = g.make<A>()->f2)
+  if (const auto f = g.make<A>(103)->f2)
     f(0, 0);
-  return g.make<A>()->consumes_funptr(nullptr, nullptr) != -234;
+  return g.make<A>(104)->consumes_funptr(nullptr, nullptr) != -234;
 }
 
 unsigned ramfuzz::runtime::spinlimit = 3;

@@ -19,7 +19,7 @@ using namespace runtime;
 
 int main(int argc, char *argv[]) {
   gen g(argc, argv);
-  while (g.make<Base<int>>()->f() != 0xba)
+  while (g.make<Base<int>>(101)->f() != 0xba)
     ;
   // A's only subclass is a template, which is ignored.  Therefore, its subcount
   // should be 0.

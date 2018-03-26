@@ -16,7 +16,7 @@
 
 int main(int argc, char *argv[]) {
   ramfuzz::runtime::gen g(argc, argv);
-  return g.make<B>()->get() != 42 || g.make<C>()->sum != 43;
+  return g.make<B>(101)->get() != 42 || g.make<C>(102)->sum != 43;
 }
 
 unsigned ::ramfuzz::runtime::spinlimit = 3;

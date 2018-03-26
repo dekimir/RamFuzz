@@ -18,7 +18,7 @@ using namespace ramfuzz::runtime;
 using namespace std;
 
 string run(gen &g) {
-  auto rf1 = g.make<A>();
+  auto rf1 = g.make<A>(101);
   return rf1 ? rf1->content : string();
 }
 

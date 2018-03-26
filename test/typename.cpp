@@ -16,7 +16,7 @@
 using namespace ramfuzz::runtime;
 int main(int argc, char *argv[]) {
   gen g(argc, argv);
-  return g.make<A<int>>()->get(0) != 456;
+  return g.make<A<int>>(101)->get(0) != 456;
 }
 
 unsigned ::ramfuzz::runtime::spinlimit = 3;

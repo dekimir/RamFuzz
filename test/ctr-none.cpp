@@ -23,7 +23,7 @@ using namespace ramfuzz;
 
 int main(int argc, char *argv[]) {
   runtime::gen g(argc, argv);
-  return g.make<C>()->id != 234;
+  return g.make<C>(101)->id != 234;
 }
 
 harness<B>::harness(runtime::gen &g) : g(g), obj(B::create()) {}

@@ -18,7 +18,7 @@ using namespace ramfuzz::runtime;
 
 int main(int argc, char* argv[]) {
   gen g(argc, argv);
-  return ns1::A(*g.make<ns2::B>()).a != 123;
+  return ns1::A(*g.make<ns2::B>(101)).a != 123;
 }
 
 unsigned ::ramfuzz::runtime::spinlimit = 3;

@@ -18,7 +18,7 @@ using namespace ramfuzz;
 
 int main(int argc, char *argv[]) {
   runtime::gen g(argc, argv);
-  while (g.make<C>()->s == 0)
+  while (g.make<C>(101)->s == 0)
     ;
 }
 
