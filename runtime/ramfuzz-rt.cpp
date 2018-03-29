@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cstddef>
+#include <cstdlib>
 #include <cstring>
 #include <iostream>
 #include <limits>
@@ -68,7 +69,8 @@ gen::gen(const string &ilogname, const string &ologname)
 }
 
 gen::gen(int argc, const char *const *argv, size_t k) {
-  if (k < static_cast<size_t>(argc) && argv[k]) {
+  size_t argnum = static_cast<size_t>(argc);
+  if (k < argnum && argv[k]) {
     runmode = replay;
     const string argstr(argv[k]);
     ilog.open(argstr);
@@ -77,6 +79,10 @@ gen::gen(int argc, const char *const *argv, size_t k) {
     olog.open(argstr + "+");
     if (!olog)
       throw file_error("Cannot open " + argstr + "+");
+    if (k + 1 < argnum && argv[k + 1]) {
+      countdown = atol(argv[k + 1]);
+      counting = true;
+    }
   } else {
     runmode = generate;
     olog.open("fuzzlog");
