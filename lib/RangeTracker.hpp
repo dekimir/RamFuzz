@@ -14,6 +14,7 @@
 
 #pragma once
 
+#include <ostream>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -26,6 +27,9 @@ class LinearCombination {
 public:
   std::unordered_map<size_t, double> multipliers;
   double offset;
+  bool operator==(const LinearCombination &other) const {
+    return multipliers == other.multipliers && offset == other.offset;
+  }
 };
 
 /// Convenience operator for combining LinearCombinations.
@@ -47,7 +51,14 @@ public:
 
   /// Substitutes value for variable.
   void substitute(size_t variable, double value);
+
+  bool operator==(const LinearInequality &other) const {
+    return lhs == other.lhs;
+  }
 };
+
+std::ostream &operator<<(std::ostream &, const LinearCombination &);
+std::ostream &operator<<(std::ostream &, const LinearInequality &);
 
 /// To distinguish upper and lower bounds.
 enum class Bound { upper, lower };

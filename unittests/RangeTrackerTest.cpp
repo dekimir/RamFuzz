@@ -72,4 +72,16 @@ TEST(RangeTrackerTest, Chain) {
                        LinearInequality{1. * x{1} - 1. * x{2} >= 2.}}));
 }
 
+TEST(RangeTrackerTest, ZeroMultiplier) {
+  EXPECT_EQ(make_pair(123., maxdbl),
+            bounds(2, {LinearInequality{0. * x{1} + 1. * x{2} >= 123.},
+                       LinearInequality{1. * x{1} - 1. * x{2} >= 0.}}));
+}
+
+TEST(RangeTrackerTest, Substitute) {
+  LinearInequality li{1. * x{1} + 2. * x{2} >= 3.};
+  li.substitute(1, 3.);
+  EXPECT_EQ(LinearInequality{2. * x{2} >= 0.}, li);
+}
+
 } // anonymous namespace

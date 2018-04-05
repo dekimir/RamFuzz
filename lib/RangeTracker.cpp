@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <ios>
 #include <limits>
 #include <string>
 #include <utility>
@@ -31,14 +32,19 @@ vector<LinearInequality> fomo_step(size_t var,
   vector<LinearCombination> upper_bounds, lower_bounds;
   vector<LinearInequality> combination;
   for (const auto &current_ineq : ineqs) {
-    if (current_ineq.lhs.multipliers.count(var)) {
+    const auto found = current_ineq.lhs.multipliers.find(var);
+    if (found == current_ineq.lhs.multipliers.end())
+      combination.push_back(current_ineq);
+    else if (found->second == 0.) {
+      combination.push_back(current_ineq);
+      combination.back().lhs.multipliers.erase(var);
+    } else {
       const auto b = bound(current_ineq, var);
       if (b.second == Bound::lower)
         lower_bounds.push_back(b.first);
       else
         upper_bounds.push_back(b.first);
-    } else
-      combination.push_back(current_ineq);
+    }
   }
   for (const auto &ub : upper_bounds)
     for (const auto &lb : lower_bounds)
@@ -75,6 +81,29 @@ LinearCombination operator/(const LinearCombination &a, double fac) {
   for (auto &m : a.multipliers)
     result.multipliers[m.first] = m.second / fac;
   return result;
+}
+
+void LinearInequality::substitute(size_t variable, double value) {
+  const auto found = lhs.multipliers.find(variable);
+  if (found == lhs.multipliers.end())
+    return;
+  lhs.offset += found->second * value;
+  lhs.multipliers.erase(found);
+}
+
+ostream &operator<<(ostream &os, const LinearCombination &lc) {
+  const auto oldflags = os.flags();
+  os << showpos;
+  for (const auto &m : lc.multipliers)
+    os << m.first << "*x{" << m.second << "} ";
+  os << ' ' << lc.offset;
+  os.flags(oldflags);
+  return os;
+}
+
+ostream &operator<<(ostream &os, const LinearInequality &li) {
+  os << li.lhs << " >= 0.";
+  return os;
 }
 
 pair<LinearCombination, Bound> bound(const LinearInequality &ineq, size_t var) {
