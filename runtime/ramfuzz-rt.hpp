@@ -92,11 +92,25 @@ template <typename T> char typetag(T);
 class LinearCombination {
 public:
   std::unordered_map<size_t, double> multipliers;
+
   double offset;
+
   bool operator==(const LinearCombination &other) const {
     return multipliers == other.multipliers && offset == other.offset;
   }
+
+  bool operator!=(const LinearCombination &other) const {
+    return multipliers != other.multipliers || offset != other.offset;
+  }
 };
+
+/// Convenience operator.
+LinearCombination operator+(const LinearCombination &a,
+                            const LinearCombination &b);
+
+/// Convenience operator.
+LinearCombination operator-(const LinearCombination &a,
+                            const LinearCombination &b);
 
 /// Represents an inequality LHS >= 0, where LHS is a linear combination of
 /// variables.
@@ -109,6 +123,10 @@ public:
 
   bool operator==(const LinearInequality &other) const {
     return lhs == other.lhs;
+  }
+
+  bool operator!=(const LinearInequality &other) const {
+    return lhs != other.lhs;
   }
 };
 

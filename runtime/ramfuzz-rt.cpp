@@ -38,15 +38,6 @@ template <typename RealT> RealT rbetween(RealT lo, RealT hi, ranlux24 &gen) {
   return uniform_real_distribution<RealT>{lo, hi}(gen);
 }
 
-LinearCombination operator-(const LinearCombination &a,
-                            const LinearCombination &b) {
-  LinearCombination result(a);
-  result.offset -= b.offset;
-  for (const auto &m : b.multipliers)
-    result.multipliers[m.first] -= m.second;
-  return result;
-}
-
 LinearCombination operator/(const LinearCombination &a, double fac) {
   LinearCombination result;
   result.offset = a.offset / fac;
@@ -261,6 +252,24 @@ template <> char typetag<long long>(long long) { return 9; }
 template <> char typetag<unsigned long long>(unsigned long long) { return 10; }
 template <> char typetag<float>(float) { return 11; }
 template <> char typetag<double>(double) { return 12; }
+
+LinearCombination operator+(const LinearCombination &a,
+                            const LinearCombination &b) {
+  LinearCombination result(a);
+  result.offset += b.offset;
+  for (const auto &m : b.multipliers)
+    result.multipliers[m.first] += m.second;
+  return result;
+}
+
+LinearCombination operator-(const LinearCombination &a,
+                            const LinearCombination &b) {
+  LinearCombination result(a);
+  result.offset -= b.offset;
+  for (const auto &m : b.multipliers)
+    result.multipliers[m.first] -= m.second;
+  return result;
+}
 
 void LinearInequality::substitute(size_t variable, double value) {
   const auto found = lhs.multipliers.find(variable);
