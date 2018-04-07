@@ -87,35 +87,6 @@ vector<LinearInequality> fomo_step(size_t var,
   return combination;
 }
 
-tuple<double, double> bounds(size_t variable,
-                            const vector<LinearInequality> &ineqs) {
-  auto lo = numeric_limits<double>::min(), hi = numeric_limits<double>::max();
-  if (ineqs.empty())
-    return make_tuple(lo, hi);
-  // Are there any other variables in ineqs?
-  for (const auto &current_ineq : ineqs)
-    for (const auto &var_mult : current_ineq.lhs.multipliers) {
-      const auto another_variable = var_mult.first;
-      if (another_variable != variable) {
-        const auto new_ineqs = fomo_step(another_variable, ineqs);
-        return bounds(variable, new_ineqs);
-      }
-    }
-  // No other variables -- ineqs dictates variable's bounds.
-  for (const auto &current_ineq : ineqs) {
-    const auto found = current_ineq.lhs.multipliers.find(variable);
-    if (found != current_ineq.lhs.multipliers.end()) {
-      const auto m = found->second;
-      // (m*x + offset >= 0) <=> (x ?? -offset/m)
-      if (m > 0)
-        lo = max(lo, -current_ineq.lhs.offset / m);
-      else if (m < 0)
-        hi = min(hi, -current_ineq.lhs.offset / m);
-    }
-  }
-  return make_pair(lo, hi);
-}
-
 } // anonymous namespace
 
 namespace ramfuzz {
@@ -277,6 +248,35 @@ void LinearInequality::substitute(size_t variable, double value) {
     return;
   lhs.offset += found->second * value;
   lhs.multipliers.erase(found);
+}
+
+tuple<double, double> bounds(size_t variable,
+                             const vector<LinearInequality> &ineqs) {
+  auto lo = numeric_limits<double>::min(), hi = numeric_limits<double>::max();
+  if (ineqs.empty())
+    return make_tuple(lo, hi);
+  // Are there any other variables in ineqs?
+  for (const auto &current_ineq : ineqs)
+    for (const auto &var_mult : current_ineq.lhs.multipliers) {
+      const auto another_variable = var_mult.first;
+      if (another_variable != variable) {
+        const auto new_ineqs = fomo_step(another_variable, ineqs);
+        return bounds(variable, new_ineqs);
+      }
+    }
+  // No other variables -- ineqs dictates variable's bounds.
+  for (const auto &current_ineq : ineqs) {
+    const auto found = current_ineq.lhs.multipliers.find(variable);
+    if (found != current_ineq.lhs.multipliers.end()) {
+      const auto m = found->second;
+      // (m*x + offset >= 0) <=> (x ?? -offset/m)
+      if (m > 0)
+        lo = max(lo, -current_ineq.lhs.offset / m);
+      else if (m < 0)
+        hi = min(hi, -current_ineq.lhs.offset / m);
+    }
+  }
+  return make_pair(lo, hi);
 }
 
 size_t gen::random_value(size_t lo, size_t hi, size_t valueid) {

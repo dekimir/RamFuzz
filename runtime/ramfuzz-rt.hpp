@@ -30,6 +30,7 @@
 #include <random>
 #include <sstream>
 #include <string>
+#include <tuple>
 #include <type_traits>
 #include <typeindex>
 #include <unordered_map>
@@ -129,6 +130,9 @@ public:
     return lhs != other.lhs;
   }
 };
+
+std::tuple<double, double> bounds(size_t variable,
+                                  const std::vector<LinearInequality> &ineqs);
 
 /// Generates values for RamFuzz code.  Can be used in the "generate" or
 /// "replay" mode.  In "generate" mode, values are created at random and logged.

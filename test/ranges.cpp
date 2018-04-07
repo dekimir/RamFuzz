@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <limits>
 #include <utility>
 
 #include "ramfuzz-rt.hpp"
@@ -38,6 +39,9 @@ LinearCombination operator>=(LinearCombination c, double lb) {
   return result;
 }
 
+constexpr double maxdbl = numeric_limits<double>::max(),
+                 mindbl = numeric_limits<double>::min();
+
 } // anonymous namespace
 
 bool check_subst() {
@@ -46,9 +50,54 @@ bool check_subst() {
   return LinearInequality{2. * x{2} >= 0.} == li;
 }
 
+bool check_bounds_empty() {
+  return make_tuple(mindbl, maxdbl) == bounds(1234, {});
+}
+
+bool check_bounds_single() {
+  return make_tuple(2., maxdbl) ==
+         bounds(1, {LinearInequality{3. * x{1} >= 6.}});
+}
+
+bool check_bounds_unconstrained() {
+  LinearInequality li{1. * x{1} + 1. * x{2} >= 0.};
+  return make_tuple(mindbl, maxdbl) == bounds(1, {li}) &&
+         make_tuple(mindbl, maxdbl) == bounds(2, {li});
+}
+
+bool check_bounds_upperandlower() {
+  return make_tuple(1000., 2000.) ==
+         bounds(1, {LinearInequality{1. * x{1} >= 1000.},
+                    LinearInequality{-1. * x{1} >= -2000.}});
+}
+
+bool check_bounds_chain() {
+  return make_tuple(125., maxdbl) ==
+         bounds(1, {LinearInequality{1. * x{2} >= 123.},
+                    LinearInequality{1. * x{1} - 1. * x{2} >= 2.}});
+}
+
+bool check_bounds_zeromultiplier() {
+  return make_tuple(123., maxdbl) ==
+         bounds(2, {LinearInequality{0. * x{1} + 1. * x{2} >= 123.},
+                    LinearInequality{1. * x{1} - 1. * x{2} >= 0.}});
+}
+
 int main(int argc, char *argv[]) {
   if (!check_subst())
     return 1;
+  if (!check_bounds_empty())
+    return 2;
+  if (!check_bounds_single())
+    return 3;
+  if (!check_bounds_unconstrained())
+    return 4;
+  if (!check_bounds_upperandlower())
+    return 5;
+  if (!check_bounds_chain())
+    return 6;
+  if (!check_bounds_zeromultiplier())
+    return 7;
 }
 
 unsigned ::ramfuzz::runtime::spinlimit = 3;
