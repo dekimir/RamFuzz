@@ -290,7 +290,7 @@ size_t gen::random_value(size_t lo, size_t hi, size_t valueid) {
   if (is_restricted)
     for (auto &i : current_constraints)
       i.substitute(valueid, val);
-  return 0; // val;
+  return val;
 }
 
 } // namespace runtime
