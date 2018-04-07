@@ -12,6 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+/// Header file for the RamFuzz runtime, which is wholly contained in
+/// ./ramfuzz-rt.cpp.  Start by reading ramfuzz::runtime::gen, which generates
+/// random values by leveraging the RamFuzz executable's output.
+
 #pragma once
 
 #include <algorithm>
@@ -83,6 +87,31 @@ struct file_error : public std::runtime_error {
 /// Returns T's type tag to put into RamFuzz logs.
 template <typename T> char typetag(T);
 
+/// A linear combinatin of multipliers and variables, plus an offset. Each
+/// variable is uniquely identified by a size_t number.
+class LinearCombination {
+public:
+  std::unordered_map<size_t, double> multipliers;
+  double offset;
+  bool operator==(const LinearCombination &other) const {
+    return multipliers == other.multipliers && offset == other.offset;
+  }
+};
+
+/// Represents an inequality LHS >= 0, where LHS is a linear combination of
+/// variables.
+class LinearInequality {
+public:
+  LinearCombination lhs;
+
+  /// Substitutes value for variable.
+  void substitute(size_t variable, double value);
+
+  bool operator==(const LinearInequality &other) const {
+    return lhs == other.lhs;
+  }
+};
+
 /// Generates values for RamFuzz code.  Can be used in the "generate" or
 /// "replay" mode.  In "generate" mode, values are created at random and logged.
 /// In "replay" mode, values are read from a previously generated log.  This
@@ -98,11 +127,9 @@ template <typename T> char typetag(T);
 /// also the constructor gen(argc, argv, k) below.
 ///
 /// The log is in binary format, to ensure replay precision.  Each log entry
-/// contains the value generated and an ID for that value.  The ID is currently
-/// based on the program's execution state, indicating the program location at
-/// which the value is generated.  Different program runs may generate different
-/// values at the same location; this is useful for AI analysis of the logs and
-/// program outcomes.
+/// contains the value generated and an ID for that value that the caller
+/// provides.  These IDs are later used for analysis and learning how to make
+/// the values valid.
 class gen {
   /// Are we generating values or replaying a previous run?
   enum { generate, replay } runmode;
@@ -165,6 +192,18 @@ public:
   }
 
 private:
+  /// Returns a random value between lo and hi, but narrows the range if valueid
+  /// is subject to restricting inequalities.
+  template <typename T> T random_value(T lo, T hi, size_t valueid) {
+    return uniform_random(lo, hi);
+  }
+
+  size_t random_value(size_t lo, size_t hi, size_t valueid);
+
+  std::vector<size_t> restricted_ids = {1002810, 2810, 2811};
+  const std::vector<LinearInequality> starting_constraints;
+  std::vector<LinearInequality> current_constraints;
+
   /// Logs val and id to olog.
   template <typename U> void output(U val, size_t id) {
     olog.put(typetag(val));
