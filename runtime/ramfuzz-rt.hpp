@@ -206,7 +206,7 @@ public:
     }
     T val;
     if (runmode == generate)
-      val = uniform_random(lo, hi);
+      val = random_value(lo, hi, valueid);
     else
       input(val);
     output(val, valueid);
@@ -223,8 +223,9 @@ private:
   size_t random_value(size_t lo, size_t hi, size_t valueid);
 
   std::vector<size_t> restricted_ids = {1002810, 2810, 2811};
-  const std::vector<LinearInequality> starting_constraints;
-  std::vector<LinearInequality> current_constraints;
+  const std::vector<LinearInequality> starting_constraints{
+      LinearInequality{LinearCombination{{{1002810, 1.}, {2811, -1.}}, 0.}}};
+  std::vector<LinearInequality> current_constraints = starting_constraints;
 
   /// Logs val and id to olog.
   template <typename U> void output(U val, size_t id) {

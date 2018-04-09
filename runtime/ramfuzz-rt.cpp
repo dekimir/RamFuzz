@@ -281,10 +281,18 @@ tuple<double, double> bounds(size_t variable,
 
 size_t gen::random_value(size_t lo, size_t hi, size_t valueid) {
   const bool is_restricted = find(begin(restricted_ids), end(restricted_ids),
-                                  valueid) == end(restricted_ids);
-  if (is_restricted)
-    tie(lo, hi) = bounds(valueid, current_constraints);
-  else
+                                  valueid) != end(restricted_ids);
+  if (is_restricted) {
+    double lb, ub;
+    tie(lb, ub) = bounds(valueid, current_constraints);
+    // Avoid library min/max: they return a double, which doesn't correctly
+    // convert back into size_t.  Instead, inline doubles comparison but assign
+    // a size_t result.
+    if (double(lo) < lb)
+      lo = static_cast<size_t>(lb);
+    if (double(hi) > ub)
+      hi = static_cast<size_t>(ub);
+  } else
     current_constraints = starting_constraints;
   size_t val = uniform_random(lo, hi);
   if (is_restricted)
