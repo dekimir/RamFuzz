@@ -249,9 +249,11 @@ private:
     1002632, 2632, 2633,
     1002655, 2655, 2656,
     1002661, 2661, 2662,
+    1002721, 2721, 2722,
     1002804, 2804, 2805,
     1002810, 2810, 2811,
     1002849, 2849, 2850,
+    1003926, 3926, 3927,
     1004031, 4031, 4032
   };
   // clang-format on
@@ -265,9 +267,11 @@ private:
       LinearInequality{LinearCombination{{{1002632, 1.}, {2633, -1.}}, 0.}},
       LinearInequality{LinearCombination{{{1002655, 1.}, {2656, -1.}}, 0.}},
       LinearInequality{LinearCombination{{{1002661, 1.}, {2662, -1.}}, 0.}},
+      LinearInequality{LinearCombination{{{1002721, 1.}, {2722, -1.}}, 0.}},
       LinearInequality{LinearCombination{{{1002804, 1.}, {2805, -1.}}, 0.}},
       LinearInequality{LinearCombination{{{1002810, 1.}, {2811, -1.}}, 0.}},
       LinearInequality{LinearCombination{{{1002849, 1.}, {2850, -1.}}, 0.}},
+      LinearInequality{LinearCombination{{{1003926, 1.}, {3927, -1.}}, 0.}},
       LinearInequality{LinearCombination{{{1004031, 1.}, {4032, -1.}}, 0.}}};
   std::vector<LinearInequality> current_constraints = starting_constraints;
 
