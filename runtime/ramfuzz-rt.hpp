@@ -222,9 +222,37 @@ private:
 
   size_t random_value(size_t lo, size_t hi, size_t valueid);
 
-  std::vector<size_t> restricted_ids = {1002810, 2810, 2811};
+  // clang-format off
+  std::vector<size_t> restricted_ids = {
+    1000319,  319,  320,
+    1000426,  426,  427,
+    1001710, 1710, 1711,
+    1002264, 2264, 2265,
+    1002606, 2606, 2607,
+    1002626, 2626, 2627,
+    1002632, 2632, 2633,
+    1002655, 2655, 2656,
+    1002661, 2661, 2662,
+    1002804, 2804, 2805,
+    1002810, 2810, 2811,
+    1002849, 2849, 2850,
+    1004031, 4031, 4032
+  };
+  // clang-format on
   const std::vector<LinearInequality> starting_constraints{
-      LinearInequality{LinearCombination{{{1002810, 1.}, {2811, -1.}}, 0.}}};
+      LinearInequality{LinearCombination{{{1000319, 1.}, {320, -1.}}, 0.}},
+      LinearInequality{LinearCombination{{{1000426, 1.}, {427, -1.}}, 0.}},
+      LinearInequality{LinearCombination{{{1001710, 1.}, {1711, -1.}}, 0.}},
+      LinearInequality{LinearCombination{{{1002264, 1.}, {2265, -1.}}, 0.}},
+      LinearInequality{LinearCombination{{{1002606, 1.}, {2607, -1.}}, 0.}},
+      LinearInequality{LinearCombination{{{1002626, 1.}, {2627, -1.}}, 0.}},
+      LinearInequality{LinearCombination{{{1002632, 1.}, {2633, -1.}}, 0.}},
+      LinearInequality{LinearCombination{{{1002655, 1.}, {2656, -1.}}, 0.}},
+      LinearInequality{LinearCombination{{{1002661, 1.}, {2662, -1.}}, 0.}},
+      LinearInequality{LinearCombination{{{1002804, 1.}, {2805, -1.}}, 0.}},
+      LinearInequality{LinearCombination{{{1002810, 1.}, {2811, -1.}}, 0.}},
+      LinearInequality{LinearCombination{{{1002849, 1.}, {2850, -1.}}, 0.}},
+      LinearInequality{LinearCombination{{{1004031, 1.}, {4032, -1.}}, 0.}}};
   std::vector<LinearInequality> current_constraints = starting_constraints;
 
   /// Logs val and id to olog.
