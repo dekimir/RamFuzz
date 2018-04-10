@@ -217,10 +217,26 @@ private:
   /// Returns a random value between lo and hi, but narrows the range if valueid
   /// is subject to restricting inequalities.
   template <typename T> T random_value(T lo, T hi, size_t valueid) {
-    return uniform_random(lo, hi);
+    const bool is_restricted = find(begin(restricted_ids), end(restricted_ids),
+                                    valueid) != end(restricted_ids);
+    if (is_restricted) {
+      double lb, ub;
+      std::tie(lb, ub) = bounds(valueid, current_constraints);
+      // Avoid library min/max: they return a double, which doesn't always
+      // correctly convert back into T.  Instead, inline doubles comparison but
+      // assign a T result.
+      if (double(lo) < lb)
+        lo = static_cast<T>(lb);
+      if (double(hi) > ub)
+        hi = static_cast<T>(ub);
+    } else
+      current_constraints = starting_constraints;
+    T val = uniform_random(lo, hi);
+    if (is_restricted)
+      for (auto &i : current_constraints)
+        i.substitute(valueid, val);
+    return val;
   }
-
-  size_t random_value(size_t lo, size_t hi, size_t valueid);
 
   // clang-format off
   std::vector<size_t> restricted_ids = {
