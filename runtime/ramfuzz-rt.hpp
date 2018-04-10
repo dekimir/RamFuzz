@@ -241,8 +241,11 @@ private:
   // clang-format off
   std::vector<size_t> restricted_ids = {
     1000319,  319,  320,
+    1000406,  406,  407,
     1000426,  426,  427,
     1001710, 1710, 1711,
+    1001766, 1766, 1767,
+    1002186, 2186, 2187,
     1002264, 2264, 2265,
     1002606, 2606, 2607,
     1002626, 2626, 2627,
@@ -254,13 +257,17 @@ private:
     1002810, 2810, 2811,
     1002849, 2849, 2850,
     1003926, 3926, 3927,
-    1004031, 4031, 4032
+    1004031, 4031, 4032,
+    1004711, 4711, 4712
   };
   // clang-format on
   const std::vector<LinearInequality> starting_constraints{
       LinearInequality{LinearCombination{{{1000319, 1.}, {320, -1.}}, 0.}},
+      LinearInequality{LinearCombination{{{1000406, 1.}, {407, -1.}}, 0.}},
       LinearInequality{LinearCombination{{{1000426, 1.}, {427, -1.}}, 0.}},
       LinearInequality{LinearCombination{{{1001710, 1.}, {1711, -1.}}, 0.}},
+      LinearInequality{LinearCombination{{{1001766, 1.}, {1767, -1.}}, 0.}},
+      LinearInequality{LinearCombination{{{1002186, 1.}, {2187, -1.}}, 0.}},
       LinearInequality{LinearCombination{{{1002264, 1.}, {2265, -1.}}, 0.}},
       LinearInequality{LinearCombination{{{1002606, 1.}, {2607, -1.}}, 0.}},
       LinearInequality{LinearCombination{{{1002626, 1.}, {2627, -1.}}, 0.}},
@@ -272,7 +279,8 @@ private:
       LinearInequality{LinearCombination{{{1002810, 1.}, {2811, -1.}}, 0.}},
       LinearInequality{LinearCombination{{{1002849, 1.}, {2850, -1.}}, 0.}},
       LinearInequality{LinearCombination{{{1003926, 1.}, {3927, -1.}}, 0.}},
-      LinearInequality{LinearCombination{{{1004031, 1.}, {4032, -1.}}, 0.}}};
+      LinearInequality{LinearCombination{{{1004031, 1.}, {4032, -1.}}, 0.}},
+      LinearInequality{LinearCombination{{{1004711, 1.}, {4712, -1.}}, 0.}}};
   std::vector<LinearInequality> current_constraints = starting_constraints;
 
   /// Logs val and id to olog.
