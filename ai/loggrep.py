@@ -28,9 +28,12 @@ if len(sys.argv) < 2:
     print 'usage: %s <location> [<filename> ...]' % sys.argv[0]
     exit(1)
 
+hitcount = 0
 loc = long(sys.argv[1])
 for fn in sys.argv[2:]:
     with open(fn) as f:
         for line, entry in enumerate(rfutils.logparse(f)):
             if entry[1] == loc:
                 print '%s:%d %r' % (fn, line + 1, entry)
+                hitcount += 1
+exit(hitcount == 0)
