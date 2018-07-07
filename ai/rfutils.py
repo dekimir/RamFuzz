@@ -17,6 +17,7 @@
 
 import numpy as np
 import ramfuzz
+from functools import total_ordering
 
 
 def logparse(f):
@@ -93,3 +94,131 @@ def read_data(files, poscount, locidx):
         vals.append(fvals)
         labels.append(fname.endswith('.s'))
     return np.array(locs), np.array(vals), np.array(labels)
+
+
+@total_ordering
+class node(object):
+    """A node in the execution-model tree.
+
+    The execution-model tree represents observed behavior of the program under
+    test, glimpsed from fuzzlogs of repeated program runs.  Each node in the
+    tree is a location, while each edge is a value generated at the location of
+    its origin node."""
+
+    def __init__(self):
+        self.loc = None
+        """Location from fuzzlog."""
+        self.edges = []
+        """Each edge is a pair (value, node)."""
+        self.terminal = False
+        """If self is the end of execution, indicates its outcome.
+
+        Either False, 'success' or 'failure'."""
+
+    @classmethod
+    def from_literal(self, lit):
+        """Creates a node from literal.
+
+        The literal is a list of (value, location) pairs, just like the result
+        of rfutils.logparse, but with the following twist: any element can be a
+        dictionary or a string, rather than a pair.  When an element is a pair,
+        it represents a node that's the sole descendant of the previous
+        element and an outgoing edge with that element's value.  But when an
+        element is a dictionary, it represents multiple edges from the previous
+        element (which must be a pair), each leading to a different subtree.
+        Each value in the dictionary is a literal representing the subtree;
+        keys are ignored.  Each such literal must begin in the same location.
+
+        Finally, when an element is a string, it must be either 'success' or
+        'failure', and it represents a terminal node descending from the
+        previous element."""
+
+        class LiteralParseError(Exception):
+            """An exception raised for erroneous literal."""
+
+            def __init__(self, msg):
+                self.msg = msg
+
+            def __repr__(self):
+                return 'LiteralParseError: ' + msg
+
+        if not isinstance(lit, list):
+            raise LiteralParseError('argument not a list')
+        root = node()
+        n = root
+        for e in lit:
+            if isinstance(e, tuple):
+                if len(e) != 2:
+                    raise LiteralParseError(
+                        'tuples must be pairs')
+                n = n.insert_or_descend(e[0], e[1])
+            elif isinstance(e, dict):
+                for sub in e.values():
+                    n2 = node.from_literal(sub)
+                    if n.loc is None:
+                        n.loc = n2.loc
+                    elif n.loc != n2.loc:
+                        raise LiteralParseError(
+                            'alternate paths must all begin in same loc')
+                    n.edges.extend(n2.edges)
+            elif isinstance(e, str):
+                if e not in ['success', 'failure']:
+                    raise LiteralParseError(
+                        'terminal must be "success" or "failure"')
+                n.terminal = e
+
+        return root
+
+    def tostr(self, prefix=''):
+        """Converts to a string, starting each new line with prefix."""
+        if self.terminal:
+            return prefix + self.terminal
+        s = prefix + '%r' % self.loc
+        indent = prefix + '  '
+        for e in self.edges:
+            s += '\n' + indent + '%r:\n' % e[0] + e[1].tostr(indent)
+        return s
+
+    def __repr__(self):
+        return self.tostr()
+
+    def __eq__(self, other):
+        if self.terminal != other.terminal:
+            return False
+        if self.loc != other.loc:
+            return False
+        return sorted(self.edges) == sorted(other.edges)
+
+    def __ne__(self, other):
+        return not self == other
+
+    def __lt__(self, other):
+        if self.terminal < other.terminal:
+            return True
+        if self.loc < other.loc:
+            return True
+        return self.edges < other.edges
+
+    def insert_or_descend(self, val, loc):
+        """Inserts a val edge from self to a new, empty node.
+
+        Does nothing if such an edge already exists. In either case, returns
+        the destination node of the edge."""
+        if self.loc is None:
+            self.loc = loc
+        if self.loc != loc:
+            print 'UB at (%lf, %ld)' % (val, loc)
+            sys.exit(1)
+        for v, n in self.edges:
+            if v == val:
+                return n
+        newnode = node()
+        self.edges.append((val, newnode))
+        return newnode
+
+    def add(self, log, successful):
+        """Updates the tree rooted in self with log's execution."""
+        curnode = self
+        for v, l in log:
+            curnode = curnode.insert_or_descend(v, l)
+        curnode.terminal = 'success' if successful else 'failure'
