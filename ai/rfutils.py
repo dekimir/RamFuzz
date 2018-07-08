@@ -217,7 +217,9 @@ class node(object):
         return newnode
 
     def add(self, log, successful):
-        """Updates the tree rooted in self with log's execution."""
+        """Updates the tree rooted in self with another log.
+
+        The log must reflect an execution of the same program."""
         curnode = self
         for v, l in log:
             curnode = curnode.insert_or_descend(v, l)

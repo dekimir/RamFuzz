@@ -26,5 +26,53 @@ class TestEq(unittest.TestCase):
         self.check_lit([{1: [(1.0, 1L)], 2: [(2.0, 1L)]}])
 
 
+class TestAdd(unittest.TestCase):
+    def ck(self, lit, n):
+        """Asserts that node n equals a literal."""
+        self.assertEqual(node.from_literal(lit), n)
+
+    def g(self, *logs):
+        """Returns a graph with all logs added.
+
+        Each logs element is a pair (log, string).  The string must be
+        'success' or 'failure'."""
+        n = node()
+        for l in logs:
+            n.add(l[0], l[1] == 'success')
+        return n
+
+    def test_identical(self):
+        log = [(1.0, 1L), (2.0, 2L)]
+        g = self.g((log, 'success'), (log, 'success'))
+        self.ck([(1.0, 1L), (2.0, 2L), 'success'], g)
+
+    def test_late_fork(self):
+        log1 = [(1.0, 1L), (2.0, 2L), (3.0, 3L)]
+        log2 = [(1.0, 1L), (2.0, 2L), (3.1, 3L)]
+        g = self.g((log1, 'success'), (log2, 'success'))
+        self.ck([(1.0, 1L), (2.0, 2L), {
+            0: [(3.0, 3L), 'success'],
+            1: [(3.1, 3L), 'success']}], g)
+
+    def test_early_fork(self):
+        log1 = [(1.0, 1L), (2.0, 2L), (3.0, 3L)]
+        log2 = [(1.1, 1L), (2.0, 2L), (3.0, 3L)]
+        g = self.g((log1, 'success'), (log2, 'failure'))
+        self.ck([{
+            0: [(1.0, 1L), (2.0, 2L), (3.0, 3L), 'success'],
+            1: [(1.1, 1L), (2.0, 2L), (3.0, 3L), 'failure']}], g)
+
+    def test_multi_fork(self):
+        log1 = [(1.0, 1L), (2.1, 2L), (3.0, 3L)]
+        log2 = [(1.0, 1L), (2.2, 2L), (3.0, 2L)]
+        log3 = [(1.0, 1L), (2.2, 2L), (3.3, 2L), (4.0, 4L)]
+        g = self.g((log1, 'success'), (log2, 'failure'), (log3, 'success'))
+        self.ck([(1.0, 1L), {
+            1: [(2.1, 2L), (3.0, 3L), 'success'],
+            2: [(2.2, 2L), {
+                2: [(3.0, 2L), 'failure'],
+                3: [(3.3, 2L), (4.0, 4L), 'success']}]}], g)
+
+
 if __name__ == '__main__':
     unittest.main()
