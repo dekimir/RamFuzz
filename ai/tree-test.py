@@ -31,7 +31,7 @@ class TestAdd(unittest.TestCase):
         """Asserts that node n equals a literal."""
         self.assertEqual(node.from_literal(lit), n)
 
-    def g(self, *logs):
+    def t(self, *logs):
         """Returns a tree with all logs added.
 
         Each logs element is a pair (log, string).  The string must be
@@ -43,35 +43,35 @@ class TestAdd(unittest.TestCase):
 
     def test_identical(self):
         log = [(1.0, 1L), (2.0, 2L)]
-        g = self.g((log, 'success'), (log, 'success'))
-        self.ck([(1.0, 1L), (2.0, 2L), 'success'], g)
+        t = self.t((log, 'success'), (log, 'success'))
+        self.ck([(1.0, 1L), (2.0, 2L), 'success'], t)
 
     def test_late_fork(self):
         log1 = [(1.0, 1L), (2.0, 2L), (3.0, 3L)]
         log2 = [(1.0, 1L), (2.0, 2L), (3.1, 3L)]
-        g = self.g((log1, 'success'), (log2, 'success'))
+        t = self.t((log1, 'success'), (log2, 'success'))
         self.ck([(1.0, 1L), (2.0, 2L), {
             0: [(3.0, 3L), 'success'],
-            1: [(3.1, 3L), 'success']}], g)
+            1: [(3.1, 3L), 'success']}], t)
 
     def test_early_fork(self):
         log1 = [(1.0, 1L), (2.0, 2L), (3.0, 3L)]
         log2 = [(1.1, 1L), (2.0, 2L), (3.0, 3L)]
-        g = self.g((log1, 'success'), (log2, 'failure'))
+        t = self.t((log1, 'success'), (log2, 'failure'))
         self.ck([{
             0: [(1.0, 1L), (2.0, 2L), (3.0, 3L), 'success'],
-            1: [(1.1, 1L), (2.0, 2L), (3.0, 3L), 'failure']}], g)
+            1: [(1.1, 1L), (2.0, 2L), (3.0, 3L), 'failure']}], t)
 
     def test_multi_fork(self):
         log1 = [(1.0, 1L), (2.1, 2L), (3.0, 3L)]
         log2 = [(1.0, 1L), (2.2, 2L), (3.0, 2L)]
         log3 = [(1.0, 1L), (2.2, 2L), (3.3, 2L), (4.0, 4L)]
-        g = self.g((log1, 'success'), (log2, 'failure'), (log3, 'success'))
+        t = self.t((log1, 'success'), (log2, 'failure'), (log3, 'success'))
         self.ck([(1.0, 1L), {
             1: [(2.1, 2L), (3.0, 3L), 'success'],
             2: [(2.2, 2L), {
                 2: [(3.0, 2L), 'failure'],
-                3: [(3.3, 2L), (4.0, 4L), 'success']}]}], g)
+                3: [(3.3, 2L), (4.0, 4L), 'success']}]}], t)
 
 
 if __name__ == '__main__':
