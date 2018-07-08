@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Unit tests for the execution-model graph."""
+"""Unit tests for the execution-model tree."""
 
 from copy import deepcopy
 from rfutils import node
@@ -32,7 +32,7 @@ class TestAdd(unittest.TestCase):
         self.assertEqual(node.from_literal(lit), n)
 
     def g(self, *logs):
-        """Returns a graph with all logs added.
+        """Returns a tree with all logs added.
 
         Each logs element is a pair (log, string).  The string must be
         'success' or 'failure'."""
