@@ -199,6 +199,15 @@ class node(object):
             return True
         return self.edges < other.edges
 
+    class InconsistentBehavior(Exception):
+        """Exception thrown when the execution model doesn't make sense."""
+
+        def __init__(self, msg):
+            self.msg = msg
+
+        def __repr__(self):
+            return 'InconsistentBehavior: ' + msg
+
     def insert_or_descend(self, val, loc):
         """Inserts a val edge from self to a new, empty node.
 
@@ -207,8 +216,8 @@ class node(object):
         if self.loc is None:
             self.loc = loc
         if self.loc != loc:
-            print 'UB at (%lf, %ld)' % (val, loc)
-            sys.exit(1)
+            raise node.InconsistentBehavior(
+                '(%lf, %ld) when %ld expected' % (val, loc, self.loc))
         for v, n in self.edges:
             if v == val:
                 return n
@@ -223,4 +232,11 @@ class node(object):
         curnode = self
         for v, l in log:
             curnode = curnode.insert_or_descend(v, l)
-        curnode.terminal = 'success' if successful else 'failure'
+        term = 'success' if successful else 'failure'
+        if not curnode.terminal:
+            curnode.terminal = term
+            if len(curnode.edges) > 0:
+                raise node.InconsistentBehavior('Inner node marked terminal')
+        elif curnode.terminal != term:
+            raise node.InconsistentBehavior(
+                '%s node marked %s' % (curnode.terminal, term))

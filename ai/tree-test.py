@@ -73,6 +73,23 @@ class TestAdd(unittest.TestCase):
                 2: [(3.0, 2L), 'failure'],
                 3: [(3.3, 2L), (4.0, 4L), 'success']}]}], t)
 
+    def test_inconsistent_loc(self):
+        l1 = [(1.0, 10L), (2.0, 21L)]
+        l2 = [(1.0, 10L), (2.0, 22L)]
+        with self.assertRaises(node.InconsistentBehavior):
+            t = self.t((l1, 'success'), (l2, 'success'))
+
+    def test_inconsistent_outcome(self):
+        l = [(1.0, 1L)]
+        with self.assertRaises(node.InconsistentBehavior):
+            t = self.t((l, 'success'), (l, 'failure'))
+
+    def test_inconsistent_end(self):
+        log1 = [(1.0, 1L), (2.0, 2L), (3.0, 3L)]
+        log2 = log1[:2]
+        with self.assertRaises(node.InconsistentBehavior):
+            t = self.t((log1, 'success'), (log2, 'success'))
+
 
 if __name__ == '__main__':
     unittest.main()
