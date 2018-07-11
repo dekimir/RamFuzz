@@ -114,6 +114,8 @@ class node(object):
         """If self is the end of execution, indicates its outcome.
 
         Either False, 'success' or 'failure'."""
+        self.parent = None
+        """Parent node."""
 
     @classmethod
     def from_literal(self, lit):
@@ -222,6 +224,7 @@ class node(object):
             if v == val:
                 return n
         newnode = node()
+        newnode.parent = self
         self.edges.append((val, newnode))
         return newnode
 

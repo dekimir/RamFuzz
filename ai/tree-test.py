@@ -90,6 +90,27 @@ class TestAdd(unittest.TestCase):
         with self.assertRaises(node.InconsistentBehavior):
             t = self.t((log1, 'success'), (log2, 'success'))
 
+    def test_parent1(self):
+        n = node()
+        n.add([(1., 1L)], True)
+        child = n.edges[0][1]
+        self.assertIs(child.parent, n)
+
+    def test_parent2(self):
+        n = node()
+        n.add([(1., 1L), (2., 2L)], True)
+        child = n.edges[0][1]
+        self.assertIs(child.parent, n)
+        grandchild = child.edges[0][1]
+        self.assertIs(grandchild.parent, child)
+
+    def test_parent_fork(self):
+        n = node()
+        n.add([(1.1, 1L)], True)
+        n.add([(1.2, 1L)], True)
+        self.assertIs(n.edges[0][1].parent, n)
+        self.assertIs(n.edges[1][1].parent, n)
+
 
 if __name__ == '__main__':
     unittest.main()
