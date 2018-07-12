@@ -163,6 +163,8 @@ class node(object):
                         raise LiteralParseError(
                             'alternate paths must all begin in same loc')
                     n.edges.extend(n2.edges)
+                for e in n.edges:
+                    e[1].parent = n
             elif isinstance(e, str):
                 if e not in ['success', 'failure']:
                     raise LiteralParseError(
