@@ -116,6 +116,8 @@ class node(object):
         Either False, 'success' or 'failure'."""
         self.parent = None
         """Parent node."""
+        self.reaches_success = False
+        """Is there a path from this node to a 'success' terminal?"""
 
     @classmethod
     def from_literal(self, lit):
@@ -242,6 +244,11 @@ class node(object):
             curnode.terminal = term
             if len(curnode.edges) > 0:
                 raise node.InconsistentBehavior('Inner node marked terminal')
+            if successful:
+                anc = curnode
+                while anc:
+                    anc.reaches_success = True
+                    anc = anc.parent
         elif curnode.terminal != term:
             raise node.InconsistentBehavior(
                 '%s node marked %s' % (curnode.terminal, term))

@@ -120,6 +120,31 @@ class TestAdd(unittest.TestCase):
         self.assertIs(c.edges[0][1].parent, c)
         self.assertIs(c.edges[1][1].parent, c)
 
+    def test_reaches_success(self):
+        n = node()
+        self.assertFalse(n.reaches_success)
+        n.add([(1., 1L)], False)
+        f1 = n.edges[0][1]
+        self.assertFalse(n.reaches_success)
+        self.assertFalse(f1.reaches_success)
+        n.add([(1.1, 1L), (2., 2L), (3., 3L)], False)
+        c2 = n.edges[1][1]
+        c3 = c2.edges[0][1]
+        f2 = c3.edges[0][1]
+        self.assertFalse(n.reaches_success)
+        self.assertFalse(f1.reaches_success)
+        self.assertFalse(c2.reaches_success)
+        self.assertFalse(c3.reaches_success)
+        self.assertFalse(f2.reaches_success)
+        n.add([(1.1, 1L), (2.1, 2L)], True)
+        s1 = c2.edges[1][1]
+        self.assertTrue(n.reaches_success)
+        self.assertFalse(f1.reaches_success)
+        self.assertTrue(c2.reaches_success)
+        self.assertFalse(c3.reaches_success)
+        self.assertFalse(f2.reaches_success)
+        self.assertTrue(s1.reaches_success)
+
 
 if __name__ == '__main__':
     unittest.main()
