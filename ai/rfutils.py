@@ -167,11 +167,13 @@ class node(object):
                     n.edges.extend(n2.edges)
                 for e in n.edges:
                     e[1].parent = n
+                    e[1].propagate_reaches_success()
             elif isinstance(e, str):
                 if e not in ['success', 'failure']:
                     raise LiteralParseError(
                         'terminal must be "success" or "failure"')
                 n.terminal = e
+                n.propagate_reaches_success()
 
         return root
 
@@ -233,7 +235,7 @@ class node(object):
         return newnode
 
     def propagate_reaches_success(self):
-        if self.terminal == 'success':
+        if self.terminal == 'success' or self.reaches_success:
             anc = self
             while anc:
                 anc.reaches_success = True
