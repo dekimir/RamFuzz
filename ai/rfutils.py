@@ -232,6 +232,13 @@ class node(object):
         self.edges.append((val, newnode))
         return newnode
 
+    def propagate_reaches_success(self):
+        if self.terminal == 'success':
+            anc = self
+            while anc:
+                anc.reaches_success = True
+                anc = anc.parent
+
     def add(self, log, successful):
         """Updates the tree rooted in self with another log.
 
@@ -244,11 +251,7 @@ class node(object):
             curnode.terminal = term
             if len(curnode.edges) > 0:
                 raise node.InconsistentBehavior('Inner node marked terminal')
-            if successful:
-                anc = curnode
-                while anc:
-                    anc.reaches_success = True
-                    anc = anc.parent
+            curnode.propagate_reaches_success()
         elif curnode.terminal != term:
             raise node.InconsistentBehavior(
                 '%s node marked %s' % (curnode.terminal, term))
