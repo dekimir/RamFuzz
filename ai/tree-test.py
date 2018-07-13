@@ -113,6 +113,8 @@ class TestAdd(unittest.TestCase):
         n = node.from_literal([(1., 1L), {
             0: [(2.0, 2L), 'success'],
             1: [(2.1, 2L), 'failure']}])
+        # 1->2->success
+        #     ->failure
         c = n.edges[0][1]
         self.assertIs(c.parent, n)
         self.assertIs(c.edges[0][1].parent, c)
