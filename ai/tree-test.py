@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 """Unit tests for the execution-model tree."""
 
-from copy import deepcopy
 from rfutils import node
 import unittest
 
