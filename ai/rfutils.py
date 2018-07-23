@@ -31,6 +31,13 @@ def logparse(f):
         yield entry
 
 
+def open_and_logparse(name):
+    """Opens a file named `name` and invokes logparse on it."""
+    with file(name) as f:
+        for e in logparse(f):
+            yield e
+
+
 def loc2val(f):
     return {loc: val for (val, loc) in logparse(f)}
 
@@ -214,7 +221,7 @@ class node(object):
             self.msg = msg
 
         def __repr__(self):
-            return 'InconsistentBehavior: ' + msg
+            return 'InconsistentBehavior: ' + self.msg
 
     def insert_or_descend(self, val, loc):
         """Inserts a val edge from self to a new, empty node.
@@ -257,3 +264,27 @@ class node(object):
         elif curnode.terminal != term:
             raise node.InconsistentBehavior(
                 '%s node marked %s' % (curnode.terminal, term))
+
+
+def find_incompatible(n, fnames):
+    """Finds the index of the first log file whose addition to node n fails.
+
+    Considers a log successful if the file name ends in '.0'.  Modifies n."""
+    for i, fn in enumerate(fnames):
+        try:
+            n.add(open_and_logparse(fn), fn.endswith('.0'))
+        except node.InconsistentBehavior:
+            return i
+    return None
+
+
+def find_incompatible_pair(fnames):
+    """Finds a pair of file names from fnames that contain incompatible logs."""
+    n = node()
+    i1 = find_incompatible(n, fnames)
+    if i1 is None:
+        return None
+    n = node()
+    n.add(open_and_logparse(fnames[i1]), fnames[i1].endswith('.0'))
+    i2 = find_incompatible(n, fnames)
+    return i1, i2
