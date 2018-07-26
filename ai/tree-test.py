@@ -173,5 +173,29 @@ class TestAdd(unittest.TestCase):
         self.assertFalse(f2.reaches_success)
 
 
+class TestRootPath(unittest.TestCase):
+    def test_single_path(self):
+        n0 = node.from_literal([(0., 0L), (1., 1L), (2., 2L)])
+        n1 = n0.edges[0][1]
+        n2 = n1.edges[0][1]
+        self.assertEqual(n1.rootpath(), [n0, n1])
+        self.assertEqual(n2.rootpath(), [n0, n1, n2])
+
+    def test_fork(self):
+        n0 = node.from_literal([(0., 0L), {
+            0: [(1.0, 1L), (2., 2L)],
+            1: [(1.1, 1L), (3., 3L)]}])
+        n1 = n0.edges[0][1]
+        n2 = n1.edges[0][1]
+        n3 = n1.edges[0][1]
+        self.assertEqual(n1.rootpath(), [n0, n1])
+        self.assertEqual(n2.rootpath(), [n0, n1, n2])
+        self.assertEqual(n3.rootpath(), [n0, n1, n3])
+
+    def test_root(self):
+        n = node()
+        self.assertEqual(n.rootpath(), [n])
+
+
 if __name__ == '__main__':
     unittest.main()

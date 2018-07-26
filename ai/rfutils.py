@@ -265,6 +265,15 @@ class node(object):
             raise node.InconsistentBehavior(
                 '%s node marked %s' % (curnode.terminal, term))
 
+    def rootpath(self):
+        """Returns a list of descendant nodes from root to self."""
+        seq = [self]
+        r = seq[0].parent
+        while r:
+            seq.insert(0, r)
+            r = r.parent
+        return seq
+
 
 def find_incompatible(n, fnames):
     """Finds the index of the first log file whose addition to node n fails.
