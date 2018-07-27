@@ -274,6 +274,13 @@ class node(object):
             r = r.parent
         return seq
 
+    def logseq(self):
+        """Returns a list of (value, location) pairs from root to self."""
+        rp = self.rootpath()
+        return [(e[0], n.parent.loc)
+                for n in rp if n.parent is not None
+                for e in n.parent.edges if e[1] is n]
+
 
 def find_incompatible(n, fnames):
     """Finds the index of the first log file whose addition to node n fails.

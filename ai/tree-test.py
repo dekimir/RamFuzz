@@ -187,7 +187,11 @@ class TestRootPath(unittest.TestCase):
             1: [(1.1, 1L), (3., 3L)]}])
         n1 = n0.edges[0][1]
         n2 = n1.edges[0][1]
-        n3 = n1.edges[0][1]
+        n3 = n1.edges[1][1]
+        self.assertEqual(n0.loc, 0L)
+        self.assertEqual(n1.loc, 1L)
+        self.assertEqual(n2.loc, 2L)
+        self.assertEqual(n3.loc, 3L)
         self.assertEqual(n1.rootpath(), [n0, n1])
         self.assertEqual(n2.rootpath(), [n0, n1, n2])
         self.assertEqual(n3.rootpath(), [n0, n1, n3])
@@ -195,6 +199,30 @@ class TestRootPath(unittest.TestCase):
     def test_root(self):
         n = node()
         self.assertEqual(n.rootpath(), [n])
+
+
+class TestLogSeq(unittest.TestCase):
+    def test_root(self):
+        self.assertEqual(node().logseq(), [])
+
+    def test_single_path(self):
+        n0 = node.from_literal([(0., 0L), (1., 1L), (2., 2L)])
+        self.assertEqual(n0.edges[0][1].logseq(), [(0., 0L)])
+        self.assertEqual(n0.edges[0][1].edges[0][1].logseq(),
+                         [(0., 0L), (1., 1L)])
+        self.assertEqual(n0.edges[0][1].edges[0][1].edges[0][1].logseq(),
+                         [(0., 0L), (1., 1L), (2., 2L)])
+
+    def test_fork(self):
+        n0 = node.from_literal([(0., 0L), {
+            0: [(1.0, 1L), (2., 2L)],
+            1: [(1.1, 1L), (3., 3L)]}])
+        n1 = n0.edges[0][1]
+        n2 = n1.edges[0][1]
+        n3 = n1.edges[1][1]
+        self.assertEqual(n1.logseq(), [(0., 0L)])
+        self.assertEqual(n2.logseq(), [(0., 0L), (1.0, 1L)])
+        self.assertEqual(n3.logseq(), [(0., 0L), (1.1, 1L)])
 
 
 if __name__ == '__main__':
