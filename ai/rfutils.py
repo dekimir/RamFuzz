@@ -13,16 +13,22 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""RamFuzz-related utilities.  Most depend on ../pymod being installed."""
+"""RamFuzz-related utilities.
+
+Most depend on ../pymod being installed.
+
+"""
 
 import numpy as np
+import os
 import ramfuzz
+import subprocess
 from functools import total_ordering
 
 
 def logparse(f):
-    """Parses a RamFuzz run log and yields each entry (a value/location pair) in
-       turn."""
+    """Parses a RamFuzz run log and yields each entry (a value/location pair)
+    in turn."""
     fd = f.fileno()
     while True:
         entry = ramfuzz.load(fd)
@@ -45,8 +51,9 @@ def loc2val(f):
 class indexes:
     """Assigns unique indexes to input values.
 
-    An index is generated for each distinct value given to make_index().  In
-    the object's lifetime, the same value always gets the same index.
+    An index is generated for each distinct value given to make_index().
+    In the object's lifetime, the same value always gets the same index.
+
     """
 
     def __init__(self):
@@ -72,6 +79,7 @@ def count_locpos(files):
     """Counts distinct positions and locations in a list of files.
 
     Returns a pair (position count, location indexes object).
+
     """
     posmax = 0
     locidx = indexes()
@@ -107,10 +115,12 @@ def read_data(files, poscount, locidx):
 class node(object):
     """A node in the execution-model tree.
 
-    The execution-model tree represents observed behavior of the program under
-    test, glimpsed from fuzzlogs of repeated program runs.  Each node in the
-    tree is a location, while each edge is a value generated at the location of
-    its origin node."""
+    The execution-model tree represents observed behavior of the program
+    under test, glimpsed from fuzzlogs of repeated program runs.  Each
+    node in the tree is a location, while each edge is a value generated
+    at the location of its origin node.
+
+    """
 
     def __init__(self):
         self.loc = None
@@ -142,7 +152,9 @@ class node(object):
 
         Finally, when an element is a string, it must be either 'success' or
         'failure', and it represents a terminal node descending from the
-        previous element."""
+        previous element.
+
+        """
 
         class LiteralParseError(Exception):
             """An exception raised for erroneous literal."""
@@ -226,8 +238,10 @@ class node(object):
     def insert_or_descend(self, val, loc):
         """Inserts a val edge from self to a new, empty node.
 
-        Does nothing if such an edge already exists. In either case, returns
-        the destination node of the edge."""
+        Does nothing if such an edge already exists. In either case,
+        returns the destination node of the edge.
+
+        """
         if self.loc is None:
             self.loc = loc
         if self.loc != loc:
@@ -251,7 +265,9 @@ class node(object):
     def add(self, log, successful):
         """Updates the tree rooted in self with another log.
 
-        The log must reflect an execution of the same program."""
+        The log must reflect an execution of the same program.
+
+        """
         curnode = self
         for v, l in log:
             curnode = curnode.insert_or_descend(v, l)
@@ -281,11 +297,41 @@ class node(object):
                 for n in rp if n.parent is not None
                 for e in n.parent.edges if e[1] is n]
 
+    def unsuccessful_descendants(self):
+        """Iterates over descendants whose reaches_success is false.
+
+        Performs DFS from self, looking for descendants that don't reach
+        success.  When such a descendant is encountered, it is yielded
+        to the caller, its subtree is skipped, and the DFS continued
+        over its siblings.
+
+        """
+        if not self.reaches_success:
+            yield self
+        else:
+            for e in self.edges:
+                for d in e[1].unsuccessful_descendants():
+                    yield d
+
+    def run_and_add(self, exe, logfilename, cutoff):
+        """Runs 'exe logfilename cutoff' and adds the resulting log to self.
+
+        exe must be the same executable that produced all previous logs
+        added to this node.  Returns the exit status of the run.
+
+        """
+        status = subprocess.call([exe, logfilename, str(cutoff)])
+        self.add(open_and_logparse(logfilename + '+'), status == 0)
+        return status
+
 
 def find_incompatible(n, fnames):
     """Finds the index of the first log file whose addition to node n fails.
 
-    Considers a log successful if the file name ends in '.0'.  Modifies n."""
+    Considers a log successful if the file name ends in '.0'.  Modifies
+    n.
+
+    """
     for i, fn in enumerate(fnames):
         try:
             n.add(open_and_logparse(fn), fn.endswith('.0'))
@@ -295,7 +341,8 @@ def find_incompatible(n, fnames):
 
 
 def find_incompatible_pair(fnames):
-    """Finds a pair of file names from fnames that contain incompatible logs."""
+    """Finds a pair of file names from fnames that contain incompatible
+    logs."""
     n = node()
     i1 = find_incompatible(n, fnames)
     if i1 is None:
@@ -304,3 +351,40 @@ def find_incompatible_pair(fnames):
     n.add(open_and_logparse(fnames[i1]), fnames[i1].endswith('.0'))
     i2 = find_incompatible(n, fnames)
     return i1, i2
+
+
+def matching_logfile(logseq, fnames):
+    """Returns a log file name that matches logseq.
+
+    If no such file exists, returns None.
+
+    """
+    for fn in fnames:
+        if list(open_and_logparse(fn))[:len(logseq)] == logseq:
+            return fn
+    return None
+
+
+def rerun_all_unsuccessful(t, exe, fnames):
+    """Reruns each unsuccessful descendant of t, adding the new logs to t.
+
+    fnames is a list of log file names produced by running exe and already
+    added to t.
+
+    Assumes that file names have format <number>.<exit_status> and that the
+    numbers are dense, starting from 0.  Logs produced by new runs are renamed
+    to conform to this format, and their names are added to fnames.
+
+    Returns the number of reruns performed.
+
+    """
+    count = 0
+    for n in t.unsuccessful_descendants():
+        s = n.logseq()
+        fn = matching_logfile(s, fnames)
+        status = t.run_and_add(exe, fn, len(s))
+        newlogname = str(len(fnames)) + '.' + str(status)
+        os.rename(fn + '+', newlogname)
+        fnames.append(newlogname)
+        count += 1
+    return count
