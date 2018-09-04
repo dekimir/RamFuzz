@@ -209,7 +209,7 @@ class node(object):
     def __repr__(self):
         if self.terminal:
             return self.terminal
-        return str(self.loc)
+        return self.loc.__repr__()
 
     def __eq__(self, other):
         if self.terminal != other.terminal:

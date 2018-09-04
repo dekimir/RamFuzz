@@ -225,5 +225,18 @@ class TestLogSeq(unittest.TestCase):
         self.assertEqual(n3.logseq(), [(0., 0L), (1.1, 1L)])
 
 
+class TestRepr(unittest.TestCase):
+    def c(self, lit, rep):
+        self.assertEqual(node.from_literal([lit]).__repr__(), rep)
+    def test_success(self):
+        self.c('success', 'success')
+    def test_failure(self):
+        self.c('failure', 'failure')
+    def test_nonterm(self):
+        self.c((1., 123L), '123L')
+    def test_none(self):
+        self.assertEqual(node().__repr__(), 'None')
+
+
 if __name__ == '__main__':
     unittest.main()
