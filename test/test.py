@@ -47,6 +47,7 @@ declarations that RamFuzz will process into fuzzing code, while the
 .cpp file contains a main() function that exercises that fuzzing code
 to verify its correctness.  For example, the main() function may want
 to ensure that all methods under test have been called in some order.
+
 """
 
 from glob import glob
