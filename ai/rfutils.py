@@ -207,6 +207,8 @@ class node(object):
         return s
 
     def __repr__(self):
+        if self.terminal:
+            return self.terminal
         return str(self.loc)
 
     def __eq__(self, other):
