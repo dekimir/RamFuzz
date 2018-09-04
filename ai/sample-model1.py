@@ -17,7 +17,7 @@
 predict the test success or failure based on the logged RamFuzz values during
 the test run.  Using a simple CNN, it can achieve >99% accuracy.  The model is
 adapted from Alexander Rakhlin's sample implementation of NLP CNN:
-https://github.com/alexander-rakhlin/CNN-for-Sentence-Classification-in-Keras
+https://github.com/alexander-rakhlin/CNN-for-Sentence-Classification-in-Keras.
 
 Usage: $0 [epochs] [batch_size]
 Defaults: epochs=1, batch_size=50
@@ -83,6 +83,7 @@ def validate(valn_files):
     """Validates ml against valn_files, a list of log file names.
 
     Returns indices of correct predictions.
+
     """
     locsv, valsv, labelsv = rfutils.read_data(valn_files, poscount, locidx)
     pred = ml.predict([locsv, valsv])[:, 0]
@@ -93,6 +94,7 @@ def corrfrac(filelist):
     """Invokes validate() on the given list of file names.
 
     Returns the fraction of correct predictions.
+
     """
     return float(len(validate(filelist))) / len(filelist)
 
@@ -137,4 +139,4 @@ fit(
 
 glval = glob.glob(os.path.join('valn', '*.[sf]'))
 if glval:
-    print "Validation: ", corrfrac(glval)
+    print 'Validation: ', corrfrac(glval)

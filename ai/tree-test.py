@@ -34,7 +34,9 @@ class TestAdd(unittest.TestCase):
         """Returns a tree with all logs added.
 
         Each logs element is a pair (log, string).  The string must be
-        'success' or 'failure'."""
+        'success' or 'failure'.
+
+        """
         n = node()
         for l in logs:
             n.add(l[0], l[1] == 'success')
@@ -228,12 +230,16 @@ class TestLogSeq(unittest.TestCase):
 class TestRepr(unittest.TestCase):
     def c(self, lit, rep):
         self.assertEqual(node.from_literal([lit]).__repr__(), rep)
+
     def test_success(self):
         self.c('success', 'success')
+
     def test_failure(self):
         self.c('failure', 'failure')
+
     def test_nonterm(self):
         self.c((1., 123L), '123L')
+
     def test_none(self):
         self.assertEqual(node().__repr__(), 'None')
 

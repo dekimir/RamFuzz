@@ -20,9 +20,9 @@ network on that corpus, feeds the network knowledge back to the generation
 process, and compares how much better the process then becomes at generating
 successes instead of failures.
 
-The name 'solver.py' comes from the fact that the feedback process treats the
-network's knowledge as a system of inequalities to be solved, or at least kept
-satisfied during parameter-value generation.
+The name 'solver.py' comes from the fact that the feedback process
+treats the network's knowledge as a system of inequalities to be solved,
+or at least kept satisfied during parameter-value generation.
 
 """
 
@@ -110,7 +110,7 @@ ineqs = []
 for i in range(dense_count):
     efw = effective_weights(i + 2)
     ineqs.append(np.append(efw[0], efw[1]))
-    print "Weights%d: %r" % (i, efw)
+    print 'Weights%d: %r' % (i, efw)
     print 'Tests succeeded despite dens%d fail: %d' % (
         i, len(despite_layer_indices(dense_list[i])))
 for x in range(4):
@@ -155,9 +155,9 @@ def bounds(ineqs):
     if shape0[0] == 2:
         for (a, b) in ineqs:
             if a > 0:
-                lo = max(lo, -b/a)
+                lo = max(lo, -b / a)
             elif a < 0:
-                hi = min(hi, -b/a)
+                hi = min(hi, -b / a)
             else:
                 assert(b > 0)
         return (lo, hi)
@@ -199,7 +199,7 @@ def badfrac(ineqs, iteration_count=10000):
     for _ in xrange(iteration_count):
         rams = gen4(ineqs)
         cnt += (rams[0] > rams[2] or rams[1] > rams[3])
-    return float(cnt)/iteration_count
+    return float(cnt) / iteration_count
 
 
 print badfrac(ineqs, 50000)
