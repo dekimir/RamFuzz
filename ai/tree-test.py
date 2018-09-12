@@ -78,18 +78,18 @@ class TestAdd(unittest.TestCase):
         l1 = [(1.0, 10L), (2.0, 21L)]
         l2 = [(1.0, 10L), (2.0, 22L)]
         with self.assertRaises(node.InconsistentBehavior):
-            t = self.t((l1, 'success'), (l2, 'success'))
+            self.t((l1, 'success'), (l2, 'success'))
 
     def test_inconsistent_outcome(self):
-        l = [(1.0, 1L)]
+        lit = [(1.0, 1L)]
         with self.assertRaises(node.InconsistentBehavior):
-            t = self.t((l, 'success'), (l, 'failure'))
+            self.t((lit, 'success'), (lit, 'failure'))
 
     def test_inconsistent_end(self):
         log1 = [(1.0, 1L), (2.0, 2L), (3.0, 3L)]
         log2 = log1[:2]
         with self.assertRaises(node.InconsistentBehavior):
-            t = self.t((log1, 'success'), (log2, 'success'))
+            self.t((log1, 'success'), (log2, 'success'))
 
     def test_parent1(self):
         n = self.t(([(1., 1L)], 'success'))
@@ -166,7 +166,6 @@ class TestAdd(unittest.TestCase):
             1: [(1.1, 1L), (3., 3L), 'failure']}])
         c2 = n.edges[0][1]
         c3 = n.edges[1][1]
-        f1 = c2.edges[0][1]
         f2 = c3.edges[0][1]
         self.assertFalse(n.reaches_success)
         self.assertFalse(c2.reaches_success)
