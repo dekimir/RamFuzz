@@ -163,7 +163,7 @@ class node(object):
                 self.msg = msg
 
             def __repr__(self):
-                return 'LiteralParseError: ' + msg
+                return 'LiteralParseError: ' + self.msg
 
         if not isinstance(lit, list):
             raise LiteralParseError('argument not a list')
