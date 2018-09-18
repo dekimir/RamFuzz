@@ -172,8 +172,7 @@ class node(object):
         for e in lit:
             if isinstance(e, tuple):
                 if len(e) != 2:
-                    raise LiteralParseError(
-                        'tuples must be pairs')
+                    raise LiteralParseError('tuples must be pairs')
                 n = n.insert_or_descend(e[0], e[1])
             elif isinstance(e, dict):
                 for sub in e.values():
@@ -247,8 +246,8 @@ class node(object):
         if self.loc is None:
             self.loc = loc
         if self.loc != loc:
-            raise node.InconsistentBehavior(
-                '(%lf, %ld) when %ld expected' % (val, loc, self.loc))
+            raise node.InconsistentBehavior('(%lf, %ld) when %ld expected' %
+                                            (val, loc, self.loc))
         for v, n in self.edges:
             if v == val:
                 return n
@@ -280,8 +279,8 @@ class node(object):
                 raise node.InconsistentBehavior('Inner node marked terminal')
             curnode.propagate_reaches_success()
         elif curnode.terminal != term:
-            raise node.InconsistentBehavior(
-                '%s node marked %s' % (curnode.terminal, term))
+            raise node.InconsistentBehavior('%s node marked %s' %
+                                            (curnode.terminal, term))
 
     def rootpath(self):
         """Returns a list of descendant nodes from root to self."""
@@ -295,8 +294,7 @@ class node(object):
     def logseq(self):
         """Returns a list of (value, location) pairs from root to self."""
         rp = self.rootpath()
-        return [(e[0], n.parent.loc)
-                for n in rp if n.parent is not None
+        return [(e[0], n.parent.loc) for n in rp if n.parent is not None
                 for e in n.parent.edges if e[1] is n]
 
     def unsuccessful_descendants(self):

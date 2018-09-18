@@ -37,7 +37,6 @@ from keras.metrics import mse
 from keras.models import Model
 from keras.optimizers import Adam
 
-
 maxint = 99999
 minint = -99999
 datrn = []
@@ -151,7 +150,7 @@ def bounds(ineqs):
     if len(ineqs) == 0:
         return (lo, hi)
     shape0 = ineqs[0].shape
-    assert(len(shape0) == 1)
+    assert (len(shape0) == 1)
     if shape0[0] == 2:
         for (a, b) in ineqs:
             if a > 0:
@@ -159,7 +158,7 @@ def bounds(ineqs):
             elif a < 0:
                 hi = min(hi, -b / a)
             else:
-                assert(b > 0)
+                assert (b > 0)
         return (lo, hi)
     else:
         return bounds(fomo_step(ineqs))
@@ -176,7 +175,7 @@ def subst(val, ineqs):
     res = []
     for m in ineqs:
         sh = m.shape
-        assert(len(sh) == 1 and sh[0] > 1)
+        assert (len(sh) == 1 and sh[0] > 1)
         r = copy.deepcopy(m)
         r[-1] = r[-1] + r[0] * val
         res.append(np.delete(r, 0))

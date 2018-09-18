@@ -53,7 +53,8 @@ class TestAdd(unittest.TestCase):
         t = self.t((log1, 'success'), (log2, 'success'))
         self.ck([(1.0, 1L), (2.0, 2L), {
             0: [(3.0, 3L), 'success'],
-            1: [(3.1, 3L), 'success']}], t)
+            1: [(3.1, 3L), 'success']
+        }], t)
 
     def test_early_fork(self):
         log1 = [(1.0, 1L), (2.0, 2L), (3.0, 3L)]
@@ -61,7 +62,8 @@ class TestAdd(unittest.TestCase):
         t = self.t((log1, 'success'), (log2, 'failure'))
         self.ck([{
             0: [(1.0, 1L), (2.0, 2L), (3.0, 3L), 'success'],
-            1: [(1.1, 1L), (2.0, 2L), (3.0, 3L), 'failure']}], t)
+            1: [(1.1, 1L), (2.0, 2L), (3.0, 3L), 'failure']
+        }], t)
 
     def test_multi_fork(self):
         log1 = [(1.0, 1L), (2.1, 2L), (3.0, 3L)]
@@ -72,7 +74,9 @@ class TestAdd(unittest.TestCase):
             1: [(2.1, 2L), (3.0, 3L), 'success'],
             2: [(2.2, 2L), {
                 2: [(3.0, 2L), 'failure'],
-                3: [(3.3, 2L), (4.0, 4L), 'success']}]}], t)
+                3: [(3.3, 2L), (4.0, 4L), 'success']
+            }]
+        }], t)
 
     def test_inconsistent_loc(self):
         l1 = [(1.0, 10L), (2.0, 21L)]
@@ -104,16 +108,15 @@ class TestAdd(unittest.TestCase):
         self.assertIs(grandchild.parent, child)
 
     def test_parent_fork(self):
-        n = self.t(
-            ([(1.1, 1L)], 'success'),
-            ([(1.2, 1L)], 'success'))
+        n = self.t(([(1.1, 1L)], 'success'), ([(1.2, 1L)], 'success'))
         self.assertIs(n.edges[0][1].parent, n)
         self.assertIs(n.edges[1][1].parent, n)
 
     def test_parent_lit(self):
         n = node.from_literal([(1., 1L), {
             0: [(2.0, 2L), 'success'],
-            1: [(2.1, 2L), 'failure']}])
+            1: [(2.1, 2L), 'failure']
+        }])
         # 1->2->success
         #     ->failure
         c = n.edges[0][1]
@@ -149,7 +152,8 @@ class TestAdd(unittest.TestCase):
     def test_reaches_success_lityes(self):
         n = node.from_literal([{
             0: [(1.0, 1L), (2., 2L), 'failure'],
-            1: [(1.1, 1L), (3., 3L), 'success']}])
+            1: [(1.1, 1L), (3., 3L), 'success']
+        }])
         c2 = n.edges[0][1]
         c3 = n.edges[1][1]
         f = c2.edges[0][1]
@@ -163,7 +167,8 @@ class TestAdd(unittest.TestCase):
     def test_reaches_success_litno(self):
         n = node.from_literal([{
             0: [(1.0, 1L), (2., 2L), 'failure'],
-            1: [(1.1, 1L), (3., 3L), 'failure']}])
+            1: [(1.1, 1L), (3., 3L), 'failure']
+        }])
         c2 = n.edges[0][1]
         c3 = n.edges[1][1]
         f2 = c3.edges[0][1]
@@ -185,7 +190,8 @@ class TestRootPath(unittest.TestCase):
     def test_fork(self):
         n0 = node.from_literal([(0., 0L), {
             0: [(1.0, 1L), (2., 2L)],
-            1: [(1.1, 1L), (3., 3L)]}])
+            1: [(1.1, 1L), (3., 3L)]
+        }])
         n1 = n0.edges[0][1]
         n2 = n1.edges[0][1]
         n3 = n1.edges[1][1]
@@ -209,15 +215,16 @@ class TestLogSeq(unittest.TestCase):
     def test_single_path(self):
         n0 = node.from_literal([(0., 0L), (1., 1L), (2., 2L)])
         self.assertEqual(n0.edges[0][1].logseq(), [(0., 0L)])
-        self.assertEqual(n0.edges[0][1].edges[0][1].logseq(),
-                         [(0., 0L), (1., 1L)])
+        self.assertEqual(n0.edges[0][1].edges[0][1].logseq(), [(0., 0L),
+                                                               (1., 1L)])
         self.assertEqual(n0.edges[0][1].edges[0][1].edges[0][1].logseq(),
                          [(0., 0L), (1., 1L), (2., 2L)])
 
     def test_fork(self):
         n0 = node.from_literal([(0., 0L), {
             0: [(1.0, 1L), (2., 2L)],
-            1: [(1.1, 1L), (3., 3L)]}])
+            1: [(1.1, 1L), (3., 3L)]
+        }])
         n1 = n0.edges[0][1]
         n2 = n1.edges[0][1]
         n3 = n1.edges[1][1]

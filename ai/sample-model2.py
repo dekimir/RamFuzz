@@ -62,8 +62,8 @@ merged = concatenate([embed_locs, normd])
 dense_list = []
 for i in range(dense_count):
     dense_list.append(
-        Dropout(dropout_prob)(Dense(1, activation='sigmoid')(Flatten()(
-            merged))))
+        Dropout(dropout_prob)(Dense(1,
+                                    activation='sigmoid')(Flatten()(merged))))
 mult = multiply(dense_list)
 ml = Model(inputs=[in_locs, in_vals], outputs=mult)
 ml.compile(optr, metrics=['acc'], loss=mse)
