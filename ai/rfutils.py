@@ -27,8 +27,11 @@ from functools import total_ordering
 
 
 def logparse(f):
-    """Parses a RamFuzz run log and yields each entry (a value/location pair)
-    in turn."""
+    """Parses a RamFuzz run log and yields each entry in turn.
+
+    Here a log entry is a value/location pair.
+
+    """
     fd = f.fileno()
     while True:
         entry = ramfuzz.load(fd)
@@ -130,7 +133,9 @@ class node(object):
         self.terminal = False
         """If self is the end of execution, indicates its outcome.
 
-        Either False, 'success' or 'failure'."""
+        Either False, 'success' or 'failure'.
+
+        """
         self.parent = None
         """Parent node."""
         self.reaches_success = False
@@ -341,8 +346,9 @@ def find_incompatible(n, fnames):
 
 
 def find_incompatible_pair(fnames):
-    """Finds a pair of file names from fnames that contain incompatible
-    logs."""
+    """Finds a pair of file names from fnames that contain incompatible logs.
+
+    """
     n = node()
     i1 = find_incompatible(n, fnames)
     if i1 is None:
