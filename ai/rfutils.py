@@ -347,8 +347,7 @@ class node(object):
 def find_incompatible(n, fnames):
     """Finds the index of the first log file whose addition to node n fails.
 
-    Considers a log successful if the file name ends in '.0'.  Modifies
-    n.
+    Considers a log successful if the file name ends in '.0'.  Modifies n.
 
     """
     for i, fn in enumerate(fnames):
