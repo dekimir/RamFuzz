@@ -329,6 +329,20 @@ class node(object):
         self.add(open_and_logparse(logfilename + '+'), status == 0)
         return status
 
+    def preorder_dfs(self):
+        """Depth-first search yielding nodes in preorder."""
+        yield self
+        for e in self.edges:
+            for n in e[1].preorder_dfs():
+                yield n
+
+    def locidx(self):
+        """Makes a locidx of all locations under self."""
+        idx = indexes()
+        for n in self.preorder_dfs():
+            idx.make_index(n.loc)
+        return idx
+
 
 def find_incompatible(n, fnames):
     """Finds the index of the first log file whose addition to node n fails.

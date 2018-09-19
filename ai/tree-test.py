@@ -250,5 +250,31 @@ class TestRepr(unittest.TestCase):
         self.assertEqual(node().__repr__(), 'None')
 
 
+class TestLocidx(unittest.TestCase):
+    def c(self, lit, loclist):
+        idx = node.from_literal(lit).locidx()
+        for loc in loclist:
+            self.assertIsNotNone(idx.get_index(loc))
+
+    def test_empty(self):
+        self.c(['success'], [])
+
+    def test_single(self):
+        self.c([(1.23, 123L)], [123L])
+
+    def test_linear(self):
+        self.c([(float(i), long(i)) for i in range(15)], range(15))
+
+    def test_linear_single(self):
+        self.c([(1., 1L) for i in range(99)], [1L])
+
+    def test_fork(self):
+        self.c([(1., 1L), {
+            3: [(2., 2L), (3., 3L)],
+            45: [(2., 2L), (4., 4L), (5., 5L)],
+            678: [(2., 2L), (6., 6L), (7., 7L), (8., 8L)]
+        }], range(1, 8))
+
+
 if __name__ == '__main__':
     unittest.main()
