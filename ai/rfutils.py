@@ -343,6 +343,16 @@ class node(object):
             idx.make_index(n.loc)
         return idx
 
+    def depth(self):
+        """Maximum depth of the subtree under self."""
+        dep = 0
+        worklist = [(self, 1)]
+        while worklist:
+            n, d = worklist.pop()
+            dep = max(dep, d)
+            worklist.extend([(e[1], d+1) for e in n.edges])
+        return dep
+
 
 def find_incompatible(n, fnames):
     """Finds the index of the first log file whose addition to node n fails.

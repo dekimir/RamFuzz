@@ -276,5 +276,23 @@ class TestLocidx(unittest.TestCase):
         }], range(1, 8))
 
 
+class TestDepth(unittest.TestCase):
+    def c(self, depth, lit):
+        self.assertEqual(depth, node.from_literal(lit).depth())
+
+    def test_single(self):
+        self.c(1, [])
+
+    def test_linear(self):
+        self.c(4, [(1., 1L), (2., 2L), (3., 3L), 'failure'])
+
+    def test_fork(self):
+        self.c(3, [{
+            0: [(1.0, 1L), 'success'],
+            1: [(1.1, 1L), 'failure'],
+            2: [(1.2, 1L), (2., 2L), 'success']
+        }])
+
+
 if __name__ == '__main__':
     unittest.main()
