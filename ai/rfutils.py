@@ -271,6 +271,8 @@ class node(object):
     def add(self, log, successful):
         """Updates the tree rooted in self with another log.
 
+        Returns the leaf node corresponding to the log.
+
         The log must reflect an execution of the same program.
 
         """
@@ -286,6 +288,7 @@ class node(object):
         elif curnode.terminal != term:
             raise node.InconsistentBehavior('%s node marked %s' %
                                             (curnode.terminal, term))
+        return curnode
 
     def rootpath(self):
         """Returns a list of descendant nodes from root to self."""

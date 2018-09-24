@@ -178,6 +178,26 @@ class TestAdd(unittest.TestCase):
         self.assertFalse(c3.reaches_success)
         self.assertFalse(f2.reaches_success)
 
+    def test_retval_single(self):
+        log = [(1., 1L), (2., 2L)]
+        n = node().add(log, True)
+        self.assertEqual(n.terminal, 'success')
+        self.assertEqual(n.logseq(), log)
+
+    def test_retval_multiple(self):
+        n = node()
+        log1 = [(0.0, 0L), (1., 1L)]
+        log2 = [(0.1, 0L), (2., 2L)]
+        n.add(log1, True)
+        a2 = n.add(log2, False)
+        self.assertEqual(a2.terminal, 'failure')
+        self.assertEqual(a2.logseq(), log2)
+
+    def test_retval_identical(self):
+        n = node()
+        log = [(1., 1L), (2., 2L)]
+        self.assertIs(n.add(log, True), n.add(log, True))
+
 
 class TestRootPath(unittest.TestCase):
     def test_single_path(self):
