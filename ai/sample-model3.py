@@ -156,7 +156,7 @@ def layer_output(l, i):
 def predict(log):
     """Returns the output of ml on fuzzlog (a list of pairs)."""
     x, y = log_to_locs_vals(log, locidx, poscount)
-    return layerfun(len(ml.layers) - 1)([[x], [y], 0])[0][0, 0]
+    return ml.predict([np.array([x]), np.array([y])])[0, 0]
 
 
 def predict_vs_label(n):
