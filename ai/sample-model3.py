@@ -55,12 +55,26 @@ locidx = exetree.locidx()
 K.set_floatx('float64')
 
 
+def log_to_locs_vals(log, locidx, poscount):
+    nlocs = np.zeros(poscount, np.uint64)
+    nvals = np.zeros((poscount, 1), np.float64)
+    for p, (v, l) in enumerate(log):
+        if p >= poscount:
+            break
+        idx = locidx.get_index(l)
+        if idx:
+            nlocs[p] = idx
+            nvals[p] = v
+    return nlocs, nvals
+
+
 def get_training_data(tree_root, poscount, locidx):
     """Builds input data from a files list."""
     locs = []  # One element per node; each is a list of location indexes.
     vals = []  # One element per node; each is a parallel list of values.
     labels = []  # One element per node: true iff node.reaches_success.
     for n in tree_root.preorder_dfs():
+        # TODO: use log_to_locs_vals.
         flocs = np.zeros(poscount, np.uint64)
         fvals = np.zeros((poscount, 1), np.float64)
         for p, (v, l) in enumerate(n.logseq()):
@@ -137,6 +151,16 @@ def layerfun(i):
 def layer_output(l, i):
     """Returns the output of layer l on input i."""
     return layerfun(l)([locs[i:i + 1], vals[i:i + 1], 0])[0]
+
+
+def predict(log):
+    """Returns the output of ml on fuzzlog (a list of pairs)."""
+    x, y = log_to_locs_vals(log, locidx, poscount)
+    return layerfun(len(ml.layers) - 1)([[x], [y], 0])[0][0, 0]
+
+
+def predict_vs_label(n):
+    return predict(n.logseq()), n.reaches_success
 
 
 def convo(layer, input, i):
