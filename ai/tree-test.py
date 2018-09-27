@@ -124,7 +124,29 @@ class TestAdd(unittest.TestCase):
         self.assertIs(c.edges[0][1].parent, c)
         self.assertIs(c.edges[1][1].parent, c)
 
-    def test_reaches_success(self):
+    def test_retval_single(self):
+        log = [(1., 1L), (2., 2L)]
+        n = node().add(log, True)
+        self.assertEqual(n.terminal, 'success')
+        self.assertEqual(n.logseq(), log)
+
+    def test_retval_multiple(self):
+        n = node()
+        log1 = [(0.0, 0L), (1., 1L)]
+        log2 = [(0.1, 0L), (2., 2L)]
+        n.add(log1, True)
+        a2 = n.add(log2, False)
+        self.assertEqual(a2.terminal, 'failure')
+        self.assertEqual(a2.logseq(), log2)
+
+    def test_retval_identical(self):
+        n = node()
+        log = [(1., 1L), (2., 2L)]
+        self.assertIs(n.add(log, True), n.add(log, True))
+
+
+class TestReachesSuccess(unittest.TestCase):
+    def test_add(self):
         n = node()
         self.assertFalse(n.reaches_success)
         n.add([(1., 1L)], False)
@@ -149,7 +171,7 @@ class TestAdd(unittest.TestCase):
         self.assertFalse(f2.reaches_success)
         self.assertTrue(s1.reaches_success)
 
-    def test_reaches_success_lityes(self):
+    def test_lityes(self):
         n = node.from_literal([{
             0: [(1.0, 1L), (2., 2L), 'failure'],
             1: [(1.1, 1L), (3., 3L), 'success']
@@ -164,7 +186,7 @@ class TestAdd(unittest.TestCase):
         self.assertTrue(c3.reaches_success)
         self.assertTrue(s.reaches_success)
 
-    def test_reaches_success_litno(self):
+    def test_litno(self):
         n = node.from_literal([{
             0: [(1.0, 1L), (2., 2L), 'failure'],
             1: [(1.1, 1L), (3., 3L), 'failure']
@@ -177,26 +199,6 @@ class TestAdd(unittest.TestCase):
         self.assertFalse(f2.reaches_success)
         self.assertFalse(c3.reaches_success)
         self.assertFalse(f2.reaches_success)
-
-    def test_retval_single(self):
-        log = [(1., 1L), (2., 2L)]
-        n = node().add(log, True)
-        self.assertEqual(n.terminal, 'success')
-        self.assertEqual(n.logseq(), log)
-
-    def test_retval_multiple(self):
-        n = node()
-        log1 = [(0.0, 0L), (1., 1L)]
-        log2 = [(0.1, 0L), (2., 2L)]
-        n.add(log1, True)
-        a2 = n.add(log2, False)
-        self.assertEqual(a2.terminal, 'failure')
-        self.assertEqual(a2.logseq(), log2)
-
-    def test_retval_identical(self):
-        n = node()
-        log = [(1., 1L), (2., 2L)]
-        self.assertIs(n.add(log, True), n.add(log, True))
 
 
 class TestRootPath(unittest.TestCase):
