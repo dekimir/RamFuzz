@@ -83,7 +83,7 @@ def get_training_data(tree_root, locidx, poscount):
 
 
 locs, vals, labels = get_training_data(exetree, locidx, poscount)
-vals[vals > 1e5] = 1e5          # Clip to avoid NaNs in batch normalization.
+vals[vals > 1e5] = 1e5  # Clip to avoid NaNs in batch normalization.
 
 embedding_dim = 4
 filter_sizes = (3, 8)
