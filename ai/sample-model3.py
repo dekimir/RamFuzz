@@ -17,8 +17,8 @@
 from Alexander Rakhlin's sample implementation of NLP CNN:
 https://github.com/alexander-rakhlin/CNN-for-Sentence-Classification-in-Keras.
 
-Usage: $0 [epochs] [batch_size]
-Defaults: epochs=1, batch_size=50
+Usage: $0 [epochs] [prediction_threshold]
+Defaults: epochs=1, prediction_threshold=0.7
 
 Expects a train/ subdirectory containing fuzzlogs whose filenames indicate
 whether the run was a success or failure.  Filenames ending in `.0` are success
@@ -68,27 +68,22 @@ def log_to_locs_vals(log, locidx, poscount):
     return nlocs, nvals
 
 
-def get_training_data(tree_root, poscount, locidx):
+def get_training_data(tree_root, locidx, poscount):
     """Builds input data from a files list."""
     locs = []  # One element per node; each is a list of location indexes.
     vals = []  # One element per node; each is a parallel list of values.
     labels = []  # One element per node: true iff node.reaches_success.
     for n in tree_root.preorder_dfs():
         # TODO: use log_to_locs_vals.
-        flocs = np.zeros(poscount, np.uint64)
-        fvals = np.zeros((poscount, 1), np.float64)
-        for p, (v, l) in enumerate(n.logseq()):
-            idx = locidx.get_index(l)
-            if idx:
-                flocs[p] = idx
-                fvals[p] = v
-        locs.append(flocs)
-        vals.append(fvals)
+        nlocs, nvals = log_to_locs_vals(n.logseq(), locidx, poscount)
+        locs.append(nlocs)
+        vals.append(nvals)
         labels.append(n.reaches_success)
     return np.array(locs), np.array(vals), np.array(labels)
 
 
-locs, vals, labels = get_training_data(exetree, poscount, locidx)
+locs, vals, labels = get_training_data(exetree, locidx, poscount)
+vals[vals > 1e5] = 1e5          # Clip to avoid NaNs in batch normalization.
 
 embedding_dim = 4
 filter_sizes = (3, 8)
@@ -117,28 +112,8 @@ ml = Model(inputs=[in_locs, in_vals], outputs=out)
 ml.compile(Adam(lr=0.01), metrics=['acc'], loss=binary_crossentropy)
 
 
-def fit(eps, bsz):
+def fit(eps, bsz=200):
     ml.fit([locs, vals], labels, batch_size=bsz, epochs=eps)
-
-
-def validate(valn_files):
-    """Validates ml against valn_files, a list of log file names.
-
-    Returns indices of correct predictions.
-
-    """
-    locsv, valsv, labelsv = rfutils.read_data(valn_files, poscount, locidx)
-    pred = ml.predict([locsv, valsv])[:, 0]
-    return ((pred > 0.7) == labelsv).nonzero()[0]
-
-
-def corrfrac(filelist):
-    """Invokes validate() on the given list of file names.
-
-    Returns the fraction of correct predictions.
-
-    """
-    return float(len(validate(filelist))) / len(filelist)
 
 
 def layerfun(i):
@@ -184,11 +159,52 @@ def convo_elements(layer_input, weights, offset):
     return sum
 
 
-fit(
-    eps=int(sys.argv[1]) if len(sys.argv) > 1 else 1,
-    # Large batches tend to cause NaNs in batch normalization.
-    bsz=int(sys.argv[2]) if len(sys.argv) > 2 else 50)
+def validate(tree_root, prediction_threshold):
+    """Prints results of ml's validation over a tree.
 
-glval = glob.glob(os.path.join('valn', '*.[sf]'))
+    Validation is specific to the intended use of ml as a go/no-go indicator to
+    RamFuzz runtime when it attempts to enter a state corresponding to some
+    node.  The intent is for RamFuzz to enter that state only if ml predicts
+    the node may reach success; otherwise, RamFuzz is to generate another value
+    leading to another state.
+
+    To that end, ml's prediction of a node matters only if all ancestors of
+    that node were predicted correctly.  Otherwise, either the node will not
+    normally be reached (if a reaches_success==True ancestor was mispredicted)
+    or ml has failed to prevent every failure under the mispredicted
+    reaches_success==False ancestor.
+
+    """
+    mispredicted_success_count = 0
+    unreachable_success_leaves_count = 0
+    mispredicted_failure_count = 0
+    worklist = [(tree_root, [])]  # Each element is a (node, logseq) pair.
+    while worklist:
+        n, log = worklist.pop()
+        if n.reaches_success == (predict(log) >= prediction_threshold):
+            for e in n.edges:
+                worklist.append((e[1], log + [(e[0], n.loc)]))
+        elif n.reaches_success:
+            mispredicted_success_count += 1
+            for d in n.preorder_dfs():
+                if d.terminal == 'success':
+                    unreachable_success_leaves_count += 1
+        else:
+            mispredicted_failure_count += 1
+    print 'Missed %d MAYWIN nodes, cutting off %d WIN leaves.' % (
+        mispredicted_success_count, unreachable_success_leaves_count)
+    print 'Missed %d NOWIN nodes.' % mispredicted_failure_count
+
+
+fit(eps=int(sys.argv[1]) if len(sys.argv) > 1 else 1)
+prediction_threshold = float(sys.argv[2]) if len(sys.argv) > 2 else 0.7
+print 'Training data:'
+validate(exetree, prediction_threshold)
+
+glval = glob.glob(os.path.join('valn', '*'))
 if glval:
-    print 'Validation: ', corrfrac(glval)
+    etv = rfutils.node()
+    for f in glval:
+        etv.add(rfutils.open_and_logparse(f), f.endswith('.0'))
+    print '\nValidation data:'
+    validate(etv, prediction_threshold)
