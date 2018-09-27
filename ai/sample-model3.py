@@ -196,6 +196,44 @@ def validate(tree_root, prediction_threshold):
     print 'Missed %d NOWIN nodes.' % mispredicted_failure_count
 
 
+def predict_with_tree(model_tree, log):
+    """Like predict(), but uses model_tree instead of ml.
+
+    Returns False if log (a list of value/location pairs) corresponds to an
+    existing node in model_tree and that node does not reach success.
+    Otherwise, returns True.
+
+    """
+    if log == []:
+        return model_tree.reaches_success
+    val, loc = log[0]
+    assert (loc == model_tree.loc)
+    for e in model_tree.edges:
+        if e[0] == val:
+            return predict_with_tree(e[1], log[1:])
+    return True
+
+
+def validate_with_tree(model_tree, validation_tree):
+    """Like validate(), but uses model_tree instead of ml."""
+    mispredicted_success_count = 0
+    unreachable_success_leaves_count = 0
+    worklist = [(validation_tree, [])]  # Each element = (node, logseq) pair.
+    while worklist:
+        n, log = worklist.pop()
+        if n.reaches_success == predict_with_tree(
+                model_tree, log) or not n.reaches_success:
+            for e in n.edges:
+                worklist.append((e[1], log + [(e[0], n.loc)]))
+        else:
+            mispredicted_success_count += 1
+            for d in n.preorder_dfs():
+                if d.terminal == 'success':
+                    unreachable_success_leaves_count += 1
+    print 'Missed %d MAYWIN nodes, cutting off %d WIN leaves.' % (
+        mispredicted_success_count, unreachable_success_leaves_count)
+
+
 fit(eps=int(sys.argv[1]) if len(sys.argv) > 1 else 1)
 prediction_threshold = float(sys.argv[2]) if len(sys.argv) > 2 else 0.7
 print 'Training data:'
