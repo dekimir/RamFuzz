@@ -244,5 +244,7 @@ if glval:
     etv = rfutils.node()
     for f in glval:
         etv.add(rfutils.open_and_logparse(f), f.endswith('.0'))
-    print '\nValidation data:'
+    print '\nValidation by model:'
     validate(etv, prediction_threshold)
+    print '\nValidation by history:'
+    validate_with_tree(exetree, etv)
