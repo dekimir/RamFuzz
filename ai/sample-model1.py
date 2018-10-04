@@ -112,7 +112,16 @@ def layer_output(l, i):
 
 
 def convo(layer, input, i):
-    """Convolves the Conv1D layer's weights with input at position i."""
+    """Convolves the Conv1D layer's weights with input at position i.
+
+    input = array of shape (n,m) where n is the length of layer's output and m
+    is the width of layer's weights.
+
+    i = integer between 0 and n-1, indicating input index at which to begin
+    convolution (and also the index of layer's output where the convolution
+    result will appear when the model is run)
+
+    """
     wts = layer.get_weights()[0][::-1]
     bias = layer.get_weights()[1]
     return np.sum([np.dot(input[i + j], w) for j, w in enumerate(wts)]) + bias
