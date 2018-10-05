@@ -30,7 +30,6 @@
 #include <random>
 #include <sstream>
 #include <string>
-#include <tuple>
 #include <type_traits>
 #include <typeindex>
 #include <unordered_map>
@@ -87,52 +86,6 @@ struct file_error : public std::runtime_error {
 
 /// Returns T's type tag to put into RamFuzz logs.
 template <typename T> char typetag(T);
-
-/// A linear combinatin of multipliers and variables, plus an offset. Each
-/// variable is uniquely identified by a size_t number.
-class LinearCombination {
-public:
-  std::unordered_map<size_t, double> multipliers;
-
-  double offset;
-
-  bool operator==(const LinearCombination &other) const {
-    return multipliers == other.multipliers && offset == other.offset;
-  }
-
-  bool operator!=(const LinearCombination &other) const {
-    return multipliers != other.multipliers || offset != other.offset;
-  }
-};
-
-/// Convenience operator.
-LinearCombination operator+(const LinearCombination &a,
-                            const LinearCombination &b);
-
-/// Convenience operator.
-LinearCombination operator-(const LinearCombination &a,
-                            const LinearCombination &b);
-
-/// Represents an inequality LHS >= 0, where LHS is a linear combination of
-/// variables.
-class LinearInequality {
-public:
-  LinearCombination lhs;
-
-  /// Substitutes value for variable.
-  void substitute(size_t variable, double value);
-
-  bool operator==(const LinearInequality &other) const {
-    return lhs == other.lhs;
-  }
-
-  bool operator!=(const LinearInequality &other) const {
-    return lhs != other.lhs;
-  }
-};
-
-std::tuple<double, double> bounds(size_t variable,
-                                  const std::vector<LinearInequality> &ineqs);
 
 /// Generates values for RamFuzz code.  Can be used in the "generate" or
 /// "replay" mode.  In "generate" mode, values are created at random and logged.
@@ -206,7 +159,7 @@ public:
     }
     T val;
     if (runmode == generate)
-      val = random_value(lo, hi, valueid);
+      val = uniform_random(lo, hi);
     else
       input(val);
     output(val, valueid);
@@ -214,75 +167,6 @@ public:
   }
 
 private:
-  /// Returns a random value between lo and hi, but narrows the range if valueid
-  /// is subject to restricting inequalities.
-  template <typename T> T random_value(T lo, T hi, size_t valueid) {
-    const bool is_restricted = find(begin(restricted_ids), end(restricted_ids),
-                                    valueid) != end(restricted_ids);
-    if (is_restricted) {
-      double lb, ub;
-      std::tie(lb, ub) = bounds(valueid, current_constraints);
-      // Avoid library min/max: they return a double, which doesn't always
-      // correctly convert back into T.  Instead, inline doubles comparison but
-      // assign a T result.
-      if (double(lo) < lb)
-        lo = static_cast<T>(lb);
-      if (double(hi) > ub)
-        hi = static_cast<T>(ub);
-    } else
-      current_constraints = starting_constraints;
-    T val = uniform_random(lo, hi);
-    if (is_restricted)
-      for (auto &i : current_constraints)
-        i.substitute(valueid, val);
-    return val;
-  }
-
-  // clang-format off
-  std::vector<size_t> restricted_ids = {
-    1000319,  319,  320,
-    1000406,  406,  407,
-    1000426,  426,  427,
-    1001710, 1710, 1711,
-    1001766, 1766, 1767,
-    1002186, 2186, 2187,
-    1002264, 2264, 2265,
-    1002606, 2606, 2607,
-    1002626, 2626, 2627,
-    1002632, 2632, 2633,
-    1002655, 2655, 2656,
-    1002661, 2661, 2662,
-    1002721, 2721, 2722,
-    1002804, 2804, 2805,
-    1002810, 2810, 2811,
-    1002849, 2849, 2850,
-    1003926, 3926, 3927,
-    1004031, 4031, 4032,
-    1004711, 4711, 4712
-  };
-  // clang-format on
-  const std::vector<LinearInequality> starting_constraints{
-      LinearInequality{LinearCombination{{{1000319, 1.}, {320, -1.}}, 0.}},
-      LinearInequality{LinearCombination{{{1000406, 1.}, {407, -1.}}, 0.}},
-      LinearInequality{LinearCombination{{{1000426, 1.}, {427, -1.}}, 0.}},
-      LinearInequality{LinearCombination{{{1001710, 1.}, {1711, -1.}}, 0.}},
-      LinearInequality{LinearCombination{{{1001766, 1.}, {1767, -1.}}, 0.}},
-      LinearInequality{LinearCombination{{{1002186, 1.}, {2187, -1.}}, 0.}},
-      LinearInequality{LinearCombination{{{1002264, 1.}, {2265, -1.}}, 0.}},
-      LinearInequality{LinearCombination{{{1002606, 1.}, {2607, -1.}}, 0.}},
-      LinearInequality{LinearCombination{{{1002626, 1.}, {2627, -1.}}, 0.}},
-      LinearInequality{LinearCombination{{{1002632, 1.}, {2633, -1.}}, 0.}},
-      LinearInequality{LinearCombination{{{1002655, 1.}, {2656, -1.}}, 0.}},
-      LinearInequality{LinearCombination{{{1002661, 1.}, {2662, -1.}}, 0.}},
-      LinearInequality{LinearCombination{{{1002721, 1.}, {2722, -1.}}, 0.}},
-      LinearInequality{LinearCombination{{{1002804, 1.}, {2805, -1.}}, 0.}},
-      LinearInequality{LinearCombination{{{1002810, 1.}, {2811, -1.}}, 0.}},
-      LinearInequality{LinearCombination{{{1002849, 1.}, {2850, -1.}}, 0.}},
-      LinearInequality{LinearCombination{{{1003926, 1.}, {3927, -1.}}, 0.}},
-      LinearInequality{LinearCombination{{{1004031, 1.}, {4032, -1.}}, 0.}},
-      LinearInequality{LinearCombination{{{1004711, 1.}, {4712, -1.}}, 0.}}};
-  std::vector<LinearInequality> current_constraints = starting_constraints;
-
   /// Logs val and id to olog.
   template <typename U> void output(U val, size_t id) {
     olog.put(typetag(val));

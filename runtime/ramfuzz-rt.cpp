@@ -21,13 +21,25 @@
 #include <cstring>
 #include <iostream>
 #include <limits>
-#include <tuple>
 
-using namespace std;
+using std::cout;
+using std::endl;
+using std::generate;
+using std::hex;
+using std::isprint;
+using std::istream;
+using std::min;
+using std::numeric_limits;
+using std::ofstream;
+using std::ranlux24;
+using std::size_t;
+using std::streamsize;
+using std::string;
+using std::vector;
+using std::uniform_int_distribution;
+using std::uniform_real_distribution;
 
 namespace {
-
-using namespace ramfuzz::runtime;
 
 template <typename IntegralT>
 IntegralT ibetween(IntegralT lo, IntegralT hi, ranlux24 &gen) {
@@ -36,55 +48,6 @@ IntegralT ibetween(IntegralT lo, IntegralT hi, ranlux24 &gen) {
 
 template <typename RealT> RealT rbetween(RealT lo, RealT hi, ranlux24 &gen) {
   return uniform_real_distribution<RealT>{lo, hi}(gen);
-}
-
-LinearCombination operator/(const LinearCombination &a, double fac) {
-  LinearCombination result;
-  result.offset = a.offset / fac;
-  for (auto &m : a.multipliers)
-    result.multipliers[m.first] = m.second / fac;
-  return result;
-}
-
-/// To distinguish upper and lower bounds.
-enum class Bound { upper, lower };
-
-pair<LinearCombination, Bound> bound(const LinearInequality &ineq, size_t var) {
-  const auto found = ineq.lhs.multipliers.find(var);
-  // (m*var + LHS' >= 0) <=> (var ?? -LHS'/m)
-  const auto m = found->second;
-  LinearCombination rest_of_lhs(ineq.lhs);
-  rest_of_lhs.multipliers.erase(var);
-  return make_pair(LinearCombination() - rest_of_lhs / m,
-                   m > 0 ? Bound::lower : Bound::upper);
-}
-
-/// Performs Fourier-Motzkin elimination of var in ineqs.  Returns an equivalent
-/// set of inequalities without var.
-vector<LinearInequality> fomo_step(size_t var,
-                                   const vector<LinearInequality> &ineqs) {
-  vector<LinearCombination> upper_bounds, lower_bounds;
-  vector<LinearInequality> combination;
-  for (const auto &current_ineq : ineqs) {
-    const auto found = current_ineq.lhs.multipliers.find(var);
-    if (found == current_ineq.lhs.multipliers.end())
-      combination.push_back(current_ineq);
-    else if (found->second == 0.) {
-      combination.push_back(current_ineq);
-      combination.back().lhs.multipliers.erase(var);
-    } else {
-      const auto b = bound(current_ineq, var);
-      if (b.second == Bound::lower)
-        lower_bounds.push_back(b.first);
-      else
-        upper_bounds.push_back(b.first);
-    }
-  }
-  for (const auto &ub : upper_bounds)
-    for (const auto &lb : lower_bounds)
-      combination.push_back(
-          LinearInequality{ub - lb}); // New inequality: ub >= lb.
-  return combination;
 }
 
 } // anonymous namespace
@@ -223,61 +186,6 @@ template <> char typetag<long long>(long long) { return 9; }
 template <> char typetag<unsigned long long>(unsigned long long) { return 10; }
 template <> char typetag<float>(float) { return 11; }
 template <> char typetag<double>(double) { return 12; }
-
-LinearCombination operator+(const LinearCombination &a,
-                            const LinearCombination &b) {
-  LinearCombination result(a);
-  result.offset += b.offset;
-  for (const auto &m : b.multipliers)
-    result.multipliers[m.first] += m.second;
-  return result;
-}
-
-LinearCombination operator-(const LinearCombination &a,
-                            const LinearCombination &b) {
-  LinearCombination result(a);
-  result.offset -= b.offset;
-  for (const auto &m : b.multipliers)
-    result.multipliers[m.first] -= m.second;
-  return result;
-}
-
-void LinearInequality::substitute(size_t variable, double value) {
-  const auto found = lhs.multipliers.find(variable);
-  if (found == lhs.multipliers.end())
-    return;
-  lhs.offset += found->second * value;
-  lhs.multipliers.erase(found);
-}
-
-tuple<double, double> bounds(size_t variable,
-                             const vector<LinearInequality> &ineqs) {
-  auto lo = numeric_limits<double>::min(), hi = numeric_limits<double>::max();
-  if (ineqs.empty())
-    return make_tuple(lo, hi);
-  // Are there any other variables in ineqs?
-  for (const auto &current_ineq : ineqs)
-    for (const auto &var_mult : current_ineq.lhs.multipliers) {
-      const auto another_variable = var_mult.first;
-      if (another_variable != variable) {
-        const auto new_ineqs = fomo_step(another_variable, ineqs);
-        return bounds(variable, new_ineqs);
-      }
-    }
-  // No other variables -- ineqs dictates variable's bounds.
-  for (const auto &current_ineq : ineqs) {
-    const auto found = current_ineq.lhs.multipliers.find(variable);
-    if (found != current_ineq.lhs.multipliers.end()) {
-      const auto m = found->second;
-      // (m*x + offset >= 0) <=> (x ?? -offset/m)
-      if (m > 0)
-        lo = max(lo, -current_ineq.lhs.offset / m);
-      else if (m < 0)
-        hi = min(hi, -current_ineq.lhs.offset / m);
-    }
-  }
-  return make_pair(lo, hi);
-}
 
 } // namespace runtime
 } // namespace ramfuzz
