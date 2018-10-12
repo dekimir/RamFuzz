@@ -85,11 +85,11 @@ def get_training_data(tree_root, locidx, poscount):
 locs, vals, labels = get_training_data(exetree, locidx, poscount)
 vals[vals > 1e5] = 1e5  # Clip to avoid NaNs in batch normalization.
 
-embedding_dim = 4
+embedding_dim = 40
 filter_sizes = (3, 8)
-num_filters = 1
-dropout_prob = (0.01, 0.01)
-hidden_dims = 10
+num_filters = 10
+dropout_prob = (0.1, 0.2)
+hidden_dims = 50
 
 in_vals = Input((poscount, 1), name='vals', dtype='float64')
 normd = BatchNormalization(
