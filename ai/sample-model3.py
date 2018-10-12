@@ -44,9 +44,12 @@ import sys
 
 sys.setrecursionlimit(9999)
 
+traincount = int(sys.argv[1]) if len(sys.argv) > 1 else 2000
+valncount = traincount + 1000
+
 exetree = rfutils.node()
 files = glob.glob(os.path.join('train', '*'))
-for f in files:
+for f in files[:traincount]:
     exetree.add(rfutils.open_and_logparse(f), f.endswith('.0'))
 
 poscount = exetree.depth()
@@ -243,15 +246,15 @@ def validate_with_tree(model_tree, validation_tree):
         mispredicted_success_count, unreachable_success_leaves_count)
 
 
-fit(eps=int(sys.argv[1]) if len(sys.argv) > 1 else 1)
-prediction_threshold = float(sys.argv[2]) if len(sys.argv) > 2 else 0.7
+fit(eps=int(sys.argv[2]) if len(sys.argv) > 2 else 2)
+prediction_threshold = float(sys.argv[3]) if len(sys.argv) > 3 else 0.7
 print 'Training data:'
 validate(exetree, prediction_threshold)
 
 glval = glob.glob(os.path.join('valn', '*'))
-if glval:
+if glval or len(files) > traincount:
     etv = rfutils.node()
-    for f in glval:
+    for f in glval if glval else files[traincount:valncount]:
         etv.add(rfutils.open_and_logparse(f), f.endswith('.0'))
     print '\nValidation by model:'
     validate(etv, prediction_threshold)
