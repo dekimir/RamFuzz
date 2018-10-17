@@ -1,0 +1,22 @@
+cmake_minimum_required(VERSION 3.8)
+project(RamFuzz.HistoryRecorder)
+set(CMAKE_CXX_STANDARD 11)
+add_library(RamFuzz.HistRecLib valgen.hpp valgen.cpp)
+
+find_package(GTest)
+if(GTEST_LIBRARY)
+  set(gtest GTest::GTest)
+  set(gtest_main GTest::Main)
+else()
+  add_subdirectory(googletest)
+  set(gtest gtest)
+  set(gtest_main gtest_main)
+endif()
+
+set(CMAKE_MODULE_PATH .)
+
+add_executable(utests valgen_test.cpp)
+target_link_libraries(utests ${gtest} ${gtest_main} RamFuzz.HistRecLib zmqpp zmq)
+
+enable_testing()
+add_test(allunittests utests)
