@@ -44,11 +44,13 @@ class ValgenTest : public ::testing::Test {
 
 constexpr bool DONT_BLOCK = true;
 
-TEST_F(ValgenTest, ProForma) {
-  message msg(123);
+TEST_F(ValgenTest, MessageTooShort) {
+  message msg(true);
   ASSERT_TRUE(to_histrec.send(msg, DONT_BLOCK));
   valgen(from_ramfuzz);
-  FAIL() << "Ha ha ha!";
+  ASSERT_TRUE(to_histrec.receive(msg));
+  ASSERT_EQ(1, msg.parts());
+  EXPECT_EQ(22, msg.get<int>(0));
 }
 
 }  // namespace
