@@ -12,14 +12,39 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#pragma once
+#include "valgen.hpp"
 
-#include <zmqpp/socket.hpp>
+#include <zmqpp/message.hpp>
+
+using namespace zmqpp;
+
+namespace {
+bool is_exit_status(const message& msg) {
+  bool v;
+  msg.get(v, 0);
+  return v;
+}
+}  // namespace
 
 namespace ramfuzz {
-namespace histrec {
+namespace valgen {
 
-void valgen(zmqpp::socket& sock);
+void valgen(socket& sock) {
+  message msg;
+  sock.receive(msg);
+  if (msg.parts() <= 1) {
+    message errresp(22);
+    sock.send(errresp);
+    return;
+  }
+  if (const auto status = is_exit_status(msg)) {
+    // Insert/verify tree leaf, propagate MAYWIN.
+  } else {
+    // This is a request for a value of certain type within certain bounds.
+  }
+  // generate random value
+  // send it back
+}
 
-}  // namespace histrec
+}  // namespace valgen
 }  // namespace ramfuzz

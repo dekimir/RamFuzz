@@ -20,7 +20,7 @@
 
 #include "valgen.hpp"
 
-using namespace ramfuzz::histrec;
+using namespace ramfuzz::valgen;
 using namespace std;
 using namespace zmqpp;
 
@@ -29,16 +29,16 @@ namespace {
 class ValgenTest : public ::testing::Test {
  protected:
   context ctx;
-  socket to_histrec, from_ramfuzz;
+  socket to_valgen, from_ramfuzz;
 
  public:
   ValgenTest()
-      : to_histrec(ctx, socket_type::request),
+      : to_valgen(ctx, socket_type::request),
         from_ramfuzz(ctx, socket_type::reply) {
-    to_histrec.set(socket_option::linger, 0);
+    to_valgen.set(socket_option::linger, 0);
     from_ramfuzz.set(socket_option::linger, 0);
     from_ramfuzz.bind("ipc://*");  // TODO: can't use ipc on Windows.
-    to_histrec.connect(from_ramfuzz.get<string>(socket_option::last_endpoint));
+    to_valgen.connect(from_ramfuzz.get<string>(socket_option::last_endpoint));
   }
 };
 
@@ -46,9 +46,9 @@ constexpr bool DONT_BLOCK = true;
 
 TEST_F(ValgenTest, MessageTooShort) {
   message msg(true);
-  ASSERT_TRUE(to_histrec.send(msg, DONT_BLOCK));
+  ASSERT_TRUE(to_valgen.send(msg, DONT_BLOCK));
   valgen(from_ramfuzz);
-  ASSERT_TRUE(to_histrec.receive(msg));
+  ASSERT_TRUE(to_valgen.receive(msg));
   ASSERT_EQ(1, msg.parts());
   EXPECT_EQ(22, msg.get<int>(0));
 }
