@@ -96,4 +96,10 @@ TEST_F(ValgenTest, ExitSuccess) {
   EXPECT_PARTS(resp, 10, IS_SUCCESS);
 }
 
+TEST_F(ValgenTest, ExitFailure) {
+  message msg(IS_EXIT, !IS_SUCCESS), resp;
+  valgen_roundtrip(msg, resp);
+  EXPECT_PARTS(resp, 10, !IS_SUCCESS);
+}
+
 }  // namespace

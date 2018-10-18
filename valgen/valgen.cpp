@@ -38,7 +38,7 @@ void valgen(socket& sock) {
   if (is_exit_status(msg)) {
     const auto succ = is_success(msg);
     // TODO: Insert/verify tree leaf, propagate MAYWIN.
-    message resp(10, is_success);
+    message resp(10, succ);
     sock.send(resp);
     return;
   } else {
