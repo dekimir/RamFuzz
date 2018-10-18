@@ -53,21 +53,40 @@ class ValgenTest : public ::testing::Test {
 
 constexpr bool IS_EXIT = true, IS_SUCCESS = true;
 
+// TODO: Make msg const below, when zmqpp allows it.
+
+/// Recursion termination for the general template below.
+template <int part = 0, typename T>
+int part_mismatch(message& msg, const T nextpart) {
+  if (part >= msg.parts() || nextpart != msg.get<T>(part)) return part;
+  if (part + 1 < msg.parts())  // Too many actuals.
+    return part + 1;
+  return -1;
+}
+
+/// Finds a mismatch between msg and its expected parts (the remaining args)
+///
+/// Matching starts at msg[part], which must equal nextpart, then proceeds down
+/// the rest of args and msg parts.
+///
+/// If there is a mismatch, returns the 0-based index of msg part that doesn't
+/// match.  Otherwise, returns -1.
+template <int part = 0, typename T, typename... Args>
+int part_mismatch(message& msg, const T nextpart, const Args... args) {
+  if (part >= msg.parts() || nextpart != msg.get<T>(part)) return part;
+  return part_mismatch<part + 1>(msg, args...);
+}
+
 TEST_F(ValgenTest, MessageTooShort) {
   message msg(IS_EXIT), resp;
   valgen_roundtrip(msg, resp);
-  ASSERT_EQ(1, resp.parts());
-  EXPECT_EQ(22, resp.get<int>(0));
+  EXPECT_EQ(-1, part_mismatch(resp, 22));
 }
 
 TEST_F(ValgenTest, ExitSuccess) {
   message msg(IS_EXIT, IS_SUCCESS), resp;
   valgen_roundtrip(msg, resp);
-  int resp_status; bool resp_is_success;
-  resp >> resp_status >> resp_is_success;
-  EXPECT_EQ(10, resp_status);
-  EXPECT_EQ(IS_SUCCESS, resp_is_success);
-  EXPECT_EQ(0, resp.remaining());
+  EXPECT_EQ(-1, part_mismatch(resp, 10, IS_SUCCESS));
 }
 
 }  // namespace
