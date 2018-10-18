@@ -56,11 +56,9 @@ constexpr bool IS_EXIT = true, IS_SUCCESS = true;
 // TODO: Make msg const below, when zmqpp allows it.
 
 /// Recursion termination for the general template below.
-template <int part = 0, typename T>
-int part_mismatch(message& msg, const T nextpart) {
-  if (part >= msg.parts() || nextpart != msg.get<T>(part)) return part;
-  if (part + 1 < msg.parts())  // Too many actuals.
-    return part + 1;
+template <int part = 0>
+int part_mismatch(message& msg) {
+  if (part + 1 < msg.parts()) return part + 1;  // Too many actuals.
   return -1;
 }
 
