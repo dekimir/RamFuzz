@@ -40,17 +40,22 @@ class ValgenTest : public ::testing::Test {
     from_ramfuzz.bind("ipc://*");  // TODO: can't use ipc on Windows.
     to_valgen.connect(from_ramfuzz.get<string>(socket_option::last_endpoint));
   }
+
+  /// Sends msg to valgen to process and records valgen's response.
+  ///
+  /// Returns void so it can use ASSERT_* macros.
+  void valgen_roundtrip(message& msg, message& resp) {
+    ASSERT_TRUE(to_valgen.send(msg));
+    valgen(from_ramfuzz);
+    ASSERT_TRUE(to_valgen.receive(resp));
+  }
 };
 
-constexpr bool DONT_BLOCK = true;
-
 TEST_F(ValgenTest, MessageTooShort) {
-  message msg(true);
-  ASSERT_TRUE(to_valgen.send(msg, DONT_BLOCK));
-  valgen(from_ramfuzz);
-  ASSERT_TRUE(to_valgen.receive(msg));
-  ASSERT_EQ(1, msg.parts());
-  EXPECT_EQ(22, msg.get<int>(0));
+  message msg(true), resp;
+  valgen_roundtrip(msg, resp);
+  ASSERT_EQ(1, resp.parts());
+  EXPECT_EQ(22, resp.get<int>(0));
 }
 
 }  // namespace
