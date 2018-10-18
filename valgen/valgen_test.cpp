@@ -77,16 +77,25 @@ int part_mismatch(message& msg, const T nextpart, const Args... args) {
   return part_mismatch<part + 1>(msg, args...);
 }
 
+/// Convenience shortcut for testing messages: EXPECT_PARTS(msg, part0, part1,
+/// part2) will pass iff msg has exactly the specified parts.  Otherwise, it
+/// will fail and print (after "Which is:") the index of msg part that
+/// mismatches the expected list.
+///
+/// Part types are inferred: EXPECT_PARTS(msg, 0, true, -12L, 123U) expects an
+/// int, a bool, a long, and an unsigned.
+#define EXPECT_PARTS(...) EXPECT_EQ(-1, part_mismatch(__VA_ARGS__))
+
 TEST_F(ValgenTest, MessageTooShort) {
   message msg(IS_EXIT), resp;
   valgen_roundtrip(msg, resp);
-  EXPECT_EQ(-1, part_mismatch(resp, 22));
+  EXPECT_PARTS(resp, 22);
 }
 
 TEST_F(ValgenTest, ExitSuccess) {
   message msg(IS_EXIT, IS_SUCCESS), resp;
   valgen_roundtrip(msg, resp);
-  EXPECT_EQ(-1, part_mismatch(resp, 10, IS_SUCCESS));
+  EXPECT_PARTS(resp, 10, IS_SUCCESS);
 }
 
 }  // namespace
