@@ -51,11 +51,23 @@ class ValgenTest : public ::testing::Test {
   }
 };
 
+constexpr bool IS_EXIT = true, IS_SUCCESS = true;
+
 TEST_F(ValgenTest, MessageTooShort) {
-  message msg(true), resp;
+  message msg(IS_EXIT), resp;
   valgen_roundtrip(msg, resp);
   ASSERT_EQ(1, resp.parts());
   EXPECT_EQ(22, resp.get<int>(0));
+}
+
+TEST_F(ValgenTest, ExitSuccess) {
+  message msg(IS_EXIT, IS_SUCCESS), resp;
+  valgen_roundtrip(msg, resp);
+  int resp_status; bool resp_is_success;
+  resp >> resp_status >> resp_is_success;
+  EXPECT_EQ(10, resp_status);
+  EXPECT_EQ(IS_SUCCESS, resp_is_success);
+  EXPECT_EQ(0, resp.remaining());
 }
 
 }  // namespace

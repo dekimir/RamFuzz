@@ -19,11 +19,9 @@
 using namespace zmqpp;
 
 namespace {
-bool is_exit_status(const message& msg) {
-  bool v;
-  msg.get(v, 0);
-  return v;
-}
+// TODO: make msg const in all is_* functions below, when zmqpp allows it.
+bool is_exit_status(message& msg) { return msg.get<bool>(0); }
+bool is_success(message& msg) { return msg.get<bool>(1); }
 }  // namespace
 
 namespace ramfuzz {
@@ -37,13 +35,15 @@ void valgen(socket& sock) {
     sock.send(errresp);
     return;
   }
-  if (const auto status = is_exit_status(msg)) {
-    // Insert/verify tree leaf, propagate MAYWIN.
+  if (is_exit_status(msg)) {
+    const auto succ = is_success(msg);
+    // TODO: Insert/verify tree leaf, propagate MAYWIN.
+    message resp(10, is_success);
+    sock.send(resp);
+    return;
   } else {
     // This is a request for a value of certain type within certain bounds.
   }
-  // generate random value
-  // send it back
 }
 
 }  // namespace valgen
