@@ -102,4 +102,10 @@ TEST_F(ValgenTest, ExitFailure) {
   EXPECT_PARTS(resp, 10, !IS_SUCCESS);
 }
 
+TEST_F(ValgenTest, RequestInt) {
+  message msg(!IS_EXIT, uint64_t{123}, uint8_t{5}, 33, 55), resp;
+  valgen_roundtrip(msg, resp);
+  EXPECT_PARTS(resp, 11, 22);
+}
+
 }  // namespace
