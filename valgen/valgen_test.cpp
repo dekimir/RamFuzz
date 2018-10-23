@@ -51,7 +51,11 @@ class ValgenTest : public ::testing::Test {
   }
 };
 
-constexpr bool IS_EXIT = true, IS_SUCCESS = true;
+using u8 = uint8_t;
+using i64 = int64_t;
+using u64 = uint64_t;
+
+constexpr u8 IS_EXIT = 1, IS_SUCCESS = 1;
 
 // TODO: Make msg const below, when zmqpp allows it.
 
@@ -87,25 +91,37 @@ int part_mismatch(message& msg, const T nextpart, const Args... args) {
 TEST_F(ValgenTest, MessageTooShort) {
   message msg(IS_EXIT), resp;
   valgen_roundtrip(msg, resp);
-  EXPECT_PARTS(resp, 22);
+  EXPECT_PARTS(resp, u8{22});
 }
 
 TEST_F(ValgenTest, ExitSuccess) {
   message msg(IS_EXIT, IS_SUCCESS), resp;
   valgen_roundtrip(msg, resp);
-  EXPECT_PARTS(resp, 10, IS_SUCCESS);
+  EXPECT_PARTS(resp, u8{10}, IS_SUCCESS);
 }
 
 TEST_F(ValgenTest, ExitFailure) {
   message msg(IS_EXIT, !IS_SUCCESS), resp;
   valgen_roundtrip(msg, resp);
-  EXPECT_PARTS(resp, 10, !IS_SUCCESS);
+  EXPECT_PARTS(resp, u8{10}, !IS_SUCCESS);
 }
 
 TEST_F(ValgenTest, RequestInt) {
-  message msg(!IS_EXIT, uint64_t{123}, uint8_t{5}, 33, 55), resp;
+  message msg(!IS_EXIT, u64{123}, u8{1}, i64{-5}, i64{5}), resp;
   valgen_roundtrip(msg, resp);
-  EXPECT_PARTS(resp, 11, 22);
+  EXPECT_PARTS(resp, u8{11}, i64{10});
+}
+
+TEST_F(ValgenTest, RequestUInt) {
+  message msg(!IS_EXIT, u64{123}, u8{2}, u64{300}, u64{300}), resp;
+  valgen_roundtrip(msg, resp);
+  EXPECT_PARTS(resp, u8{11}, u64{0});
+}
+
+TEST_F(ValgenTest, RequestDouble) {
+  message msg(!IS_EXIT, u64{123}, u8{3}, -0.5, 0.5), resp;
+  valgen_roundtrip(msg, resp);
+  EXPECT_PARTS(resp, u8{11}, 1.);
 }
 
 }  // namespace
