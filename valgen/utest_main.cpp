@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include <gtest/gtest.h>
+#include <cstdlib>
 #include <iostream>
 #include <memory>
 
@@ -25,8 +26,20 @@ unique_ptr<valgen> global_valgen;
 
 int main(int argc, char **argv) {
   testing::InitGoogleTest(&argc, argv);
-  const auto seed = random_device{}();
+  auto seed = random_device{}();
+  if (argc > 1) {
+    if (string("--seed") != argv[1]) {
+      cerr << "Unknown option: '" << argv[1] << "'\n";
+      cerr << "usage: " << argv[0] << " [--seed <number>]" << endl;
+      exit(11);
+    }
+    if (argc < 3) {
+      cerr << "--seed requires a value" << endl;
+      exit(22);
+    }
+    seed = atoi(argv[2]);
+  }
   cout << "Using seed " << seed << " for valgen." << endl;
-  global_valgen.reset(new valgen());
+  global_valgen.reset(new valgen(seed));
   return RUN_ALL_TESTS();
 }
