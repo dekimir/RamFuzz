@@ -1,0 +1,8 @@
+Value generator for RamFuzz tests.  A standalone executable that
+RamFuzz-generated code messages to get random values when necessary.
+
+Build separately from RamFuzz, in valgen's own build directory.  Use cmake and
+ctest.
+
+Prerequisites:
+- zmqpp >=4.2.0 (`brew install zmqpp` or `apt install libzmqpp-dev`)

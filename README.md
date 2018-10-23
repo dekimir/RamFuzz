@@ -99,7 +99,9 @@ These limitations will typically manifest themselves as ill-formed C++ on the ou
 
 3. **Rebuild Clang:** Now the standard LLVM build procedure should produce a `bin/ramfuzz` executable.
 
-4. **Run Tests:** There are some end-to-end tests in the [`test`](test) directory -- see [`test.py`](test/test.py) there.  There are also unit tests in the [`unittests`](unittests) directory.  RamFuzz adds a new build target `check-ramfuzz`, which executes all unit- and end-to-end tests.  The end-to-end tests depend on `bin/ramfuzz`, so `bin/ramfuzz` will be rebuilt before testing if it's out of date.
+4. **Build valgen** Follow instructions at [`valgen/README`](valgen/README).
+
+5. **Run Tests:** There are some end-to-end tests in the [`test`](test) directory -- see [`test.py`](test/test.py) there.  There are also unit tests in the [`unittests`](unittests) directory.  RamFuzz adds a new build target `check-ramfuzz`, which executes all unit- and end-to-end tests.  The end-to-end tests depend on `bin/ramfuzz`, so `bin/ramfuzz` will be rebuilt before testing if it's out of date.
 
 ## How to Contribute
 
