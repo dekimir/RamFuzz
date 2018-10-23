@@ -14,14 +14,20 @@
 
 #pragma once
 
+#include <random>
 #include <zmqpp/socket.hpp>
 
 namespace ramfuzz {
 
 class valgen {
  public:
+  valgen(int seed = std::random_device{}()) : rn_eng(seed) {}
+
   /// Receives one request from sock and sends back a response.
   void process_request(zmqpp::socket& sock);
+
+ private:
+  std::ranlux24 rn_eng = std::ranlux24();
 };
 
 }  // namespace ramfuzz
