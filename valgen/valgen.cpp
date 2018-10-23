@@ -57,9 +57,8 @@ void response(socket& sock, Args&&... args) {
 }  // namespace
 
 namespace ramfuzz {
-namespace valgen {
 
-void valgen(socket& sock) {
+void valgen::process_request(socket& sock) {
   message msg;
   sock.receive(msg);
   if (msg.parts() <= 1)
@@ -80,5 +79,4 @@ void valgen(socket& sock) {
   }
 }
 
-}  // namespace valgen
 }  // namespace ramfuzz

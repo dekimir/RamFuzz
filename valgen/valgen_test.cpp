@@ -20,11 +20,13 @@
 
 #include "valgen.hpp"
 
-using namespace ramfuzz::valgen;
+using namespace ramfuzz;
 using namespace std;
 using namespace zmqpp;
 
 namespace {
+
+valgen global_valgen;
 
 class ValgenTest : public ::testing::Test {
  protected:
@@ -45,7 +47,7 @@ class ValgenTest : public ::testing::Test {
   /// it.
   message valgen_roundtrip(message& msg) {
     EXPECT_TRUE(to_valgen.send(msg));
-    valgen(from_ramfuzz);
+    global_valgen.process_request(from_ramfuzz);
     message resp;
     EXPECT_TRUE(to_valgen.receive(resp));
     return resp;

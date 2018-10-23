@@ -17,9 +17,11 @@
 #include <zmqpp/socket.hpp>
 
 namespace ramfuzz {
-namespace valgen {
 
-void valgen(zmqpp::socket& sock);
+class valgen {
+ public:
+  /// Receives one request from sock and sends back a response.
+  void process_request(zmqpp::socket& sock);
+};
 
-}  // namespace valgen
 }  // namespace ramfuzz
