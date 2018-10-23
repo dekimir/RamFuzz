@@ -22,10 +22,9 @@ namespace {
 
 using u8 = uint8_t;
 
-// TODO: make msg const in all is_* functions below, when zmqpp allows it.
-u8 is_exit_status(message& msg) { return msg.get<u8>(0); }
+u8 is_exit_status(const message& msg) { return msg.get<u8>(0); }
 
-u8 is_success(message& msg) { return msg.get<u8>(1); }
+u8 is_success(const message& msg) { return msg.get<u8>(1); }
 
 template <typename T>
 void add_typed_value(message& req, message& resp) {
