@@ -21,7 +21,7 @@ namespace ramfuzz {
 
 class valgen {
  public:
-  valgen(int seed = std::random_device{}()) : rn_eng(seed) {}
+  valgen(int seed) : rn_eng(seed) {}
 
   /// Receives one request from sock and sends back a response.
   void process_request(zmqpp::socket& sock);
