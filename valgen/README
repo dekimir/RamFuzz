@@ -5,4 +5,10 @@ Build separately from RamFuzz, in valgen's own build directory.  Use cmake and
 ctest.
 
 Prerequisites:
-- zmqpp >=4.2.0 (`brew install zmqpp` or `apt install libzmqpp-dev`)
+- zmqpp >=4.2.0 (eg, `brew install zmqpp` or `apt install libzmqpp-dev`)
+- googletest
+  + if googletest is installed, set GTEST_ROOT to install prefix (parent of
+    `include/gtest/gtest.h`), as described
+    [here](https://cmake.org/cmake/help/latest/module/FindGTest.html)
+  + otherwise, clone the [googletest repo](https://github.com/google/googletest)
+    in this directory
