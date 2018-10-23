@@ -41,13 +41,14 @@ class ValgenTest : public ::testing::Test {
     to_valgen.connect(from_ramfuzz.get<string>(socket_option::last_endpoint));
   }
 
-  /// Sends msg to valgen to process and records valgen's response.
-  ///
-  /// Returns void so it can use ASSERT_* macros.
-  void valgen_roundtrip(message& msg, message& resp) {
-    ASSERT_TRUE(to_valgen.send(msg));
+  /// Sends msg to valgen to process, receives valgen's response, and returns
+  /// it.
+  message valgen_roundtrip(message& msg) {
+    EXPECT_TRUE(to_valgen.send(msg));
     valgen(from_ramfuzz);
-    ASSERT_TRUE(to_valgen.receive(resp));
+    message resp;
+    EXPECT_TRUE(to_valgen.receive(resp));
+    return resp;
   }
 };
 
@@ -57,11 +58,9 @@ using u64 = uint64_t;
 
 constexpr u8 IS_EXIT = 1, IS_SUCCESS = 1;
 
-// TODO: Make msg const below, when zmqpp allows it.
-
 /// Recursion termination for the general template below.
 template <int part = 0>
-int part_mismatch(message& msg) {
+int part_mismatch(const message& msg) {
   if (part + 1 < msg.parts()) return part + 1;  // Too many actuals.
   return -1;
 }
@@ -74,7 +73,7 @@ int part_mismatch(message& msg) {
 /// If there is a mismatch, returns the 0-based index of msg part that doesn't
 /// match.  Otherwise, returns -1.
 template <int part = 0, typename T, typename... Args>
-int part_mismatch(message& msg, const T nextpart, const Args... args) {
+int part_mismatch(const message& msg, const T nextpart, const Args... args) {
   if (part >= msg.parts() || nextpart != msg.get<T>(part)) return part;
   return part_mismatch<part + 1>(msg, args...);
 }
@@ -89,39 +88,33 @@ int part_mismatch(message& msg, const T nextpart, const Args... args) {
 #define EXPECT_PARTS(...) EXPECT_EQ(-1, part_mismatch(__VA_ARGS__))
 
 TEST_F(ValgenTest, MessageTooShort) {
-  message msg(IS_EXIT), resp;
-  valgen_roundtrip(msg, resp);
-  EXPECT_PARTS(resp, u8{22});
+  message msg(IS_EXIT);
+  EXPECT_PARTS(valgen_roundtrip(msg), u8{22});
 }
 
 TEST_F(ValgenTest, ExitSuccess) {
   message msg(IS_EXIT, IS_SUCCESS), resp;
-  valgen_roundtrip(msg, resp);
-  EXPECT_PARTS(resp, u8{10}, IS_SUCCESS);
+  EXPECT_PARTS(valgen_roundtrip(msg), u8{10}, IS_SUCCESS);
 }
 
 TEST_F(ValgenTest, ExitFailure) {
   message msg(IS_EXIT, !IS_SUCCESS), resp;
-  valgen_roundtrip(msg, resp);
-  EXPECT_PARTS(resp, u8{10}, !IS_SUCCESS);
+  EXPECT_PARTS(valgen_roundtrip(msg), u8{10}, !IS_SUCCESS);
 }
 
 TEST_F(ValgenTest, RequestInt) {
   message msg(!IS_EXIT, u64{123}, u8{1}, i64{-5}, i64{5}), resp;
-  valgen_roundtrip(msg, resp);
-  EXPECT_PARTS(resp, u8{11}, i64{10});
+  EXPECT_PARTS(valgen_roundtrip(msg), u8{11}, i64{10});
 }
 
 TEST_F(ValgenTest, RequestUInt) {
   message msg(!IS_EXIT, u64{123}, u8{2}, u64{300}, u64{300}), resp;
-  valgen_roundtrip(msg, resp);
-  EXPECT_PARTS(resp, u8{11}, u64{0});
+  EXPECT_PARTS(valgen_roundtrip(msg), u8{11}, u64{0});
 }
 
 TEST_F(ValgenTest, RequestDouble) {
   message msg(!IS_EXIT, u64{123}, u8{3}, -0.5, 0.5), resp;
-  valgen_roundtrip(msg, resp);
-  EXPECT_PARTS(resp, u8{11}, 1.);
+  EXPECT_PARTS(valgen_roundtrip(msg), u8{11}, 1.);
 }
 
 }  // namespace
