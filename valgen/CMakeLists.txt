@@ -15,8 +15,8 @@ endif()
 
 set(CMAKE_MODULE_PATH .)
 
-add_executable(utests valgen_test.cpp)
-target_link_libraries(utests ${gtest} ${gtest_main} RamFuzz.ValgenLib zmqpp zmq)
+add_executable(utests utest_main.cpp valgen_test.cpp)
+target_link_libraries(utests ${gtest} RamFuzz.ValgenLib zmqpp zmq)
 
 enable_testing()
 add_test(allunittests utests)
