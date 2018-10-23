@@ -12,9 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+#include <iostream>
+#include <memory>
+
+#include "valgen.hpp"
+
+using namespace ramfuzz;
+using namespace std;
+
+unique_ptr<valgen> global_valgen;
 
 int main(int argc, char **argv) {
   testing::InitGoogleTest(&argc, argv);
+  const auto seed = random_device{}();
+  cout << "Using seed " << seed << " for valgen." << endl;
+  global_valgen.reset(new valgen());
   return RUN_ALL_TESTS();
 }

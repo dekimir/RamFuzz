@@ -24,9 +24,9 @@ using namespace ramfuzz;
 using namespace std;
 using namespace zmqpp;
 
-namespace {
+extern unique_ptr<valgen> global_valgen;
 
-valgen global_valgen;
+namespace {
 
 class ValgenTest : public ::testing::Test {
  protected:
@@ -47,7 +47,7 @@ class ValgenTest : public ::testing::Test {
   /// it.
   message valgen_roundtrip(message& msg) {
     EXPECT_TRUE(to_valgen.send(msg));
-    global_valgen.process_request(from_ramfuzz);
+    global_valgen->process_request(from_ramfuzz);
     message resp;
     EXPECT_TRUE(to_valgen.receive(resp));
     return resp;
