@@ -28,6 +28,12 @@ extern unique_ptr<valgen> global_valgen;
 
 namespace {
 
+using u8 = uint8_t;
+using i64 = int64_t;
+using u64 = uint64_t;
+
+constexpr u8 IS_EXIT = 1, IS_SUCCESS = 1;
+
 class ValgenTest : public ::testing::Test {
  protected:
   context ctx;
@@ -52,13 +58,20 @@ class ValgenTest : public ::testing::Test {
     EXPECT_TRUE(to_valgen.receive(resp));
     return resp;
   }
+
+  /// Uses valgen to generate a random value between lo and hi, then checks that
+  /// the value is indeed between these bounds.
+  template <typename T>
+  void valgen_between(u8 type_tag, T lo, T hi) {
+    message msg(!IS_EXIT, u64{123}, type_tag, lo, hi);
+    const auto resp = valgen_roundtrip(msg);
+    ASSERT_EQ(11, resp.get<u8>(0))
+        << "tag: " << type_tag << ", lo: " << lo << ", hi: " << hi;
+    const auto val = resp.get<T>(1);
+    EXPECT_LE(lo, val);
+    EXPECT_GE(hi, val);
+  }
 };
-
-using u8 = uint8_t;
-using i64 = int64_t;
-using u64 = uint64_t;
-
-constexpr u8 IS_EXIT = 1, IS_SUCCESS = 1;
 
 /// Recursion termination for the general template below.
 template <int part = 0>
@@ -104,19 +117,10 @@ TEST_F(ValgenTest, ExitFailure) {
   EXPECT_PARTS(valgen_roundtrip(msg), u8{10}, !IS_SUCCESS);
 }
 
-TEST_F(ValgenTest, RequestInt) {
-  message msg(!IS_EXIT, u64{123}, u8{1}, i64{-5}, i64{5});
-  EXPECT_PARTS(valgen_roundtrip(msg), u8{11}, i64{10});
-}
+TEST_F(ValgenTest, RequestInt) { valgen_between<i64>(1, -5, 5); }
 
-TEST_F(ValgenTest, RequestUInt) {
-  message msg(!IS_EXIT, u64{123}, u8{2}, u64{300}, u64{300});
-  EXPECT_PARTS(valgen_roundtrip(msg), u8{11}, u64{0});
-}
+TEST_F(ValgenTest, RequestUInt) { valgen_between<u64>(2, 300, 300); }
 
-TEST_F(ValgenTest, RequestDouble) {
-  message msg(!IS_EXIT, u64{123}, u8{3}, -0.5, 0.5);
-  EXPECT_PARTS(valgen_roundtrip(msg), u8{11}, 1.);
-}
+TEST_F(ValgenTest, RequestDouble) { valgen_between(3, -0.5, 0.5); }
 
 }  // namespace

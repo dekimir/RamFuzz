@@ -16,6 +16,7 @@
 
 #include <zmqpp/message.hpp>
 
+using namespace std;
 using namespace zmqpp;
 
 namespace {
@@ -27,22 +28,32 @@ u8 is_exit_status(const message& msg) { return msg.get<u8>(0); }
 u8 is_success(const message& msg) { return msg.get<u8>(1); }
 
 template <typename T>
-void add_typed_value(message& req, message& resp) {
-  T lo = req.get<T>(3);
-  T hi = req.get<T>(4);
-  resp << hi - lo;
+T uniform_random(T lo, T hi, ranlux24& rn_eng) {
+  return uniform_int_distribution<T>{lo, hi}(rn_eng);
 }
 
-void add_value(message& req, message& resp) {
+template <>
+double uniform_random(double lo, double hi, ranlux24& rn_eng) {
+  return uniform_real_distribution<double>{lo, hi}(rn_eng);
+}
+
+template <typename T>
+void add_typed_value(message& req, message& resp, ranlux24& rn_eng) {
+  T lo = req.get<T>(3);
+  T hi = req.get<T>(4);
+  resp << uniform_random(lo, hi, rn_eng);
+}
+
+void add_value(message& req, message& resp, ranlux24& rn_eng) {
   switch (req.get<uint8_t>(2)) {
     // The following must match the specializations of
     // ramfuzz::runtime::typetag.
     case 1:
-      return add_typed_value<int64_t>(req, resp);
+      return add_typed_value<int64_t>(req, resp, rn_eng);
     case 2:
-      return add_typed_value<uint64_t>(req, resp);
+      return add_typed_value<uint64_t>(req, resp, rn_eng);
     case 3:
-      return add_typed_value<double>(req, resp);
+      return add_typed_value<double>(req, resp, rn_eng);
     default:
       assert(false);
   }
@@ -74,7 +85,7 @@ void valgen::process_request(socket& sock) {
     // is identified by tag (see add_value() above).
     if (msg.parts() != 5) return response(sock, u8{24});
     message resp(u8{11});
-    add_value(msg, resp);
+    add_value(msg, resp, rn_eng);
     sock.send(resp);
   }
 }
