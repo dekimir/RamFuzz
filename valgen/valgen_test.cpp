@@ -46,7 +46,12 @@ struct widetype;
     using type = W;    \
   }
 
+WIDETYPE(bool, i64);
+WIDETYPE(char, i64);
 WIDETYPE(short, i64);
+WIDETYPE(int, i64);
+WIDETYPE(long, i64);
+WIDETYPE(long long, i64);
 
 #undef WIDETYPE
 
@@ -165,6 +170,11 @@ TEST_F(ValgenTest, ExitFailure) {
   EXPECT_PARTS(valgen_roundtrip(msg), u8{10}, !IS_SUCCESS);
 }
 
+TEST_F(ValgenTest, BetweenBool) { check_random_bounds<bool>(); }
+TEST_F(ValgenTest, BetweenChar) { check_random_bounds<char>(); }
 TEST_F(ValgenTest, BetweenShort) { check_random_bounds<short>(); }
+TEST_F(ValgenTest, BetweenInt) { check_random_bounds<int>(); }
+TEST_F(ValgenTest, BetweenLong) { check_random_bounds<long>(); }
+TEST_F(ValgenTest, BetweenLongLong) { check_random_bounds<long long>(); }
 
 }  // namespace
