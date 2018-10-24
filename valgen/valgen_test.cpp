@@ -14,6 +14,7 @@
 
 #include <gtest/gtest.h>
 #include <unistd.h>
+#include <limits>
 #include <string>
 #include <zmqpp/context.hpp>
 #include <zmqpp/message.hpp>
@@ -25,6 +26,7 @@ using namespace std;
 using namespace zmqpp;
 
 extern unique_ptr<valgen> global_valgen;
+extern unique_ptr<mt19937> global_testrng;
 
 namespace {
 
@@ -33,6 +35,34 @@ using i64 = int64_t;
 using u64 = uint64_t;
 
 constexpr u8 IS_EXIT = 1, IS_SUCCESS = 1;
+
+template <typename T>
+struct widetype;
+
+#define WIDETYPE(T, W) \
+  template <>          \
+  struct widetype<T> { \
+    using type = W;    \
+  }
+
+WIDETYPE(short, i64);
+
+#undef WIDETYPE
+
+template <typename T>
+u8 typetag();
+
+#define TYPETAG(T, tag) \
+  template <>           \
+  u8 typetag<T>() {     \
+    return tag;         \
+  }
+
+TYPETAG(i64, 1);
+TYPETAG(u64, 2);
+TYPETAG(double, 3);
+
+#undef TYPETAG
 
 class ValgenTest : public ::testing::Test {
  protected:
@@ -62,14 +92,16 @@ class ValgenTest : public ::testing::Test {
   /// Uses valgen to generate a random value between lo and hi, then checks that
   /// the value is indeed between these bounds.
   template <typename T>
-  void valgen_between(u8 type_tag, T lo, T hi) {
-    message msg(!IS_EXIT, u64{123}, type_tag, lo, hi);
+  void valgen_between(T lo, T hi) {
+    using W = typename widetype<T>::type;
+    message msg(!IS_EXIT, u64{123}, typetag<W>(), W{lo}, W{hi});
     const auto resp = valgen_roundtrip(msg);
+    const auto tname = typeid(lo).name();
     ASSERT_EQ(11, resp.get<u8>(0))
-        << "tag: " << type_tag << ", lo: " << lo << ", hi: " << hi;
-    const auto val = resp.get<T>(1);
-    EXPECT_LE(lo, val);
-    EXPECT_GE(hi, val);
+        << "type: " << tname << ", lo: " << lo << ", hi: " << hi;
+    const auto val = static_cast<T>(resp.get<W>(1));
+    EXPECT_LE(lo, val) << tname;
+    EXPECT_GE(hi, val) << tname;
   }
 };
 
@@ -117,10 +149,17 @@ TEST_F(ValgenTest, ExitFailure) {
   EXPECT_PARTS(valgen_roundtrip(msg), u8{10}, !IS_SUCCESS);
 }
 
-TEST_F(ValgenTest, RequestInt) { valgen_between<i64>(1, -5, 5); }
+template <typename T>
+T random(T lo = numeric_limits<T>::min(), T hi = numeric_limits<T>::max()) {
+  static uniform_int_distribution<T> inst(lo, hi);
+  return inst(*global_testrng);
+}
 
-TEST_F(ValgenTest, RequestUInt) { valgen_between<u64>(2, 300, 300); }
-
-TEST_F(ValgenTest, RequestDouble) { valgen_between(3, -0.5, 0.5); }
+TEST_F(ValgenTest, BetweenShort) {
+  static const auto max = numeric_limits<short>::max();
+  const auto lo = random<short>(), range = random<short>(0);
+  const short hi = (range < max - lo) ? lo + range : max;
+  valgen_between(lo, hi);
+}
 
 }  // namespace

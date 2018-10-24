@@ -16,6 +16,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <memory>
+#include <random>
 
 #include "valgen.hpp"
 
@@ -23,6 +24,7 @@ using namespace ramfuzz;
 using namespace std;
 
 unique_ptr<valgen> global_valgen;
+unique_ptr<mt19937> global_testrng;
 
 int main(int argc, char **argv) {
   testing::InitGoogleTest(&argc, argv);
@@ -39,7 +41,8 @@ int main(int argc, char **argv) {
     }
     seed = atoi(argv[2]);
   }
-  cout << "Using seed " << seed << " for valgen." << endl;
+  cout << "Using seed " << seed << " for valgen and randomized tests." << endl;
   global_valgen.reset(new valgen(seed));
+  global_testrng.reset(new mt19937(seed));
   return RUN_ALL_TESTS();
 }
