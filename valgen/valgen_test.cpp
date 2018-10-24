@@ -95,27 +95,27 @@ TEST_F(ValgenTest, MessageTooShort) {
 }
 
 TEST_F(ValgenTest, ExitSuccess) {
-  message msg(IS_EXIT, IS_SUCCESS), resp;
+  message msg(IS_EXIT, IS_SUCCESS);
   EXPECT_PARTS(valgen_roundtrip(msg), u8{10}, IS_SUCCESS);
 }
 
 TEST_F(ValgenTest, ExitFailure) {
-  message msg(IS_EXIT, !IS_SUCCESS), resp;
+  message msg(IS_EXIT, !IS_SUCCESS);
   EXPECT_PARTS(valgen_roundtrip(msg), u8{10}, !IS_SUCCESS);
 }
 
 TEST_F(ValgenTest, RequestInt) {
-  message msg(!IS_EXIT, u64{123}, u8{1}, i64{-5}, i64{5}), resp;
+  message msg(!IS_EXIT, u64{123}, u8{1}, i64{-5}, i64{5});
   EXPECT_PARTS(valgen_roundtrip(msg), u8{11}, i64{10});
 }
 
 TEST_F(ValgenTest, RequestUInt) {
-  message msg(!IS_EXIT, u64{123}, u8{2}, u64{300}, u64{300}), resp;
+  message msg(!IS_EXIT, u64{123}, u8{2}, u64{300}, u64{300});
   EXPECT_PARTS(valgen_roundtrip(msg), u8{11}, u64{0});
 }
 
 TEST_F(ValgenTest, RequestDouble) {
-  message msg(!IS_EXIT, u64{123}, u8{3}, -0.5, 0.5), resp;
+  message msg(!IS_EXIT, u64{123}, u8{3}, -0.5, 0.5);
   EXPECT_PARTS(valgen_roundtrip(msg), u8{11}, 1.);
 }
 
