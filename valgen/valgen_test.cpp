@@ -16,6 +16,7 @@
 #include <unistd.h>
 #include <limits>
 #include <string>
+#include <typeinfo>
 #include <zmqpp/context.hpp>
 #include <zmqpp/message.hpp>
 
@@ -64,6 +65,12 @@ TYPETAG(double, 3);
 
 #undef TYPETAG
 
+template <typename T>
+T random(T lo = numeric_limits<T>::min(), T hi = numeric_limits<T>::max()) {
+  uniform_int_distribution<T> inst(lo, hi);
+  return inst(*global_testrng);
+}
+
 class ValgenTest : public ::testing::Test {
  protected:
   context ctx;
@@ -102,6 +109,15 @@ class ValgenTest : public ::testing::Test {
     const auto val = static_cast<T>(resp.get<W>(1));
     EXPECT_LE(lo, val) << tname;
     EXPECT_GE(hi, val) << tname;
+  }
+
+  /// Generates random bounds of type T and invokes valgen_between() on them.
+  template <typename T>
+  void check_random_bounds() {
+    static const auto max = numeric_limits<T>::max();
+    const auto lo = random<T>(), range = random<T>(0);
+    const T hi = (range < max - lo) ? lo + range : max;
+    valgen_between(lo, hi);
   }
 };
 
@@ -149,17 +165,6 @@ TEST_F(ValgenTest, ExitFailure) {
   EXPECT_PARTS(valgen_roundtrip(msg), u8{10}, !IS_SUCCESS);
 }
 
-template <typename T>
-T random(T lo = numeric_limits<T>::min(), T hi = numeric_limits<T>::max()) {
-  static uniform_int_distribution<T> inst(lo, hi);
-  return inst(*global_testrng);
-}
-
-TEST_F(ValgenTest, BetweenShort) {
-  static const auto max = numeric_limits<short>::max();
-  const auto lo = random<short>(), range = random<short>(0);
-  const short hi = (range < max - lo) ? lo + range : max;
-  valgen_between(lo, hi);
-}
+TEST_F(ValgenTest, BetweenShort) { check_random_bounds<short>(); }
 
 }  // namespace
