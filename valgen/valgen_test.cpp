@@ -49,9 +49,13 @@ struct widetype;
 WIDETYPE(bool, i64);
 WIDETYPE(char, i64);
 WIDETYPE(short, i64);
+WIDETYPE(unsigned short, u64);
 WIDETYPE(int, i64);
+WIDETYPE(unsigned int, u64);
 WIDETYPE(long, i64);
+WIDETYPE(unsigned long, u64);
 WIDETYPE(long long, i64);
+WIDETYPE(unsigned long long, u64);
 
 #undef WIDETYPE
 
@@ -182,5 +186,11 @@ TEST_F(ValgenTest, BetweenShort) { check_random_bounds<short>(); }
 TEST_F(ValgenTest, BetweenInt) { check_random_bounds<int>(); }
 TEST_F(ValgenTest, BetweenLong) { check_random_bounds<long>(); }
 TEST_F(ValgenTest, BetweenLongLong) { check_random_bounds<long long>(); }
+TEST_F(ValgenTest, BetweenUShort) { check_random_bounds<unsigned short>(); }
+TEST_F(ValgenTest, BetweenUInt) { check_random_bounds<unsigned int>(); }
+TEST_F(ValgenTest, BetweenULong) { check_random_bounds<unsigned long>(); }
+TEST_F(ValgenTest, BetweenULongLong) {
+  check_random_bounds<unsigned long long>();
+}
 
 }  // namespace
