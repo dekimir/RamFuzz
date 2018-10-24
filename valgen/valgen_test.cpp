@@ -76,6 +76,12 @@ T random(T lo = numeric_limits<T>::min(), T hi = numeric_limits<T>::max()) {
   return inst(*global_testrng);
 }
 
+template <>
+bool random<bool>(bool lo, bool hi) {
+  uniform_int_distribution<short> inst(lo, hi);
+  return inst(*global_testrng);
+}
+
 class ValgenTest : public ::testing::Test {
  protected:
   context ctx;
