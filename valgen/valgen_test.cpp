@@ -56,6 +56,8 @@ WIDETYPE(long, i64);
 WIDETYPE(unsigned long, u64);
 WIDETYPE(long long, i64);
 WIDETYPE(unsigned long long, u64);
+WIDETYPE(float, double);
+WIDETYPE(double, double);
 
 #undef WIDETYPE
 
@@ -192,5 +194,7 @@ TEST_F(ValgenTest, BetweenULong) { check_random_bounds<unsigned long>(); }
 TEST_F(ValgenTest, BetweenULongLong) {
   check_random_bounds<unsigned long long>();
 }
+TEST_F(ValgenTest, BetweenFloat) { check_random_bounds<float>(); }
+TEST_F(ValgenTest, BetweenDouble) { check_random_bounds<double>(); }
 
 }  // namespace
