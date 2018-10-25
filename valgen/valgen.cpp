@@ -61,7 +61,7 @@ void add_value(message& req, message& resp, ranlux24& rn_eng) {
 
 template <typename... Args>
 void response(socket& sock, Args&&... args) {
-  message resp(std::forward<Args>(args)...);
+  message resp(forward<Args>(args)...);
   sock.send(resp);
 }
 
