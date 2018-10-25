@@ -16,6 +16,7 @@
 #include <unistd.h>
 #include <limits>
 #include <string>
+#include <type_traits>
 #include <typeinfo>
 #include <zmqpp/context.hpp>
 #include <zmqpp/message.hpp>
@@ -76,14 +77,21 @@ TYPETAG(double, 3);
 
 #undef TYPETAG
 
-template <typename T>
+template <typename T, typename enable_if<is_integral<T>::value, int>::type = 0>
 T random(T lo = numeric_limits<T>::min(), T hi = numeric_limits<T>::max()) {
   uniform_int_distribution<T> inst(lo, hi);
   return inst(*global_testrng);
 }
 
+template <typename T,
+          typename enable_if<is_floating_point<T>::value, int>::type = 0>
+T random(T lo = numeric_limits<T>::min(), T hi = numeric_limits<T>::max()) {
+  uniform_real_distribution<T> inst(lo, hi);
+  return inst(*global_testrng);
+}
+
 template <>
-bool random<bool>(bool lo, bool hi) {
+bool random<bool, 0>(bool lo, bool hi) {
   uniform_int_distribution<short> inst(lo, hi);
   return inst(*global_testrng);
 }
