@@ -136,6 +136,12 @@ class ValgenTest : public ::testing::Test {
     const T hi = (range < max - lo) ? lo + range : max;
     valgen_between(lo, hi);
   }
+
+  template <typename T>
+  void check_null_range() {
+    const auto b = random<T>();
+    valgen_between(b, b);
+  }
 };
 
 /// Recursion termination for the general template below.
@@ -189,12 +195,22 @@ TEST_F(ValgenTest, BetweenInt) { check_random_bounds<int>(); }
 TEST_F(ValgenTest, BetweenLong) { check_random_bounds<long>(); }
 TEST_F(ValgenTest, BetweenLongLong) { check_random_bounds<long long>(); }
 TEST_F(ValgenTest, BetweenUShort) { check_random_bounds<unsigned short>(); }
-TEST_F(ValgenTest, BetweenUInt) { check_random_bounds<unsigned int>(); }
+TEST_F(ValgenTest, BetweenUInt) { check_random_bounds<unsigned>(); }
 TEST_F(ValgenTest, BetweenULong) { check_random_bounds<unsigned long>(); }
-TEST_F(ValgenTest, BetweenULongLong) {
-  check_random_bounds<unsigned long long>();
-}
+TEST_F(ValgenTest, BetweenULL) { check_random_bounds<unsigned long long>(); }
 TEST_F(ValgenTest, BetweenFloat) { check_random_bounds<float>(); }
 TEST_F(ValgenTest, BetweenDouble) { check_random_bounds<double>(); }
 
+TEST_F(ValgenTest, NullRangeBool) { check_null_range<bool>(); }
+TEST_F(ValgenTest, NullRangeChar) { check_null_range<char>(); }
+TEST_F(ValgenTest, NullRangeShort) { check_null_range<short>(); }
+TEST_F(ValgenTest, NullRangeInt) { check_null_range<int>(); }
+TEST_F(ValgenTest, NullRangeLong) { check_null_range<long>(); }
+TEST_F(ValgenTest, NullRangeLongLong) { check_null_range<long long>(); }
+TEST_F(ValgenTest, NullRangeUShort) { check_null_range<unsigned short>(); }
+TEST_F(ValgenTest, NullRangeUInt) { check_null_range<unsigned>(); }
+TEST_F(ValgenTest, NullRangeULong) { check_null_range<unsigned long>(); }
+TEST_F(ValgenTest, NullRangeULL) { check_null_range<unsigned long long>(); }
+TEST_F(ValgenTest, NullRangeFloat) { check_null_range<float>(); }
+TEST_F(ValgenTest, NullRangeDouble) { check_null_range<double>(); }
 }  // namespace
