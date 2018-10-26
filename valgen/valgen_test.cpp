@@ -13,7 +13,6 @@
 // limitations under the License.
 
 #include <gtest/gtest.h>
-#include <unistd.h>
 #include <limits>
 #include <string>
 #include <type_traits>
