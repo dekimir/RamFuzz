@@ -157,7 +157,7 @@ public:
   ///
   /// The value is obtained from the valgen given to the constructor.
   template <typename T> T between(T lo, T hi, size_t valueid) {
-    static constexpr uint8_t VALUE_REQUEST = 1;
+    static constexpr uint8_t VALUE_REQUEST = 0;
     // Pack widened-type version of lo, hi into an outgoing message.
     using W = typename widetype<T>::type;
     zmqpp::message request(VALUE_REQUEST, uint64_t{valueid}, typetag<W>(),

@@ -15,8 +15,10 @@
 #include <gtest/gtest.h>
 #include <limits>
 #include <string>
+#include <thread>
 #include <type_traits>
 #include <typeinfo>
+#include <utility>
 #include <zmqpp/context.hpp>
 #include <zmqpp/message.hpp>
 
@@ -55,6 +57,14 @@ template <>
 bool random<bool, 0>(bool lo, bool hi) {
   uniform_int_distribution<short> inst(lo, hi);
   return inst(*global_testrng);
+}
+
+template <typename T>
+pair<T, T> random_bounds() {
+  static const auto max = numeric_limits<T>::max();
+  const auto lo = random<T>(), range = random<T>(0);
+  const T hi = (range < max - lo) ? lo + range : max;
+  return make_pair(lo, hi);
 }
 
 class ValgenTest : public ::testing::Test {
@@ -99,10 +109,8 @@ class ValgenTest : public ::testing::Test {
   /// Generates random bounds of type T and invokes valgen_between() on them.
   template <typename T>
   void check_random_bounds() {
-    static const auto max = numeric_limits<T>::max();
-    const auto lo = random<T>(), range = random<T>(0);
-    const T hi = (range < max - lo) ? lo + range : max;
-    valgen_between(lo, hi);
+    const auto bounds = random_bounds<T>();
+    valgen_between(bounds.first, bounds.second);
   }
 
   template <typename T>
@@ -159,34 +167,66 @@ TEST_F(ValgenTest, ExitFailure) {
 TEST_F(ValgenTest, BetweenInteger) { check_random_bounds<i64>(); }
 TEST_F(ValgenTest, BetweenUnsigned) { check_random_bounds<u64>(); }
 TEST_F(ValgenTest, BetweenDouble) { check_random_bounds<double>(); }
-
-#if 0
-// TODO: only test widetypes here; test gen::between on all types, but it
-// requires forking valgen::process_request.
-TEST_F(ValgenTest, BetweenBool) { check_random_bounds<bool>(); }
-TEST_F(ValgenTest, BetweenChar) { check_random_bounds<char>(); }
-TEST_F(ValgenTest, BetweenShort) { check_random_bounds<short>(); }
-TEST_F(ValgenTest, BetweenInt) { check_random_bounds<int>(); }
-TEST_F(ValgenTest, BetweenLong) { check_random_bounds<long>(); }
-TEST_F(ValgenTest, BetweenLongLong) { check_random_bounds<long long>(); }
-TEST_F(ValgenTest, BetweenUShort) { check_random_bounds<unsigned short>(); }
-TEST_F(ValgenTest, BetweenUInt) { check_random_bounds<unsigned>(); }
-TEST_F(ValgenTest, BetweenULong) { check_random_bounds<unsigned long>(); }
-TEST_F(ValgenTest, BetweenULL) { check_random_bounds<unsigned long long>(); }
-TEST_F(ValgenTest, BetweenFloat) { check_random_bounds<float>(); }
-TEST_F(ValgenTest, BetweenDouble) { check_random_bounds<double>(); }
-
-TEST_F(ValgenTest, NullRangeBool) { check_null_range<bool>(); }
-TEST_F(ValgenTest, NullRangeChar) { check_null_range<char>(); }
-TEST_F(ValgenTest, NullRangeShort) { check_null_range<short>(); }
-TEST_F(ValgenTest, NullRangeInt) { check_null_range<int>(); }
-TEST_F(ValgenTest, NullRangeLong) { check_null_range<long>(); }
-TEST_F(ValgenTest, NullRangeLongLong) { check_null_range<long long>(); }
-TEST_F(ValgenTest, NullRangeUShort) { check_null_range<unsigned short>(); }
-TEST_F(ValgenTest, NullRangeUInt) { check_null_range<unsigned>(); }
-TEST_F(ValgenTest, NullRangeULong) { check_null_range<unsigned long>(); }
-TEST_F(ValgenTest, NullRangeULL) { check_null_range<unsigned long long>(); }
-TEST_F(ValgenTest, NullRangeFloat) { check_null_range<float>(); }
+TEST_F(ValgenTest, NullRangeInteger) { check_null_range<i64>(); }
+TEST_F(ValgenTest, NullRangeUnsigned) { check_null_range<u64>(); }
 TEST_F(ValgenTest, NullRangeDouble) { check_null_range<double>(); }
-#endif
+
+/// Fixture for tests of ramfuzz::runtime classes in their interaction with
+/// global_valgen.
+class RuntimeTest : public ValgenTest {
+ protected:
+  runtime::gen rgen;
+
+  template <typename T>
+  void check_rgen_between(T lo, T hi) {
+    thread vgt([this] { global_valgen->process_request(from_ramfuzz); });
+    vgt.detach();
+    const auto val = rgen.between(lo, hi, 12345);
+    const auto tname = typeid(lo).name();
+    EXPECT_LE(lo, val) << tname;
+    EXPECT_GE(hi, val) << tname;
+  }
+
+  template <typename T>
+  void check_rgen_random_bounds() {
+    const auto bounds = random_bounds<T>();
+    check_rgen_between(bounds.first, bounds.second);
+  }
+
+  template <typename T>
+  void check_rgen_null_range() {
+    const auto b = random<T>();
+    check_rgen_between(b, b);
+  }
+
+ public:
+  RuntimeTest() : rgen(to_valgen) {}
+};
+
+TEST_F(RuntimeTest, BetweenBool) { check_rgen_random_bounds<bool>(); }
+TEST_F(RuntimeTest, BetweenChar) { check_rgen_random_bounds<char>(); }
+TEST_F(RuntimeTest, BetweenShort) { check_rgen_random_bounds<short>(); }
+TEST_F(RuntimeTest, BetweenInt) { check_rgen_random_bounds<int>(); }
+TEST_F(RuntimeTest, BetweenLong) { check_rgen_random_bounds<long>(); }
+TEST_F(RuntimeTest, BetweenLongLong) { check_rgen_random_bounds<long long>(); }
+TEST_F(RuntimeTest, BetweenUSh) { check_rgen_random_bounds<unsigned short>(); }
+TEST_F(RuntimeTest, BetweenUInt) { check_rgen_random_bounds<unsigned>(); }
+TEST_F(RuntimeTest, BetweenULong) { check_rgen_random_bounds<unsigned long>(); }
+TEST_F(RuntimeTest, BetwULL) { check_rgen_random_bounds<unsigned long long>(); }
+TEST_F(RuntimeTest, BetweenFloat) { check_rgen_random_bounds<float>(); }
+TEST_F(RuntimeTest, BetweenDouble) { check_rgen_random_bounds<double>(); }
+
+TEST_F(RuntimeTest, NullRangeBool) { check_rgen_null_range<bool>(); }
+TEST_F(RuntimeTest, NullRangeChar) { check_rgen_null_range<char>(); }
+TEST_F(RuntimeTest, NullRangeShort) { check_rgen_null_range<short>(); }
+TEST_F(RuntimeTest, NullRangeInt) { check_rgen_null_range<int>(); }
+TEST_F(RuntimeTest, NullRangeLong) { check_rgen_null_range<long>(); }
+TEST_F(RuntimeTest, NullRangeLongLong) { check_rgen_null_range<long long>(); }
+TEST_F(RuntimeTest, NullRangeUSh) { check_rgen_null_range<unsigned short>(); }
+TEST_F(RuntimeTest, NullRangeUInt) { check_rgen_null_range<unsigned>(); }
+TEST_F(RuntimeTest, NullRangeULong) { check_rgen_null_range<unsigned long>(); }
+TEST_F(RuntimeTest, NullRngULL) { check_rgen_null_range<unsigned long long>(); }
+TEST_F(RuntimeTest, NullRangeFloat) { check_rgen_null_range<float>(); }
+TEST_F(RuntimeTest, NullRangeDouble) { check_rgen_null_range<double>(); }
+
 }  // namespace
