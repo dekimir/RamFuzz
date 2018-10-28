@@ -113,6 +113,7 @@ class ValgenTest : public ::testing::Test {
     valgen_between(bounds.first, bounds.second);
   }
 
+  /// Like check_random_bounds(), but lower bound equals higher bound.
   template <typename T>
   void check_null_range() {
     const auto b = random<T>();
@@ -177,6 +178,7 @@ class RuntimeTest : public ValgenTest {
  protected:
   runtime::gen rgen;
 
+  /// Asserts that rgen.between(lo, hi) really is between them.
   template <typename T>
   void check_rgen_between(T lo, T hi) {
     thread vgt([this] { global_valgen->process_request(from_ramfuzz); });
