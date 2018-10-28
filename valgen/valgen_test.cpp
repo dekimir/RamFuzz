@@ -20,6 +20,7 @@
 #include <zmqpp/context.hpp>
 #include <zmqpp/message.hpp>
 
+#include "../runtime/ramfuzz-rt.hpp"
 #include "valgen.hpp"
 
 using namespace ramfuzz;
@@ -36,45 +37,6 @@ using i64 = int64_t;
 using u64 = uint64_t;
 
 constexpr u8 IS_EXIT = 1, IS_SUCCESS = 1;
-
-template <typename T>
-struct widetype;
-
-#define WIDETYPE(T, W) \
-  template <>          \
-  struct widetype<T> { \
-    using type = W;    \
-  }
-
-WIDETYPE(bool, i64);
-WIDETYPE(char, i64);
-WIDETYPE(short, i64);
-WIDETYPE(unsigned short, u64);
-WIDETYPE(int, i64);
-WIDETYPE(unsigned int, u64);
-WIDETYPE(long, i64);
-WIDETYPE(unsigned long, u64);
-WIDETYPE(long long, i64);
-WIDETYPE(unsigned long long, u64);
-WIDETYPE(float, double);
-WIDETYPE(double, double);
-
-#undef WIDETYPE
-
-template <typename T>
-u8 typetag();
-
-#define TYPETAG(T, tag) \
-  template <>           \
-  u8 typetag<T>() {     \
-    return tag;         \
-  }
-
-TYPETAG(i64, 1);
-TYPETAG(u64, 2);
-TYPETAG(double, 3);
-
-#undef TYPETAG
 
 template <typename T, typename enable_if<is_integral<T>::value, int>::type = 0>
 T random(T lo = numeric_limits<T>::min(), T hi = numeric_limits<T>::max()) {
@@ -124,13 +86,12 @@ class ValgenTest : public ::testing::Test {
   /// the value is indeed between these bounds.
   template <typename T>
   void valgen_between(T lo, T hi) {
-    using W = typename widetype<T>::type;
-    message msg(!IS_EXIT, u64{123}, typetag<W>(), W{lo}, W{hi});
+    message msg(!IS_EXIT, u64{123}, runtime::typetag<T>(), lo, hi);
     const auto resp = valgen_roundtrip(msg);
     const auto tname = typeid(lo).name();
     ASSERT_EQ(11, resp.get<u8>(0))
         << "type: " << tname << ", lo: " << lo << ", hi: " << hi;
-    const auto val = static_cast<T>(resp.get<W>(1));
+    const auto val = resp.get<T>(1);
     EXPECT_LE(lo, val) << tname;
     EXPECT_GE(hi, val) << tname;
   }
@@ -195,6 +156,13 @@ TEST_F(ValgenTest, ExitFailure) {
   EXPECT_PARTS(valgen_roundtrip(msg), u8{10}, !IS_SUCCESS);
 }
 
+TEST_F(ValgenTest, BetweenInteger) { check_random_bounds<i64>(); }
+TEST_F(ValgenTest, BetweenUnsigned) { check_random_bounds<u64>(); }
+TEST_F(ValgenTest, BetweenDouble) { check_random_bounds<double>(); }
+
+#if 0
+// TODO: only test widetypes here; test gen::between on all types, but it
+// requires forking valgen::process_request.
 TEST_F(ValgenTest, BetweenBool) { check_random_bounds<bool>(); }
 TEST_F(ValgenTest, BetweenChar) { check_random_bounds<char>(); }
 TEST_F(ValgenTest, BetweenShort) { check_random_bounds<short>(); }
@@ -220,4 +188,5 @@ TEST_F(ValgenTest, NullRangeULong) { check_null_range<unsigned long>(); }
 TEST_F(ValgenTest, NullRangeULL) { check_null_range<unsigned long long>(); }
 TEST_F(ValgenTest, NullRangeFloat) { check_null_range<float>(); }
 TEST_F(ValgenTest, NullRangeDouble) { check_null_range<double>(); }
+#endif
 }  // namespace

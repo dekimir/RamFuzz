@@ -29,12 +29,14 @@
 #include <ostream>
 #include <random>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <type_traits>
 #include <typeindex>
 #include <unordered_map>
 #include <utility>
 #include <vector>
+#include <zmqpp/socket.hpp>
 
 namespace ramfuzz {
 
@@ -78,14 +80,33 @@ namespace runtime {
 /// RamFuzz classes.  Should be defined in user's code.
 extern unsigned spinlimit;
 
-/// Exception thrown when there's a file-access error.
-struct file_error : public std::runtime_error {
-  explicit file_error(const std::string &s) : runtime_error(s) {}
-  explicit file_error(const char *s) : runtime_error(s) {}
-};
+/// Maps an arithmetic type to a wider type that can be put into zmqpp::message.
+template <typename T> struct widetype;
 
-/// Returns T's type tag to put into RamFuzz logs.
-template <typename T> char typetag(T);
+/// Declares W to be T's widetype.
+#define WIDETYPE(T, W)                                                         \
+  template <> struct widetype<T> { using type = W; }
+
+WIDETYPE(bool, int64_t);
+WIDETYPE(char, int64_t);
+WIDETYPE(short, int64_t);
+WIDETYPE(unsigned short, uint64_t);
+WIDETYPE(int, int64_t);
+WIDETYPE(unsigned int, uint64_t);
+WIDETYPE(long, int64_t);
+WIDETYPE(unsigned long, uint64_t);
+WIDETYPE(long long, int64_t);
+WIDETYPE(unsigned long long, uint64_t);
+WIDETYPE(float, double);
+WIDETYPE(double, double);
+
+#undef WIDETYPE
+
+/// Unique tag value for every widetype used.
+template <typename T> uint8_t typetag();
+template <> uint8_t typetag<int64_t>() { return 1; }
+template <> uint8_t typetag<uint64_t>() { return 2; }
+template <> uint8_t typetag<double>() { return 3; }
 
 /// Generates values for RamFuzz code.  Can be used in the "generate" or
 /// "replay" mode.  In "generate" mode, values are created at random and logged.
@@ -110,26 +131,9 @@ class gen {
   enum { generate, replay } runmode;
 
 public:
-  /// Values will be generated and logged in ologname.
-  gen(const std::string &ologname = "fuzzlog");
-
-  /// Values will be replayed from ilogname and logged into ologname.
-  gen(const std::string &ilogname, const std::string &ologname);
-
-  /// Interprets kth command-line argument.  If the argument exists (ie, k <
-  /// argc), values will be replayed from file named argv[k] and logged in
-  /// argv[k]+"+".  If the argument doesn't exist, values will be generated and
-  /// logged in "fuzzlog".
-  ///
-  /// This makes it convenient for main(argc, argv) to invoke gen(argc, argv),
-  /// yielding a program that either generates its values (if no command-line
-  /// arguments) or replays the log file named by its first argument.
-  ///
-  /// If k+1st argument also exists (ie, k+1 < argc), then argv[k+1] will be
-  /// parsed as a positive integer showing how many values total to replay from
-  /// the log named by argv[k].  After that many values are replayed, gen will
-  /// switch back to "generate" mode, ignoring the rest of the input log.
-  gen(int argc, const char *const *argv, size_t k = 1);
+  /// valgen_socket must be connected to a valgen process before any calls to
+  /// make() or between().
+  gen(zmqpp::socket &valgen_socket) : valgen_socket(valgen_socket) {}
 
   /// Returns an unconstrained value of type T and logs it.  The value is random
   /// in "generate" mode but read from the input log in "replay" mode.
@@ -149,21 +153,23 @@ public:
   /// Handy name for invoking make<T>(or_subclass).
   static constexpr bool or_subclass = true;
 
-  /// Returns a value of numeric type T between lo and hi, inclusive, and logs
-  /// it.  The value is random in "generate" mode but read from the input log in
-  /// "replay" mode.
+  /// Returns a value of numeric type T between lo and hi, inclusive.
+  ///
+  /// The value is obtained from the valgen given to the constructor.
   template <typename T> T between(T lo, T hi, size_t valueid) {
-    if (counting && !countdown--) {
-      runmode = generate;
-      counting = false;
-    }
-    T val;
-    if (runmode == generate)
-      val = uniform_random(lo, hi);
-    else
-      input(val);
-    output(val, valueid);
-    return val;
+    static constexpr uint8_t VALUE_REQUEST = 1;
+    // Pack widened-type version of lo, hi into an outgoing message.
+    using W = typename widetype<T>::type;
+    zmqpp::message request(VALUE_REQUEST, uint64_t{valueid}, typetag<W>(),
+                           W{lo}, W{hi});
+    if (!valgen_socket.send(request))
+      throw std::runtime_error("valgen_socket.send() returned false");
+    zmqpp::message response;
+    if (!valgen_socket.receive(response))
+      throw std::runtime_error("valgen_socket.receive() returned false");
+    if (response.get<uint8_t>(0) != 11)
+      throw std::runtime_error("valgen returned error status");
+    return static_cast<T>(response.get<W>(1));
   }
 
 private:
@@ -303,6 +309,8 @@ private:
   /// How many more values to read from ilog before switching to "generate"
   /// mode.
   size_t countdown;
+
+  zmqpp::socket& valgen_socket;
 };
 
 /// Limit on the call-stack depth in generated RamFuzz methods.  Without such a
