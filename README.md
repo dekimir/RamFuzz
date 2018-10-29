@@ -93,7 +93,7 @@ These limitations will typically manifest themselves as ill-formed C++ on the ou
 
 ## How to Build
 
-1. **Get Clang:** the RamFuzz code generator is a Clang tool, so first get and build Clang using [these instructions](http://clang.llvm.org/get_started.html).  RamFuzz is known to work with Clang/LLVM version 4.0.0 and has been successfully tested with version 3.8.1.
+1. **Get Clang:** the RamFuzz code generator is a Clang tool, so first get and build Clang using [these instructions](http://clang.llvm.org/get_started.html).  RamFuzz is intended to work with Clang trunk and is periodically updated to be compatible with it.  This has been ongoing since release 3.8.1, the first release RamFuzz worked with.
 
 2. **Drop RamFuzz into Clang:** RamFuzz source is intended to go under `clang/tools/extra` and build from there (as described in [this](http://clang.llvm.org/docs/LibASTMatchersTutorial.html#step-1-create-a-clangtool) Clang tutorial).  Drop the top-level RamFuzz directory into `clang/tools/extra` and add it (using `add_subdirectory`) to `clang/tools/extra/CMakeLists.txt`.
 
