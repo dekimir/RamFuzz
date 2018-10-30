@@ -1,7 +1,7 @@
 set(LLVM_LINK_COMPONENTS support)
 add_subdirectory(lib)
 add_clang_executable(ramfuzz main.cpp)
-target_link_libraries(ramfuzz clangRamFuzz)
+target_link_libraries(ramfuzz PRIVATE clangRamFuzz)
 
 add_custom_target(RamFuzzEndToEndTests
   COMMAND ${PYTHON_EXECUTABLE}
