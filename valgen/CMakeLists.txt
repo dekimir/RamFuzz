@@ -13,8 +13,6 @@ else()
   set(gtest_main gtest_main)
 endif()
 
-set(CMAKE_MODULE_PATH .)
-
 add_executable(utests utest_main.cpp valgen_test.cpp)
 target_link_libraries(utests ${gtest} RamFuzz.ValgenLib zmqpp zmq)
 
