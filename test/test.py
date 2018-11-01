@@ -52,7 +52,7 @@ to ensure that all methods under test have been called in some order.
 
 from glob import glob
 from os import chdir, path
-from subprocess import CalledProcessError, check_call
+from subprocess import CalledProcessError, check_call, Popen
 import shutil
 import sys
 import tempfile
@@ -82,10 +82,13 @@ for case in glob(path.join(scriptdir, '*.hpp')):
         check_call([path.join(bindir, 'ramfuzz'), hfile, '--', '-std=c++11'])
         build_cmd = [
             path.join(bindir, 'clang++'), '-std=c++11', '-or', '-g', cfile,
-            'fuzz.cpp', 'ramfuzz-rt.cpp'
+            'fuzz.cpp', '-lzmqpp', '-lzmq'
         ]
         check_call(build_cmd)
-        check_call(path.join(temp, 'r'))
+        endpoint = 'ipc://' + temp + '/socket'
+        vgproc = Popen([path.join(bindir, 'valgen'), endpoint])
+        check_call([path.join(temp, 'r'), endpoint])
+        vgproc.terminate()
         chdir(bindir)  # Just a precaution to guarantee rmtree success.
         shutil.rmtree(path.realpath(temp))
     except CalledProcessError:

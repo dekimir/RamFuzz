@@ -36,6 +36,8 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+#include <zmqpp/context.hpp>
+#include <zmqpp/message.hpp>
 #include <zmqpp/socket.hpp>
 
 namespace ramfuzz {
@@ -104,9 +106,9 @@ WIDETYPE(double, double);
 
 /// Unique tag value for every widetype used.
 template <typename T> uint8_t typetag();
-template <> uint8_t typetag<int64_t>() { return 1; }
-template <> uint8_t typetag<uint64_t>() { return 2; }
-template <> uint8_t typetag<double>() { return 3; }
+template <> inline uint8_t typetag<int64_t>() { return 1; }
+template <> inline uint8_t typetag<uint64_t>() { return 2; }
+template <> inline uint8_t typetag<double>() { return 3; }
 
 /// Generates values for RamFuzz code.  Can be used in the "generate" or
 /// "replay" mode.  In "generate" mode, values are created at random and logged.
@@ -131,9 +133,15 @@ class gen {
   enum { generate, replay } runmode;
 
 public:
-  /// valgen_socket must be connected to a valgen process before any calls to
-  /// make() or between().
-  gen(zmqpp::socket &valgen_socket) : valgen_socket(valgen_socket) {}
+  /// Connects to a valgen process at endpoint.
+  gen(const std::string &endpoint)
+      : valgen_socket(ctx, zmqpp::socket_type::request) {
+    valgen_socket.connect(endpoint);
+  }
+
+  /// Convenience for main().
+  gen(int argc, char *argv[])
+      : gen(argc > 1 ? argv[1] : "ipc:///tmp/ramfuzz-socket") {}
 
   /// Returns an unconstrained value of type T and logs it.  The value is random
   /// in "generate" mode but read from the input log in "replay" mode.
@@ -282,10 +290,6 @@ private:
     return 0;
   }
 
-  /// Returns a random value distributed uniformly between lo and hi, inclusive.
-  /// Logs the value in olog.
-  template <typename T> T uniform_random(T lo, T hi);
-
   /// Whether make() should reuse a previously created value or create a fresh
   /// one.  Decided randomly.
   bool reuse() { return false /*between(false, true)*/; }
@@ -310,7 +314,8 @@ private:
   /// mode.
   size_t countdown;
 
-  zmqpp::socket& valgen_socket;
+  zmqpp::context ctx;
+  zmqpp::socket valgen_socket;
 };
 
 /// Limit on the call-stack depth in generated RamFuzz methods.  Without such a
