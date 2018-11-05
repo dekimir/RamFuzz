@@ -12,28 +12,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#pragma once
-
-#include <random>
-#include <zmqpp/socket.hpp>
-
 #include "exetree.hpp"
 
+#include <algorithm>
+#include <iterator>
+
+using namespace std;
+
 namespace ramfuzz {
+namespace exetree {
 
-class valgen {
- public:
-  valgen(int seed) : rn_eng(seed) {}
+edge::edge(double value, node* src)
+    : _value(value), _src(src), _dst(new node(this)) {}
 
-  /// Receives one request from sock and sends back a response.
-  void process_request(zmqpp::socket& sock);
+node* node::find_or_add_edge(double v) {
+  const auto found = find(begin(edges), end(edges), v);
+  if (found == end(edges)) {
+    edges.emplace_back(v, this);
+    return edges.back().dst();
+  } else
+    return found->dst();
+}
 
-  const exetree::node& exetree() const { return root; }
-
- private:
-  std::ranlux24 rn_eng = std::ranlux24();
-  exetree::node root;
-  exetree::node* cursor = &root;
-};
-
+}  // namespace exetree
 }  // namespace ramfuzz

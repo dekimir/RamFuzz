@@ -25,10 +25,10 @@ using namespace std;
 
 unique_ptr<valgen> global_valgen;
 unique_ptr<mt19937> global_testrng;
+unsigned test_seed = random_device{}();
 
 int main(int argc, char **argv) {
   testing::InitGoogleTest(&argc, argv);
-  auto seed = random_device{}();
   if (argc > 1) {
     if (string("--seed") != argv[1]) {
       cerr << "Unknown option: '" << argv[1] << "'\n";
@@ -39,10 +39,10 @@ int main(int argc, char **argv) {
       cerr << "--seed requires a value" << endl;
       exit(22);
     }
-    seed = atoi(argv[2]);
+    test_seed = atoi(argv[2]);
   }
-  cout << "Using seed " << seed << " for valgen and randomized tests." << endl;
-  global_valgen.reset(new valgen(seed));
-  global_testrng.reset(new mt19937(seed));
+  cout << "Using seed " << test_seed << " for valgen and randomized tests." << endl;
+  global_valgen.reset(new valgen(test_seed));
+  global_testrng.reset(new mt19937(test_seed));
   return RUN_ALL_TESTS();
 }

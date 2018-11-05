@@ -31,6 +31,7 @@ using namespace zmqpp;
 
 extern unique_ptr<valgen> global_valgen;
 extern unique_ptr<mt19937> global_testrng;
+extern unsigned test_seed;
 
 namespace {
 
@@ -69,12 +70,14 @@ pair<T, T> random_bounds() {
 
 class ValgenTest : public ::testing::Test {
  protected:
+  valgen& _valgen;
   context ctx;
   socket to_valgen, from_ramfuzz;
 
  public:
-  ValgenTest()
-      : to_valgen(ctx, socket_type::request),
+  ValgenTest(valgen& vg = *global_valgen)
+      : _valgen(vg),
+        to_valgen(ctx, socket_type::request),
         from_ramfuzz(ctx, socket_type::reply) {
     to_valgen.set(socket_option::linger, 0);
     from_ramfuzz.set(socket_option::linger, 0);
@@ -86,7 +89,7 @@ class ValgenTest : public ::testing::Test {
   /// it.
   message valgen_roundtrip(message& msg) {
     EXPECT_TRUE(to_valgen.send(msg));
-    global_valgen->process_request(from_ramfuzz);
+    _valgen.process_request(from_ramfuzz);
     message resp;
     EXPECT_TRUE(to_valgen.receive(resp));
     return resp;
@@ -95,15 +98,16 @@ class ValgenTest : public ::testing::Test {
   /// Uses valgen to generate a random value between lo and hi, then checks that
   /// the value is indeed between these bounds.
   template <typename T>
-  void valgen_between(T lo, T hi) {
-    message msg(!IS_EXIT, u64{123}, runtime::typetag<T>(), lo, hi);
+  T valgen_between(T lo, T hi, u64 valueid = 123) {
+    message msg(!IS_EXIT, valueid, runtime::typetag<T>(), lo, hi);
     const auto resp = valgen_roundtrip(msg);
     const auto tname = typeid(lo).name();
-    ASSERT_EQ(11, resp.get<u8>(0))
+    EXPECT_EQ(11, resp.get<u8>(0))
         << "type: " << tname << ", lo: " << lo << ", hi: " << hi;
     const auto val = resp.get<T>(1);
     EXPECT_LE(lo, val) << tname;
     EXPECT_GE(hi, val) << tname;
+    return val;
   }
 
   /// Generates random bounds of type T and invokes valgen_between() on them.
@@ -181,7 +185,7 @@ class RuntimeTest : public ValgenTest {
   /// Asserts that rgen.between(lo, hi) really is between them.
   template <typename T>
   void check_rgen_between(T lo, T hi) {
-    thread vgt([this] { global_valgen->process_request(from_ramfuzz); });
+    thread vgt([this] { _valgen.process_request(from_ramfuzz); });
     vgt.detach();
     const auto val = rgen.between(lo, hi, 12345);
     const auto tname = typeid(lo).name();
@@ -230,5 +234,25 @@ TEST_F(RuntimeTest, NullRangeULong) { check_rgen_null_range<unsigned long>(); }
 TEST_F(RuntimeTest, NullRngULL) { check_rgen_null_range<unsigned long long>(); }
 TEST_F(RuntimeTest, NullRangeFloat) { check_rgen_null_range<float>(); }
 TEST_F(RuntimeTest, NullRangeDouble) { check_rgen_null_range<double>(); }
+
+/// Test fixture for exetree.  Makes a fresh valgen object for every test, to
+/// avoid cross-pollution.
+class ExeTreeTest : public ValgenTest {
+ protected:
+  valgen member_valgen;
+  ExeTreeTest() : member_valgen(test_seed), ValgenTest(member_valgen) {}
+};
+
+TEST_F(ExeTreeTest, OneValue) {
+  // When a value is generated, the root should have
+  const double v = valgen_between<u64>(10, 20, 3344);
+  // 1. valueid sent, and
+  const auto root = &member_valgen.exetree();
+  EXPECT_TRUE(root->valueid_is(3344));
+  // 2. a branch with the generated value
+  auto it = root->cbegin();
+  EXPECT_EQ(v, *it);
+  EXPECT_EQ(root->cend(), ++it);
+}
 
 }  // namespace

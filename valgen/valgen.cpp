@@ -18,6 +18,7 @@
 
 using namespace std;
 using namespace zmqpp;
+using namespace ramfuzz::exetree;
 
 namespace {
 
@@ -38,22 +39,25 @@ double uniform_random(double lo, double hi, ranlux24& rn_eng) {
 }
 
 template <typename T>
-void add_typed_value(message& req, message& resp, ranlux24& rn_eng) {
+void add_typed_value(message& req, message& resp, ranlux24& rn_eng,
+                     node*& cursor) {
   T lo = req.get<T>(3);
   T hi = req.get<T>(4);
-  resp << uniform_random(lo, hi, rn_eng);
+  T v = uniform_random(lo, hi, rn_eng);
+  cursor = cursor->find_or_add_edge(v);
+  resp << v;
 }
 
-void add_value(message& req, message& resp, ranlux24& rn_eng) {
+void add_value(message& req, message& resp, ranlux24& rn_eng, node*& cursor) {
   switch (req.get<uint8_t>(2)) {
     // The following must match the specializations of
     // ramfuzz::runtime::typetag.
     case 1:
-      return add_typed_value<int64_t>(req, resp, rn_eng);
+      return add_typed_value<int64_t>(req, resp, rn_eng, cursor);
     case 2:
-      return add_typed_value<uint64_t>(req, resp, rn_eng);
+      return add_typed_value<uint64_t>(req, resp, rn_eng, cursor);
     case 3:
-      return add_typed_value<double>(req, resp, rn_eng);
+      return add_typed_value<double>(req, resp, rn_eng, cursor);
     default:
       assert(false);
   }
@@ -77,15 +81,20 @@ void valgen::process_request(socket& sock) {
   else if (is_exit_status(msg)) {
     if (msg.parts() != 2) return response(sock, 23);
     const auto succ = is_success(msg);
-    // TODO: Insert/verify tree leaf, propagate MAYWIN.
+    // TODO: Mark/verify *cursor as terminal.
+    // TODO: propagate maywin to all *cursor's ancestors.
     return response(sock, u8{10}, succ);
   } else {
     // This is a request for a value of certain type within certain bounds.
-    // Message is (false, uint64_t value_id, uint8_t tag, T lo, T hi), where T
-    // is identified by tag (see add_value() above).
+    // Message is (uint8_t type, uint64_t value_id, uint8_t tag, T lo, T hi),
+    // where T is identified by tag (see add_value() above).
     if (msg.parts() != 5) return response(sock, u8{24});
+    uint64_t valueid;
+    msg.get(valueid, 1);
+    if (!cursor->check_valueid(valueid)) return response(sock, u8{25});
+    cursor->set_valueid(valueid);
     message resp(u8{11});
-    add_value(msg, resp, rn_eng);
+    add_value(msg, resp, rn_eng, cursor);
     sock.send(resp);
   }
 }

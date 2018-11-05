@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.8)
 project(RamFuzz.ValGen)
 set(CMAKE_CXX_STANDARD 11)
-add_library(RamFuzz.ValgenLib valgen.hpp valgen.cpp)
+add_library(RamFuzz.ValgenLib valgen.hpp valgen.cpp exetree.hpp exetree.cpp)
 
 add_executable(valgen main.cpp)
 target_link_libraries(valgen RamFuzz.ValgenLib zmqpp zmq)
