@@ -27,7 +27,7 @@ class edge {
   /// Creates a new node as a destination, owns its memory.
   edge(double value, node* src);
   bool operator==(double v) const { return v == _value; }
-  node* dst() { return _dst.get(); }
+  node* dst() const { return _dst.get(); }
 
  private:
   double _value;

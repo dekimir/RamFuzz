@@ -112,9 +112,9 @@ class ValgenTest : public ::testing::Test {
 
   /// Generates random bounds of type T and invokes valgen_between() on them.
   template <typename T>
-  void check_random_bounds() {
+  T check_random_bounds(u64 valueid = 123) {
     const auto bounds = random_bounds<T>();
-    valgen_between(bounds.first, bounds.second);
+    return valgen_between(bounds.first, bounds.second, valueid);
   }
 
   /// Like check_random_bounds(), but lower bound equals higher bound.
@@ -244,15 +244,31 @@ class ExeTreeTest : public ValgenTest {
 };
 
 TEST_F(ExeTreeTest, OneValue) {
-  // When a value is generated, the root should have
-  const double v = valgen_between<u64>(10, 20, 3344);
-  // 1. valueid sent, and
+  const double v = check_random_bounds<u64>(3344);
   const auto root = &member_valgen.exetree();
   EXPECT_TRUE(root->valueid_is(3344));
-  // 2. a branch with the generated value
   auto it = root->cbegin();
   EXPECT_EQ(v, *it);
   EXPECT_EQ(root->cend(), ++it);
+}
+
+TEST_F(ExeTreeTest, NValues) {
+  const auto n = random<u8>();
+  vector<u64> valueids(n);
+  vector<double> values(n);
+  for (auto i = 0; i < n; ++i) {
+    valueids[i] = random<u64>();
+    values[i] = check_random_bounds<i64>(valueids[i]);
+  }
+  auto node = &member_valgen.exetree();
+  for (auto i = 0; i < n; ++i) {
+    EXPECT_TRUE(node->valueid_is(valueids[i])) << i;
+    const auto first = node->cbegin(), last = node->cend();
+    EXPECT_EQ(values[i], *first) << i;
+    EXPECT_EQ(first + 1, last) << i;
+    node = first->dst();
+  }
+  EXPECT_EQ(node->cbegin(), node->cend());
 }
 
 }  // namespace
