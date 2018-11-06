@@ -81,13 +81,14 @@ void valgen::process_request(socket& sock) {
   else if (is_exit_status(msg)) {
     if (msg.parts() != 2) return response(sock, 23);
     const auto succ = is_success(msg);
+    cursor = &root;
     // TODO: Mark/verify *cursor as terminal.
     // TODO: propagate maywin to all *cursor's ancestors.
     return response(sock, u8{10}, succ);
   } else {
     // This is a request for a value of certain type within certain bounds.
     // Message is (uint8_t type, uint64_t value_id, uint8_t tag, T lo, T hi),
-    // where T is identified by tag (see add_value() above).
+    // where T is identified by tag (see add_typed_value() above).
     if (msg.parts() != 5) return response(sock, u8{24});
     uint64_t valueid;
     msg.get(valueid, 1);

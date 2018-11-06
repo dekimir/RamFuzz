@@ -271,4 +271,23 @@ TEST_F(ExeTreeTest, NValues) {
   EXPECT_EQ(node->cbegin(), node->cend());
 }
 
+TEST_F(ExeTreeTest, ForkAtRoot) {
+  const double v1 = check_random_bounds<double>(1122);
+  message msg(IS_EXIT, !IS_SUCCESS);  // Reset valgen's cursor.
+  EXPECT_PARTS(valgen_roundtrip(msg), u8{10}, !IS_SUCCESS);
+  // Generate a different value, creating a fork under root.
+  double v2;
+  do
+    v2 = check_random_bounds<double>(1122);
+  while (v2 == v1);
+  auto node = &member_valgen.exetree();
+  EXPECT_TRUE(node->valueid_is(1122));
+  auto first = node->cbegin(), last = node->cend();
+  EXPECT_EQ(first + 2, last);
+  EXPECT_EQ(*first, v1);
+  EXPECT_EQ(first->dst()->cbegin(), first->dst()->cend());
+  EXPECT_EQ(*(first + 1), v2);
+  EXPECT_EQ((first + 1)->dst()->cbegin(), (first + 1)->dst()->cend());
+}
+
 }  // namespace
