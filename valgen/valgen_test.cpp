@@ -370,34 +370,37 @@ TEST_F(ExeTreeTest, TerminalRootFailure) {
   EXPECT_EQ(node::SUCCESS, member_valgen.exetree().terminal());
 }
 
+/// Descends from a node to its nth descendant, always following the first edge.
+const node& descend(const node& from, size_t howmany = 1) {
+  const node* descendant = &from;
+  for (auto i = 0; i < howmany; ++i) descendant = descendant->cbegin()->dst();
+  return *descendant;
+}
+
 TEST_F(ExeTreeTest, TerminalLeafNone) {
   check_random_bounds<i64>();
   check_random_bounds<u64>();
   check_random_bounds<double>();
-  const node* n = &member_valgen.exetree();
-  EXPECT_FALSE(n->terminal());
-  n = n->cbegin()->dst();
-  EXPECT_FALSE(n->terminal());
-  n = n->cbegin()->dst();
-  EXPECT_FALSE(n->terminal());
+  const node& n = member_valgen.exetree();
+  EXPECT_FALSE(n.terminal());
+  EXPECT_FALSE(descend(n).terminal());
+  EXPECT_FALSE(descend(n, 2).terminal());
 }
 
 TEST_F(ExeTreeTest, TerminalLeafSuccess) {
   check_random_bounds<i64>();
   reset_cursor(IS_SUCCESS);
-  const node* n = &member_valgen.exetree();
-  EXPECT_FALSE(n->terminal());
-  n = n->cbegin()->dst();
-  EXPECT_EQ(node::SUCCESS, n->terminal());
+  const node& n = member_valgen.exetree();
+  EXPECT_FALSE(n.terminal());
+  EXPECT_EQ(node::SUCCESS, descend(n).terminal());
 }
 
 TEST_F(ExeTreeTest, TerminalLeafFailure) {
   check_random_bounds<double>();
   reset_cursor(!IS_SUCCESS);
-  const node* n = &member_valgen.exetree();
-  EXPECT_FALSE(n->terminal());
-  n = n->cbegin()->dst();
-  EXPECT_EQ(node::FAILURE, n->terminal());
+  const node& n = member_valgen.exetree();
+  EXPECT_FALSE(n.terminal());
+  EXPECT_EQ(node::FAILURE, descend(n).terminal());
 }
 
 TEST_F(ExeTreeTest, MayWinSequenceDefault) {
@@ -405,11 +408,11 @@ TEST_F(ExeTreeTest, MayWinSequenceDefault) {
   EXPECT_FALSE(root.maywin());
   check_random_bounds<i64>();
   EXPECT_FALSE(root.maywin());
-  EXPECT_FALSE(root.cbegin()->dst()->maywin());
+  EXPECT_FALSE(descend(root).maywin());
   check_random_bounds<i64>();
   EXPECT_FALSE(root.maywin());
-  EXPECT_FALSE(root.cbegin()->dst()->maywin());
-  EXPECT_FALSE(root.cbegin()->dst()->cbegin()->dst()->maywin());
+  EXPECT_FALSE(descend(root).maywin());
+  EXPECT_FALSE(descend(root, 2).maywin());
 }
 
 TEST_F(ExeTreeTest, MayWinSequenceFailure) {
@@ -417,10 +420,10 @@ TEST_F(ExeTreeTest, MayWinSequenceFailure) {
   EXPECT_FALSE(root.maywin());
   check_random_bounds<double>();
   EXPECT_FALSE(root.maywin());
-  EXPECT_FALSE(root.cbegin()->dst()->maywin());
+  EXPECT_FALSE(descend(root).maywin());
   reset_cursor(!IS_SUCCESS);
   EXPECT_FALSE(root.maywin());
-  EXPECT_FALSE(root.cbegin()->dst()->maywin());
+  EXPECT_FALSE(descend(root).maywin());
 }
 
 TEST_F(ExeTreeTest, MayWinFork) {}
