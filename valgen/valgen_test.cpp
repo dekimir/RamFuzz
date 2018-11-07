@@ -452,6 +452,28 @@ TEST_F(ExeTreeTest, MayWinFork) {
   EXPECT_TRUE(descend(*root_children[1]).maywin());
 }
 
-TEST_F(ExeTreeTest, MayWinTwoForks) {}
+TEST_F(ExeTreeTest, MayWinTwoForks) {
+  // root --> n11
+  //      +-> n12 --> n22
+  //              +-> n23 (success)
+  const double v11 = check_random_bounds<double>();
+  reset_cursor(!IS_SUCCESS);
+  const double v12 = fork(v11, 123);
+  const double v22 = check_random_bounds<u64>();
+  reset_cursor(!IS_SUCCESS);
+  valgen_between(v12, v12);
+  const double v23 = check_random_bounds<u64>();
+  EXPECT_FALSE(root.maywin());
+  reset_cursor(IS_SUCCESS);
+  EXPECT_TRUE(root.maywin());
+  const auto root_children = get_children(root, {v11, v12});
+  EXPECT_EQ(2, root_children.size());
+  EXPECT_FALSE(root_children[0]->maywin());  // n11
+  EXPECT_TRUE(root_children[1]->maywin());   // n12
+  const auto n12_children = get_children(*root_children[1], {v22, v23});
+  EXPECT_EQ(2, n12_children.size());
+  EXPECT_FALSE(n12_children[0]->maywin());  // n22
+  EXPECT_TRUE(n12_children[1]->maywin());   // n23
+}
 
 }  // namespace
