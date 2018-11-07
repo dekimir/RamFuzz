@@ -437,7 +437,20 @@ TEST_F(ExeTreeTest, MayWinSequenceSuccess) {
   EXPECT_TRUE(descend(root, 2).maywin());
 }
 
-TEST_F(ExeTreeTest, MayWinFork) {}
+TEST_F(ExeTreeTest, MayWinFork) {
+  const double v1 = check_random_bounds<u64>();
+  reset_cursor(!IS_SUCCESS);
+  const double v2 = check_random_bounds<u64>();
+  const double v22 = check_random_bounds<i64>();
+  EXPECT_FALSE(root.maywin());
+  reset_cursor(IS_SUCCESS);
+  EXPECT_TRUE(root.maywin());
+  const auto root_children = get_children(root, {v1, v2});
+  EXPECT_EQ(2, root_children.size());
+  EXPECT_FALSE(root_children[0]->maywin());
+  EXPECT_TRUE(root_children[1]->maywin());
+  EXPECT_TRUE(descend(*root_children[1]).maywin());
+}
 
 TEST_F(ExeTreeTest, MayWinTwoForks) {}
 
