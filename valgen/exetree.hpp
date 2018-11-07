@@ -37,8 +37,9 @@ class edge {
 
 class node {
  public:
+  enum TerminalStatus { INNER = 0, SUCCESS, FAILURE };
   node(edge* incoming_edge = nullptr)
-      : has_valueid(false), incoming_edge(incoming_edge) {}
+      : has_valueid(false), incoming_edge(incoming_edge), _terminal(INNER) {}
 
   bool check_valueid(uint64_t expected) const {
     return !has_valueid || valueid == expected;
@@ -58,11 +59,15 @@ class node {
   std::vector<edge>::const_iterator cbegin() const { return edges.cbegin(); }
   std::vector<edge>::const_iterator cend() const { return edges.cend(); }
 
+  TerminalStatus terminal() const { return _terminal; }
+  void terminal(TerminalStatus t) { _terminal = t; }
+
  private:
   uint64_t valueid;
   bool has_valueid;
   edge* incoming_edge;
   std::vector<edge> edges;
+  TerminalStatus _terminal;
 };
 
 }  // namespace exetree

@@ -81,9 +81,9 @@ void valgen::process_request(socket& sock) {
   else if (is_exit_status(msg)) {
     if (msg.parts() != 2) return response(sock, 23);
     const auto succ = is_success(msg);
-    cursor = &root;
-    // TODO: Mark/verify *cursor as terminal.
+    cursor->terminal(succ ? node::SUCCESS : node::FAILURE);
     // TODO: propagate maywin to all *cursor's ancestors.
+    cursor = &root;
     return response(sock, u8{10}, succ);
   } else {
     // This is a request for a value of certain type within certain bounds.
