@@ -268,6 +268,11 @@ EdgeMap edgemap(const node& n) {
   return em;
 }
 
+/// For each vals element, finds the corresponding branch from n and puts its
+/// dst() into the result vector.  If total edge count differs from vals size,
+/// returns an empty vector.  Otherwise, terminates at the first element without
+/// a corresponding branch (thus if result's size() equals vals.size(), the
+/// branch set matches vals perfectly.)
 vector<const node*> get_children(const node& n, const vector<double>& vals) {
   const auto edges = edgemap(n);
   if (edges.size() != vals.size()) return {};
@@ -278,6 +283,13 @@ vector<const node*> get_children(const node& n, const vector<double>& vals) {
     children.push_back(child->second);
   }
   return children;
+}
+
+/// Descends from a node to its nth descendant, always following the first edge.
+const node& descend(const node& from, size_t howmany = 1) {
+  const node* descendant = &from;
+  for (auto i = 0; i < howmany; ++i) descendant = descendant->cbegin()->dst();
+  return *descendant;
 }
 
 TEST_F(ExeTreeTest, OneValue) {
@@ -294,15 +306,12 @@ TEST_F(ExeTreeTest, NValues) {
     valueids[i] = random<u64>();
     values[i] = check_random_bounds<i64>(valueids[i]);
   }
-  auto node = &root;
   for (auto i = 0; i < n; ++i) {
-    EXPECT_TRUE(node->valueid_is(valueids[i])) << i;
-    const auto first = node->cbegin(), last = node->cend();
-    EXPECT_EQ(values[i], *first) << i;
-    EXPECT_EQ(first + 1, last) << i;
-    node = first->dst();
+    const node& n = descend(root, i);
+    EXPECT_TRUE(n.valueid_is(valueids[i])) << i;
+    EXPECT_EQ(1, get_children(n, {values[i]}).size()) << i;
   }
-  EXPECT_EQ(node->cbegin(), node->cend());
+  EXPECT_EQ(0, edgemap(descend(root, n)).size());
 }
 
 TEST_F(ExeTreeTest, ForkAtRoot) {
@@ -367,13 +376,6 @@ TEST_F(ExeTreeTest, TerminalRootSuccess) {
 TEST_F(ExeTreeTest, TerminalRootFailure) {
   reset_cursor(IS_SUCCESS);
   EXPECT_EQ(node::SUCCESS, root.terminal());
-}
-
-/// Descends from a node to its nth descendant, always following the first edge.
-const node& descend(const node& from, size_t howmany = 1) {
-  const node* descendant = &from;
-  for (auto i = 0; i < howmany; ++i) descendant = descendant->cbegin()->dst();
-  return *descendant;
 }
 
 TEST_F(ExeTreeTest, TerminalLeafNone) {
