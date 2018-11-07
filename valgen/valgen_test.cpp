@@ -242,7 +242,11 @@ TEST_F(RuntimeTest, NullRangeDouble) { check_rgen_null_range<double>(); }
 class ExeTreeTest : public ValgenTest {
  protected:
   valgen member_valgen;
-  ExeTreeTest() : member_valgen(test_seed), ValgenTest(member_valgen) {}
+  const node& root;
+  ExeTreeTest()
+      : member_valgen(test_seed),
+        ValgenTest(member_valgen),
+        root(member_valgen.exetree()) {}
   void reset_cursor(bool success = true) {
     message msg(IS_EXIT, success);
     EXPECT_PARTS(valgen_roundtrip(msg), u8{10}, success);
@@ -258,11 +262,10 @@ class ExeTreeTest : public ValgenTest {
 
 TEST_F(ExeTreeTest, OneValue) {
   const double v = check_random_bounds<u64>(3344);
-  const auto root = &member_valgen.exetree();
-  EXPECT_TRUE(root->valueid_is(3344));
-  auto it = root->cbegin();
+  EXPECT_TRUE(root.valueid_is(3344));
+  auto it = root.cbegin();
   EXPECT_EQ(v, *it);
-  EXPECT_EQ(root->cend(), ++it);
+  EXPECT_EQ(root.cend(), ++it);
 }
 
 TEST_F(ExeTreeTest, NValues) {
@@ -273,7 +276,7 @@ TEST_F(ExeTreeTest, NValues) {
     valueids[i] = random<u64>();
     values[i] = check_random_bounds<i64>(valueids[i]);
   }
-  auto node = &member_valgen.exetree();
+  auto node = &root;
   for (auto i = 0; i < n; ++i) {
     EXPECT_TRUE(node->valueid_is(valueids[i])) << i;
     const auto first = node->cbegin(), last = node->cend();
@@ -308,9 +311,8 @@ TEST_F(ExeTreeTest, ForkAtRoot) {
   const double v1 = check_random_bounds<double>(1122);
   reset_cursor();
   const double v2 = fork(v1, 1122);
-  auto root = &member_valgen.exetree();
-  EXPECT_TRUE(root->valueid_is(1122));
-  const auto root_children = get_children(*root, {v1, v2});
+  EXPECT_TRUE(root.valueid_is(1122));
+  const auto root_children = get_children(root, {v1, v2});
   EXPECT_EQ(2, root_children.size());
   get_children(*root_children[0], {});
   get_children(*root_children[1], {});
@@ -333,10 +335,9 @@ TEST_F(ExeTreeTest, MultipleForks) {
   reset_cursor();
   const double v12 = fork(v11, 0), v23 = check_random_bounds<i64>(1),
                v33 = check_random_bounds<double>(2);
-  auto root = &member_valgen.exetree();
-  EXPECT_TRUE(root->valueid_is(0));
+  EXPECT_TRUE(root.valueid_is(0));
   // Root should have (only) v11 and v12.
-  const auto root_children = get_children(*root, {v11, v12});
+  const auto root_children = get_children(root, {v11, v12});
   EXPECT_EQ(2, root_children.size());
   // n11 should have (only) v21 and v22.
   const auto n11_children = get_children(*root_children[0], {v21, v22});
@@ -356,18 +357,18 @@ TEST_F(ExeTreeTest, MultipleForks) {
 
 TEST_F(ExeTreeTest, TerminalRootNone) {
   check_random_bounds<u64>();
-  EXPECT_FALSE(member_valgen.exetree().terminal());
-  EXPECT_EQ(node::INNER, member_valgen.exetree().terminal());
+  EXPECT_FALSE(root.terminal());
+  EXPECT_EQ(node::INNER, root.terminal());
 }
 
 TEST_F(ExeTreeTest, TerminalRootSuccess) {
   reset_cursor(IS_SUCCESS);
-  EXPECT_EQ(node::SUCCESS, member_valgen.exetree().terminal());
+  EXPECT_EQ(node::SUCCESS, root.terminal());
 }
 
 TEST_F(ExeTreeTest, TerminalRootFailure) {
   reset_cursor(IS_SUCCESS);
-  EXPECT_EQ(node::SUCCESS, member_valgen.exetree().terminal());
+  EXPECT_EQ(node::SUCCESS, root.terminal());
 }
 
 /// Descends from a node to its nth descendant, always following the first edge.
@@ -381,30 +382,26 @@ TEST_F(ExeTreeTest, TerminalLeafNone) {
   check_random_bounds<i64>();
   check_random_bounds<u64>();
   check_random_bounds<double>();
-  const node& n = member_valgen.exetree();
-  EXPECT_FALSE(n.terminal());
-  EXPECT_FALSE(descend(n).terminal());
-  EXPECT_FALSE(descend(n, 2).terminal());
+  EXPECT_FALSE(root.terminal());
+  EXPECT_FALSE(descend(root).terminal());
+  EXPECT_FALSE(descend(root, 2).terminal());
 }
 
 TEST_F(ExeTreeTest, TerminalLeafSuccess) {
   check_random_bounds<i64>();
   reset_cursor(IS_SUCCESS);
-  const node& n = member_valgen.exetree();
-  EXPECT_FALSE(n.terminal());
-  EXPECT_EQ(node::SUCCESS, descend(n).terminal());
+  EXPECT_FALSE(root.terminal());
+  EXPECT_EQ(node::SUCCESS, descend(root).terminal());
 }
 
 TEST_F(ExeTreeTest, TerminalLeafFailure) {
   check_random_bounds<double>();
   reset_cursor(!IS_SUCCESS);
-  const node& n = member_valgen.exetree();
-  EXPECT_FALSE(n.terminal());
-  EXPECT_EQ(node::FAILURE, descend(n).terminal());
+  EXPECT_FALSE(root.terminal());
+  EXPECT_EQ(node::FAILURE, descend(root).terminal());
 }
 
 TEST_F(ExeTreeTest, MayWinSequenceDefault) {
-  const node& root = member_valgen.exetree();
   EXPECT_FALSE(root.maywin());
   check_random_bounds<i64>();
   EXPECT_FALSE(root.maywin());
@@ -416,7 +413,6 @@ TEST_F(ExeTreeTest, MayWinSequenceDefault) {
 }
 
 TEST_F(ExeTreeTest, MayWinSequenceFailure) {
-  const node& root = member_valgen.exetree();
   EXPECT_FALSE(root.maywin());
   check_random_bounds<double>();
   EXPECT_FALSE(root.maywin());
