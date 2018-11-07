@@ -400,4 +400,8 @@ TEST_F(ExeTreeTest, TerminalLeafFailure) {
   EXPECT_EQ(node::FAILURE, n->terminal());
 }
 
+TEST_F(ExeTreeTest, MayWinSingleNode) {
+  EXPECT_FALSE(member_valgen.exetree().maywin());
+}
+
 }  // namespace

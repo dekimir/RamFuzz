@@ -39,7 +39,10 @@ class node {
  public:
   enum TerminalStatus { INNER = 0, SUCCESS, FAILURE };
   node(edge* incoming_edge = nullptr)
-      : has_valueid(false), incoming_edge(incoming_edge), _terminal(INNER) {}
+      : has_valueid(false),
+        incoming_edge(incoming_edge),
+        _terminal(INNER),
+        _maywin(false) {}
 
   bool check_valueid(uint64_t expected) const {
     return !has_valueid || valueid == expected;
@@ -62,12 +65,16 @@ class node {
   TerminalStatus terminal() const { return _terminal; }
   void terminal(TerminalStatus t) { _terminal = t; }
 
+  bool maywin() const { return _maywin; }
+  void maywin(bool mw) { _maywin = mw; }
+
  private:
   uint64_t valueid;
   bool has_valueid;
   edge* incoming_edge;
   std::vector<edge> edges;
   TerminalStatus _terminal;
+  bool _maywin;  ///< True iff any descendant is SUCCESS.
 };
 
 }  // namespace exetree
