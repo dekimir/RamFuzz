@@ -28,6 +28,7 @@ class edge {
   edge(double value, node* src);
   operator double() const { return _value; }
   node* dst() const { return _dst.get(); }
+  node* src() const { return _src; }
 
  private:
   double _value;
@@ -40,7 +41,7 @@ class node {
   enum TerminalStatus { INNER = 0, SUCCESS, FAILURE };
   node(edge* incoming_edge = nullptr)
       : has_valueid(false),
-        incoming_edge(incoming_edge),
+        _incoming_edge(incoming_edge),
         _terminal(INNER),
         _maywin(false) {}
 
@@ -68,10 +69,12 @@ class node {
   bool maywin() const { return _maywin; }
   void maywin(bool mw) { _maywin = mw; }
 
+  const edge* incoming_edge() const { return _incoming_edge; }
+
  private:
   uint64_t valueid;
   bool has_valueid;
-  edge* incoming_edge;
+  edge* _incoming_edge;
   std::vector<edge> edges;
   TerminalStatus _terminal;
   bool _maywin;  ///< True iff any descendant is SUCCESS.

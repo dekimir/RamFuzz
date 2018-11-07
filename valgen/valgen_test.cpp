@@ -422,7 +422,23 @@ TEST_F(ExeTreeTest, MayWinSequenceFailure) {
   EXPECT_FALSE(descend(root).maywin());
 }
 
+TEST_F(ExeTreeTest, MayWinSequenceSuccess) {
+  EXPECT_FALSE(root.maywin());
+  check_random_bounds<double>();
+  EXPECT_FALSE(root.maywin());
+  EXPECT_FALSE(descend(root).maywin());
+  check_random_bounds<double>();
+  EXPECT_FALSE(root.maywin());
+  EXPECT_FALSE(descend(root).maywin());
+  EXPECT_FALSE(descend(root, 2).maywin());
+  reset_cursor(IS_SUCCESS);
+  EXPECT_TRUE(root.maywin());
+  EXPECT_TRUE(descend(root).maywin());
+  EXPECT_TRUE(descend(root, 2).maywin());
+}
+
 TEST_F(ExeTreeTest, MayWinFork) {}
+
 TEST_F(ExeTreeTest, MayWinTwoForks) {}
 
 }  // namespace

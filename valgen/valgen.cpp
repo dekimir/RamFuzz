@@ -14,6 +14,7 @@
 
 #include "valgen.hpp"
 
+#include <cassert>
 #include <zmqpp/message.hpp>
 
 using namespace std;
@@ -80,9 +81,17 @@ void valgen::process_request(socket& sock) {
     return response(sock, u8{22});
   else if (is_exit_status(msg)) {
     if (msg.parts() != 2) return response(sock, 23);
+    // TODO: check current cursor->terminal value!
     const auto succ = is_success(msg);
     cursor->terminal(succ ? node::SUCCESS : node::FAILURE);
-    // TODO: propagate maywin to all *cursor's ancestors.
+    cursor->maywin(succ);
+    if (succ) {
+      while (auto up = cursor->incoming_edge()) {
+        cursor = up->src();
+        cursor->maywin(true);
+      }
+      assert(cursor == &root);
+    }
     cursor = &root;
     return response(sock, u8{10}, succ);
   } else {
