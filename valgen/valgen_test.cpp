@@ -356,6 +356,7 @@ TEST_F(ExeTreeTest, MultipleForks) {
 
 TEST_F(ExeTreeTest, TerminalRootNone) {
   check_random_bounds<u64>();
+  EXPECT_FALSE(member_valgen.exetree().terminal());
   EXPECT_EQ(node::INNER, member_valgen.exetree().terminal());
 }
 
@@ -369,23 +370,23 @@ TEST_F(ExeTreeTest, TerminalRootFailure) {
   EXPECT_EQ(node::SUCCESS, member_valgen.exetree().terminal());
 }
 
-TEST_F(ExeTreeTest, TerminalInner) {
+TEST_F(ExeTreeTest, TerminalLeafNone) {
   check_random_bounds<i64>();
   check_random_bounds<u64>();
   check_random_bounds<double>();
   const node* n = &member_valgen.exetree();
-  EXPECT_EQ(node::INNER, n->terminal());
+  EXPECT_FALSE(n->terminal());
   n = n->cbegin()->dst();
-  EXPECT_EQ(node::INNER, n->terminal());
+  EXPECT_FALSE(n->terminal());
   n = n->cbegin()->dst();
-  EXPECT_EQ(node::INNER, n->terminal());
+  EXPECT_FALSE(n->terminal());
 }
 
 TEST_F(ExeTreeTest, TerminalLeafSuccess) {
   check_random_bounds<i64>();
   reset_cursor(IS_SUCCESS);
   const node* n = &member_valgen.exetree();
-  EXPECT_EQ(node::INNER, n->terminal());
+  EXPECT_FALSE(n->terminal());
   n = n->cbegin()->dst();
   EXPECT_EQ(node::SUCCESS, n->terminal());
 }
@@ -394,7 +395,7 @@ TEST_F(ExeTreeTest, TerminalLeafFailure) {
   check_random_bounds<double>();
   reset_cursor(!IS_SUCCESS);
   const node* n = &member_valgen.exetree();
-  EXPECT_EQ(node::INNER, n->terminal());
+  EXPECT_FALSE(n->terminal());
   n = n->cbegin()->dst();
   EXPECT_EQ(node::FAILURE, n->terminal());
 }
