@@ -14,6 +14,7 @@
 
 #include <gtest/gtest.h>
 #include <limits>
+#include <map>
 #include <string>
 #include <thread>
 #include <type_traits>
@@ -25,6 +26,7 @@
 #include "../runtime/ramfuzz-rt.hpp"
 #include "valgen.hpp"
 
+using namespace ramfuzz::exetree;
 using namespace ramfuzz;
 using namespace std;
 using namespace zmqpp;
@@ -241,6 +243,17 @@ class ExeTreeTest : public ValgenTest {
  protected:
   valgen member_valgen;
   ExeTreeTest() : member_valgen(test_seed), ValgenTest(member_valgen) {}
+  void reset_cursor(bool success = true) {
+    message msg(IS_EXIT, success);
+    EXPECT_PARTS(valgen_roundtrip(msg), u8{10}, success);
+  }
+  double fork(double avoid, u64 valueid) {
+    double v;
+    do
+      v = check_random_bounds<double>(valueid);
+    while (v == avoid);
+    return v;
+  }
 };
 
 TEST_F(ExeTreeTest, OneValue) {
@@ -271,23 +284,74 @@ TEST_F(ExeTreeTest, NValues) {
   EXPECT_EQ(node->cbegin(), node->cend());
 }
 
+using EdgeMap = map<double, const node*>;
+
+EdgeMap edgemap(const node& n) {
+  EdgeMap em;
+  for (auto i = n.cbegin(), e = n.cend(); i != e; ++i) em[*i] = i->dst();
+  return em;
+}
+
+vector<const node*> get_children(const node& n, const vector<double>& vals) {
+  const auto edges = edgemap(n);
+  if (edges.size() != vals.size()) return {};
+  vector<const node*> children;
+  for (const auto v : vals) {
+    const auto child = edges.find(v);
+    if (child == edges.end()) break;
+    children.push_back(child->second);
+  }
+  return children;
+}
+
 TEST_F(ExeTreeTest, ForkAtRoot) {
   const double v1 = check_random_bounds<double>(1122);
-  message msg(IS_EXIT, !IS_SUCCESS);  // Reset valgen's cursor.
-  EXPECT_PARTS(valgen_roundtrip(msg), u8{10}, !IS_SUCCESS);
-  // Generate a different value, creating a fork under root.
-  double v2;
-  do
-    v2 = check_random_bounds<double>(1122);
-  while (v2 == v1);
-  auto node = &member_valgen.exetree();
-  EXPECT_TRUE(node->valueid_is(1122));
-  auto first = node->cbegin(), last = node->cend();
-  EXPECT_EQ(first + 2, last);
-  EXPECT_EQ(*first, v1);
-  EXPECT_EQ(first->dst()->cbegin(), first->dst()->cend());
-  EXPECT_EQ(*(first + 1), v2);
-  EXPECT_EQ((first + 1)->dst()->cbegin(), (first + 1)->dst()->cend());
+  reset_cursor();
+  const double v2 = fork(v1, 1122);
+  auto root = &member_valgen.exetree();
+  EXPECT_TRUE(root->valueid_is(1122));
+  const auto root_children = get_children(*root, {v1, v2});
+  EXPECT_EQ(2, root_children.size());
+  get_children(*root_children[0], {});
+  get_children(*root_children[1], {});
+}
+
+TEST_F(ExeTreeTest, MultipleForks) {
+  // root --> n11 --> n21
+  //      |       +-> n22 --> n31
+  //      |               +-> n32
+  //      +-> n12 --> n23 --> n33
+  const double v11 = check_random_bounds<i64>(0),
+               v21 = check_random_bounds<i64>(1);
+  reset_cursor();
+  valgen_between(v11, v11, 0);  // Move cursor to n11.
+  const double v22 = fork(v21, 1), v31 = check_random_bounds<u64>(2);
+  reset_cursor();
+  valgen_between(v11, v11, 0);  // Move cursor to n11.
+  valgen_between(v22, v22, 1);  // Move cursor to n22.
+  const double v32 = fork(v31, 2);
+  reset_cursor();
+  const double v12 = fork(v11, 0), v23 = check_random_bounds<i64>(1),
+               v33 = check_random_bounds<double>(2);
+  auto root = &member_valgen.exetree();
+  EXPECT_TRUE(root->valueid_is(0));
+  // Root should have (only) v11 and v12.
+  const auto root_children = get_children(*root, {v11, v12});
+  EXPECT_EQ(2, root_children.size());
+  // n11 should have (only) v21 and v22.
+  const auto n11_children = get_children(*root_children[0], {v21, v22});
+  EXPECT_EQ(2, n11_children.size());
+  // n21 should have no children.
+  get_children(*n11_children[0], {});
+  // n22 should have (only) v31 and v32.
+  const auto n22_children = get_children(*n11_children[1], {v31, v32});
+  EXPECT_EQ(2, n22_children.size());
+  // n12, n23, and n33:
+  const auto n23 = get_children(*root_children[1], {v23});
+  EXPECT_EQ(1, n23.size());
+  const auto n33 = get_children(*n23[0], {v33});
+  EXPECT_EQ(1, n33.size());
+  get_children(*n33[0], {});
 }
 
 }  // namespace

@@ -26,7 +26,7 @@ class edge {
  public:
   /// Creates a new node as a destination, owns its memory.
   edge(double value, node* src);
-  bool operator==(double v) const { return v == _value; }
+  operator double() const { return _value; }
   node* dst() const { return _dst.get(); }
 
  private:
@@ -34,9 +34,6 @@ class edge {
   node* _src;
   std::unique_ptr<node> _dst;
 };
-
-/// For commutativity.
-inline bool operator==(double v, const edge& e) { return e == v; }
 
 class node {
  public:
