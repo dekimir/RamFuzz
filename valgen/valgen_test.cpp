@@ -260,12 +260,30 @@ class ExeTreeTest : public ValgenTest {
   }
 };
 
+using EdgeMap = map<double, const node*>;
+
+EdgeMap edgemap(const node& n) {
+  EdgeMap em;
+  for (auto i = n.cbegin(), e = n.cend(); i != e; ++i) em[*i] = i->dst();
+  return em;
+}
+
+vector<const node*> get_children(const node& n, const vector<double>& vals) {
+  const auto edges = edgemap(n);
+  if (edges.size() != vals.size()) return {};
+  vector<const node*> children;
+  for (const auto v : vals) {
+    const auto child = edges.find(v);
+    if (child == edges.end()) break;
+    children.push_back(child->second);
+  }
+  return children;
+}
+
 TEST_F(ExeTreeTest, OneValue) {
   const double v = check_random_bounds<u64>(3344);
   EXPECT_TRUE(root.valueid_is(3344));
-  auto it = root.cbegin();
-  EXPECT_EQ(v, *it);
-  EXPECT_EQ(root.cend(), ++it);
+  EXPECT_EQ(1, get_children(root, {v}).size());
 }
 
 TEST_F(ExeTreeTest, NValues) {
@@ -285,26 +303,6 @@ TEST_F(ExeTreeTest, NValues) {
     node = first->dst();
   }
   EXPECT_EQ(node->cbegin(), node->cend());
-}
-
-using EdgeMap = map<double, const node*>;
-
-EdgeMap edgemap(const node& n) {
-  EdgeMap em;
-  for (auto i = n.cbegin(), e = n.cend(); i != e; ++i) em[*i] = i->dst();
-  return em;
-}
-
-vector<const node*> get_children(const node& n, const vector<double>& vals) {
-  const auto edges = edgemap(n);
-  if (edges.size() != vals.size()) return {};
-  vector<const node*> children;
-  for (const auto v : vals) {
-    const auto child = edges.find(v);
-    if (child == edges.end()) break;
-    children.push_back(child->second);
-  }
-  return children;
 }
 
 TEST_F(ExeTreeTest, ForkAtRoot) {
