@@ -247,7 +247,7 @@ class ExeTreeTest : public ValgenTest {
       : member_valgen(test_seed),
         ValgenTest(member_valgen),
         root(member_valgen.exetree()) {}
-  void reset_cursor(bool success = true) {
+  void reset_cursor(uint8_t success = IS_SUCCESS) {
     message msg(IS_EXIT, success);
     EXPECT_PARTS(valgen_roundtrip(msg), u8{10}, success);
   }
