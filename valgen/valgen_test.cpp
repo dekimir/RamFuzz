@@ -400,8 +400,30 @@ TEST_F(ExeTreeTest, TerminalLeafFailure) {
   EXPECT_EQ(node::FAILURE, n->terminal());
 }
 
-TEST_F(ExeTreeTest, MayWinSingleNode) {
-  EXPECT_FALSE(member_valgen.exetree().maywin());
+TEST_F(ExeTreeTest, MayWinSequenceDefault) {
+  const node& root = member_valgen.exetree();
+  EXPECT_FALSE(root.maywin());
+  check_random_bounds<i64>();
+  EXPECT_FALSE(root.maywin());
+  EXPECT_FALSE(root.cbegin()->dst()->maywin());
+  check_random_bounds<i64>();
+  EXPECT_FALSE(root.maywin());
+  EXPECT_FALSE(root.cbegin()->dst()->maywin());
+  EXPECT_FALSE(root.cbegin()->dst()->cbegin()->dst()->maywin());
 }
+
+TEST_F(ExeTreeTest, MayWinSequenceFailure) {
+  const node& root = member_valgen.exetree();
+  EXPECT_FALSE(root.maywin());
+  check_random_bounds<double>();
+  EXPECT_FALSE(root.maywin());
+  EXPECT_FALSE(root.cbegin()->dst()->maywin());
+  reset_cursor(!IS_SUCCESS);
+  EXPECT_FALSE(root.maywin());
+  EXPECT_FALSE(root.cbegin()->dst()->maywin());
+}
+
+TEST_F(ExeTreeTest, MayWinFork) {}
+TEST_F(ExeTreeTest, MayWinTwoForks) {}
 
 }  // namespace
