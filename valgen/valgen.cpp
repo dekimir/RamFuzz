@@ -78,9 +78,10 @@ void valgen::process_request(socket& sock) {
   message msg;
   sock.receive(msg);
   if (msg.parts() <= 1)
-    return response(sock, u8{22});
+    return response(sock, ResponseStatus::ERR_FEW_PARTS);
   else if (is_exit_status(msg)) {
-    if (msg.parts() != 2) return response(sock, 23);
+    if (msg.parts() != 2)
+      return response(sock, ResponseStatus::ERR_TERM_TAKES_2);
     // TODO: check current cursor->terminal value!
     const auto succ = is_success(msg);
     cursor->terminal(succ ? node::SUCCESS : node::FAILURE);
@@ -93,20 +94,29 @@ void valgen::process_request(socket& sock) {
       assert(cursor == &root);
     }
     cursor = &root;
-    return response(sock, u8{10}, succ);
+    return response(sock, ResponseStatus::OK_TERMINAL, succ);
   } else {
     // This is a request for a value of certain type within certain bounds.
     // Message is (uint8_t type, uint64_t value_id, uint8_t tag, T lo, T hi),
     // where T is identified by tag (see add_typed_value() above).
-    if (msg.parts() != 5) return response(sock, u8{24});
+    if (msg.parts() != 5)
+      return response(sock, ResponseStatus::ERR_VALUE_TAKES_5);
     uint64_t valueid;
     msg.get(valueid, 1);
-    if (!cursor->check_valueid(valueid)) return response(sock, u8{25});
+    if (!cursor->check_valueid(valueid))
+      return response(sock, ResponseStatus::ERR_WRONG_VALUEID);
     cursor->set_valueid(valueid);
     message resp(u8{11});
     add_value(msg, resp, rn_eng, cursor);
     sock.send(resp);
   }
 }
+
+const uint8_t valgen::ResponseStatus::OK_TERMINAL,
+    valgen::ResponseStatus::OK_VALUE, valgen::ResponseStatus::ERR_FEW_PARTS,
+    valgen::ResponseStatus::ERR_TERM_TAKES_2,
+    valgen::ResponseStatus::ERR_VALUE_TAKES_5,
+    valgen::ResponseStatus::ERR_WRONG_VALUEID,
+    valgen::ResponseStatus::END_MARKER_DO_NOT_USE;
 
 }  // namespace ramfuzz

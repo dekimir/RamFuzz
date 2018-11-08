@@ -156,19 +156,21 @@ int part_mismatch(const message& msg, const T nextpart, const Args... args) {
 /// int, a bool, a long, and an unsigned.
 #define EXPECT_PARTS(...) EXPECT_EQ(-1, part_mismatch(__VA_ARGS__))
 
+using Status = valgen::ResponseStatus;
+
 TEST_F(ValgenTest, MessageTooShort) {
   message msg(IS_EXIT);
-  EXPECT_PARTS(valgen_roundtrip(msg), u8{22});
+  EXPECT_PARTS(valgen_roundtrip(msg), Status::ERR_FEW_PARTS);
 }
 
 TEST_F(ValgenTest, ExitSuccess) {
   message msg(IS_EXIT, IS_SUCCESS);
-  EXPECT_PARTS(valgen_roundtrip(msg), u8{10}, IS_SUCCESS);
+  EXPECT_PARTS(valgen_roundtrip(msg), Status::OK_TERMINAL, IS_SUCCESS);
 }
 
 TEST_F(ValgenTest, ExitFailure) {
   message msg(IS_EXIT, !IS_SUCCESS);
-  EXPECT_PARTS(valgen_roundtrip(msg), u8{10}, !IS_SUCCESS);
+  EXPECT_PARTS(valgen_roundtrip(msg), Status::OK_TERMINAL, !IS_SUCCESS);
 }
 
 TEST_F(ValgenTest, BetweenInteger) { check_random_bounds<i64>(); }
@@ -249,7 +251,7 @@ class ExeTreeTest : public ValgenTest {
         root(member_valgen.exetree()) {}
   void reset_cursor(uint8_t success = IS_SUCCESS) {
     message msg(IS_EXIT, success);
-    EXPECT_PARTS(valgen_roundtrip(msg), u8{10}, success);
+    EXPECT_PARTS(valgen_roundtrip(msg), Status::OK_TERMINAL, success);
   }
   double fork(double avoid, u64 valueid) {
     double v;
