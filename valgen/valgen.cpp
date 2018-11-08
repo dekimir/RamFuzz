@@ -106,6 +106,7 @@ void valgen::process_request(socket& sock) {
     if (!cursor->check_valueid(valueid))
       return response(sock, ResponseStatus::ERR_WRONG_VALUEID);
     cursor->set_valueid(valueid);
+    // TODO: check current cursor->terminal value!
     message resp(u8{11});
     add_value(msg, resp, rn_eng, cursor);
     sock.send(resp);
