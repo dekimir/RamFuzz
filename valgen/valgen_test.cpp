@@ -210,7 +210,8 @@ class RuntimeTest : public ValgenTest {
   }
 
  public:
-  RuntimeTest() : rgen(to_valgen) {}
+  RuntimeTest()
+      : rgen(from_ramfuzz.get<string>(socket_option::last_endpoint)) {}
 };
 
 TEST_F(RuntimeTest, BetweenBool) { check_rgen_random_bounds<bool>(); }
