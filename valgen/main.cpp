@@ -16,6 +16,7 @@
 #include <zmqpp/context.hpp>
 #include <zmqpp/socket.hpp>
 
+#include "../runtime/ramfuzz-rt.hpp"
 #include "valgen.hpp"
 
 using namespace ramfuzz;
@@ -31,7 +32,7 @@ int main(int argc, char* argv[]) {
   //    [http://zguide.zeromq.org/page:all#ROUTER-Broker-and-REQ-Workers] shows
   //    identity, allows multi-threaded generation, FWIW
   socket s(ctx, socket_type::reply);
-  s.bind(argc > 1 ? argv[1] : "ipc:///tmp/ramfuzz-socket");
+  s.bind(argc > 1 ? argv[1] : runtime::default_valgen_endpoint);
   valgen vg(argc > 2 ? atoi(argv[2]) : 0);
   for (;;) vg.process_request(s);
 }

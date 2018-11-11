@@ -110,6 +110,8 @@ template <> inline uint8_t typetag<int64_t>() { return 1; }
 template <> inline uint8_t typetag<uint64_t>() { return 2; }
 template <> inline uint8_t typetag<double>() { return 3; }
 
+constexpr char const *default_valgen_endpoint = "ipc:///tmp/ramfuzz-socket";
+
 /// Generates values for RamFuzz code.  Can be used in the "generate" or
 /// "replay" mode.  In "generate" mode, values are created at random and logged.
 /// In "replay" mode, values are read from a previously generated log.  This
@@ -141,7 +143,7 @@ public:
 
   /// Convenience for main().
   gen(int argc, char *argv[])
-      : gen(argc > 1 ? argv[1] : "ipc:///tmp/ramfuzz-socket") {}
+      : gen(argc > 1 ? argv[1] : default_valgen_endpoint) {}
 
   /// Returns an unconstrained value of type T and logs it.  The value is random
   /// in "generate" mode but read from the input log in "replay" mode.
