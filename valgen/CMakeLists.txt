@@ -6,6 +6,9 @@ add_library(RamFuzz.ValgenLib valgen.hpp valgen.cpp exetree.hpp exetree.cpp)
 add_executable(valgen main.cpp)
 target_link_libraries(valgen RamFuzz.ValgenLib zmqpp zmq)
 
+add_executable(driver driver.cpp)
+target_link_libraries(driver zmqpp zmq)
+
 find_package(GTest)
 if(GTEST_LIBRARY)
   set(gtest GTest::GTest)
