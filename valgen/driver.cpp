@@ -52,15 +52,16 @@ using namespace std;
 using namespace zmqpp;
 
 int main(int argc, const char** argv) {
+  static constexpr size_t default_count = 1000;
   if (argc < 2) {
-    cerr << "usage: " << argv[0] << " <test executable> [<endpoint> [<count>]]"
+    cerr << "usage: " << argv[0] << " <test executable> [<count> [<endpoint>]]"
          << endl;
-    cerr << "defaults: endpoint=" << runtime::default_valgen_endpoint
-         << ", count=1000" << endl;
+    cerr << "defaults: count=" << default_count
+         << ", endpoint=" << runtime::default_valgen_endpoint << endl;
     exit(11);
   }
-  const auto endpoint = (argc < 3) ? runtime::default_valgen_endpoint : argv[2];
-  const auto count = (argc < 4) ? 1000 : atoi(argv[3]);
+  const auto count = (argc < 3) ? default_count : atoi(argv[2]);
+  const auto endpoint = (argc < 4) ? runtime::default_valgen_endpoint : argv[3];
   const string command = string(argv[1]) + ' ' + endpoint;
   context ctx;
   for (int i = 0; i < count; ++i) {
