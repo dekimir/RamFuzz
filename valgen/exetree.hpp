@@ -15,7 +15,7 @@
 #pragma once
 
 #include <memory>
-#include <vector>
+#include <set>
 
 namespace ramfuzz {
 namespace exetree {
@@ -60,8 +60,8 @@ class node {
   /// returns that edge's destination node.
   node* find_or_add_edge(double v);
 
-  std::vector<edge>::const_iterator cbegin() const { return edges.cbegin(); }
-  std::vector<edge>::const_iterator cend() const { return edges.cend(); }
+  std::set<edge>::const_iterator cbegin() const { return edges.cbegin(); }
+  std::set<edge>::const_iterator cend() const { return edges.cend(); }
 
   TerminalStatus terminal() const { return _terminal; }
   void terminal(TerminalStatus t) { _terminal = t; }
@@ -75,7 +75,7 @@ class node {
   uint64_t valueid;
   bool has_valueid;
   edge* _incoming_edge;
-  std::vector<edge> edges;
+  std::set<edge> edges;
   TerminalStatus _terminal;
   bool _maywin;  ///< True iff any descendant is SUCCESS.
 };

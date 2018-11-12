@@ -26,12 +26,7 @@ edge::edge(double value, node* src)
     : _value(value), _src(src), _dst(new node(this)) {}
 
 node* node::find_or_add_edge(double v) {
-  const auto found = find(cbegin(), cend(), v);
-  if (found == cend()) {
-    edges.emplace_back(v, this);
-    return edges.back().dst();
-  } else
-    return found->dst();
+  return edges.emplace(v, this).first->dst();
 }
 
 }  // namespace exetree
