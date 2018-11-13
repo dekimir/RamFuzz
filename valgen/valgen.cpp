@@ -40,11 +40,27 @@ double uniform_random(double lo, double hi, ranlux24& rn_eng) {
 }
 
 template <typename T>
+T size_random(T lo, T hi, ranlux24& rn_eng) {
+  return negative_binomial_distribution<T>{1, 0.001}(rn_eng);
+}
+
+template <>
+double size_random(double lo, double hi, ranlux24& rn_eng) {
+  // This should never be called, as size_random is only for u64.
+  assert(false && "size_random invoked for type double");
+}
+
+template <typename T>
 void add_typed_value(message& req, message& resp, ranlux24& rn_eng,
                      node*& cursor) {
   T lo = req.get<T>(3);
   T hi = req.get<T>(4);
-  T v = uniform_random(lo, hi, rn_eng);
+  uint64_t valueid;
+  req.get(valueid, 1);
+  // valueid 1 is vector size, which produces bad training data with uniform
+  // distribution.
+  T v = (valueid == 1) ? size_random(lo, hi, rn_eng)
+                       : uniform_random(lo, hi, rn_eng);
   cursor = cursor->find_or_add_edge(v);
   resp << v;
 }

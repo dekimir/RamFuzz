@@ -306,7 +306,7 @@ TEST_F(ExeTreeTest, NValues) {
   vector<u64> valueids(n);
   vector<double> values(n);
   for (auto i = 0; i < n; ++i) {
-    valueids[i] = random<u64>();
+    valueids[i] = random<u64>(2);
     values[i] = check_random_bounds<i64>(valueids[i]);
   }
   for (auto i = 0; i < n; ++i) {
@@ -333,19 +333,19 @@ TEST_F(ExeTreeTest, MultipleForks) {
   //      |       +-> n22 --> n31
   //      |               +-> n32
   //      +-> n12 --> n23 --> n33
-  const double v11 = check_random_bounds<i64>(0),
-               v21 = check_random_bounds<i64>(1);
+  const double v11 = check_random_bounds<i64>(10),
+               v21 = check_random_bounds<i64>(11);
   reset_cursor();
-  valgen_between(v11, v11, 0);  // Move cursor to n11.
-  const double v22 = fork(v21, 1), v31 = check_random_bounds<u64>(2);
+  valgen_between(v11, v11, 10);  // Move cursor to n11.
+  const double v22 = fork(v21, 11), v31 = check_random_bounds<u64>(12);
   reset_cursor();
-  valgen_between(v11, v11, 0);  // Move cursor to n11.
-  valgen_between(v22, v22, 1);  // Move cursor to n22.
-  const double v32 = fork(v31, 2);
+  valgen_between(v11, v11, 10);  // Move cursor to n11.
+  valgen_between(v22, v22, 11);  // Move cursor to n22.
+  const double v32 = fork(v31, 12);
   reset_cursor();
-  const double v12 = fork(v11, 0), v23 = check_random_bounds<i64>(1),
-               v33 = check_random_bounds<double>(2);
-  EXPECT_TRUE(root.valueid_is(0));
+  const double v12 = fork(v11, 10), v23 = check_random_bounds<i64>(11),
+               v33 = check_random_bounds<double>(12);
+  EXPECT_TRUE(root.valueid_is(10));
   // Root should have (only) v11 and v12.
   const auto root_children = get_children(root, {v11, v12});
   EXPECT_EQ(2, root_children.size());
