@@ -36,6 +36,7 @@
 /// listens for messages) as an argument to the test executable.  It uses the
 /// same endpoint for its own success/failure messages it sends to valgen.
 
+#include <unistd.h>
 #include <cassert>
 #include <cstdlib>
 #include <iostream>
@@ -64,7 +65,8 @@ int main(int argc, const char** argv) {
   const auto endpoint = (argc < 4) ? runtime::default_valgen_endpoint : argv[3];
   const string command = string(argv[1]) + ' ' + endpoint;
   context ctx;
-  for (int i = 0; i < count; ++i) {
+  const char line_reset = isatty(STDOUT_FILENO) ? '\r' : '\n';
+  for (int i = 1; i <= count; ++i) {
     const uint8_t success = (0 == system(command.c_str()));
     message m(uint8_t{1}, success);
     socket sock(ctx, socket_type::request);
@@ -82,5 +84,7 @@ int main(int argc, const char** argv) {
       exit(33);
     }
     assert(m.get<uint8_t>(1) == success);
+    cout << i << line_reset << flush;
   }
+  cout << endl;
 }
