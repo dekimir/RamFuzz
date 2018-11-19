@@ -17,14 +17,17 @@
 from Alexander Rakhlin's sample implementation of NLP CNN:
 https://github.com/alexander-rakhlin/CNN-for-Sentence-Classification-in-Keras.
 
-Usage: $0 [epochs] [prediction_threshold]
-Defaults: epochs=1, prediction_threshold=0.7
+Usage: $0 [traincount] [epochs] [prediction_threshold]
+Defaults: traincount=2000 epochs=1, prediction_threshold=0.7
 
 Expects a train/ subdirectory containing fuzzlogs whose filenames indicate
 whether the run was a success or failure.  Filenames ending in `.0` are success
 fuzzlogs, while all other files are failure fuzzlogs.  (This makes it easy to
 generate fuzzlogs via shell commands like `./runtest; mv fuzzlog
 train/$((counter++)).$?`.)
+
+Uses traincount files as the training set, and another 1000 files as the
+validation set.
 
 """
 
@@ -77,7 +80,6 @@ def get_training_data(tree_root, locidx, poscount):
     vals = []  # One element per node; each is a parallel list of values.
     labels = []  # One element per node: true iff node.reaches_success.
     for n in tree_root.preorder_dfs():
-        # TODO: use log_to_locs_vals.
         nlocs, nvals = log_to_locs_vals(n.logseq(), locidx, poscount)
         locs.append(nlocs)
         vals.append(nvals)
