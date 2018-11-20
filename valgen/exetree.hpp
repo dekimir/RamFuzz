@@ -71,6 +71,8 @@ class node {
 
   const edge* incoming_edge() const { return _incoming_edge; }
 
+  /// Traverses n in depth-first-search preorder, invoking fn on each edge along
+  /// the way.
   template <typename Callable>
   void dfs(Callable& fn) {
     for (auto& e : edges) {
