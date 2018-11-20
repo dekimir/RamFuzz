@@ -90,5 +90,9 @@ class node {
   bool _maywin;  ///< True iff any descendant is SUCCESS.
 };
 
+/// The number of nodes in the longest path starting at root (ie, the tree
+/// height).
+size_t longest_path(const node& root);
+
 }  // namespace exetree
 }  // namespace ramfuzz

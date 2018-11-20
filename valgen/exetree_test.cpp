@@ -73,13 +73,38 @@ TEST(DFS, Branch) {
   node root;
   auto n1 = root.find_or_add_edge(1);
   auto n2 = n1->find_or_add_edge(2);
-  auto n3 = n1->find_or_add_edge(3);
+  auto n3 = n2->find_or_add_edge(3);
   auto n4 = n1->find_or_add_edge(4);
   auto n5 = root.find_or_add_edge(5);
   EXPECT_EQ((edge_vector{n1->incoming_edge(), n2->incoming_edge(),
                          n3->incoming_edge(), n4->incoming_edge(),
                          n5->incoming_edge()}),
             dfs_result(root));
+}
+
+TEST(LongestPath, One) { EXPECT_EQ(1, longest_path(node())); }
+
+TEST(LongestPath, Two) {
+  node root;
+  root.find_or_add_edge(1);
+  EXPECT_EQ(2, longest_path(root));
+  root.find_or_add_edge(2);
+  EXPECT_EQ(2, longest_path(root));
+  root.find_or_add_edge(3);
+  EXPECT_EQ(2, longest_path(root));
+}
+
+TEST(LongestPath, Branch) {
+  // root > n1 > n2 > n3
+  //           > n4
+  //      > n5
+  node root;
+  auto n1 = root.find_or_add_edge(1);
+  auto n2 = n1->find_or_add_edge(2);
+  auto n3 = n2->find_or_add_edge(3);
+  auto n4 = n1->find_or_add_edge(4);
+  auto n5 = root.find_or_add_edge(5);
+  EXPECT_EQ(4, longest_path(root));
 }
 
 }  // namespace

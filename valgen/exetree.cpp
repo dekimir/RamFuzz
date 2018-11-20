@@ -14,8 +14,9 @@
 
 #include "exetree.hpp"
 
-#include <algorithm>
-#include <iterator>
+#include <memory>
+#include <utility>
+#include <vector>
 
 using namespace std;
 
@@ -27,6 +28,27 @@ edge::edge(double value, node* src)
 
 node* node::find_or_add_edge(double v) {
   return edges.emplace(v, this).first->dst();
+}
+
+size_t longest_path(const node& root) {
+  using nvec = vector<const node*>;
+  unique_ptr<nvec> current_level(new nvec{&root}), next_level(new nvec);
+  size_t current_depth = 1;
+  for (;;) {
+    while (!current_level->empty()) {
+      const auto n = current_level->back();
+      for (auto e = n->cbegin(); e != n->cend(); ++e)
+        next_level->push_back(e->dst());
+      current_level->pop_back();
+    }
+    if (next_level->empty())
+      return current_depth;
+    else {
+      current_depth++;
+      current_level = move(next_level);
+      next_level.reset(new nvec);
+    }
+  }
 }
 
 }  // namespace exetree
