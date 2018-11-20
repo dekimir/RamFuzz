@@ -240,8 +240,8 @@ TEST_F(RuntimeTest, NullRngULL) { check_rgen_null_range<unsigned long long>(); }
 TEST_F(RuntimeTest, NullRangeFloat) { check_rgen_null_range<float>(); }
 TEST_F(RuntimeTest, NullRangeDouble) { check_rgen_null_range<double>(); }
 
-/// Test fixture for exetree.  Makes a fresh valgen object for every test, to
-/// avoid cross-pollution.
+/// Test fixture for valgen's exetree tracking.  Makes a fresh valgen object for
+/// every test, to avoid cross-pollution.
 class ExeTreeTest : public ValgenTest {
  protected:
   valgen member_valgen;

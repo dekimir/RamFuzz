@@ -71,6 +71,14 @@ class node {
 
   const edge* incoming_edge() const { return _incoming_edge; }
 
+  template <typename Callable>
+  void dfs(Callable& fn) {
+    for (auto& e : edges) {
+      fn(e);
+      e.dst()->dfs(fn);
+    }
+  }
+
  private:
   uint64_t valueid;
   bool has_valueid;

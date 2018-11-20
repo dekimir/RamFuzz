@@ -19,7 +19,7 @@ else()
   set(gtest_main gtest_main)
 endif()
 
-add_executable(utests utest_main.cpp valgen_test.cpp)
+add_executable(utests utest_main.cpp valgen_test.cpp exetree_test.cpp)
 target_link_libraries(utests ${gtest} RamFuzz.ValgenLib zmqpp zmq)
 
 enable_testing()
