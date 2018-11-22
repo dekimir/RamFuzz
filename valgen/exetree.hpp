@@ -56,6 +56,8 @@ class node {
     has_valueid = true;
   }
 
+  uint64_t get_valueid() const { return valueid; }
+
   /// Finds the outgoing edge matching v (or creates one, if none existed) and
   /// returns that edge's destination node.
   node* find_or_add_edge(double v);
@@ -74,7 +76,7 @@ class node {
   /// Traverses n in depth-first-search preorder, invoking fn on each edge along
   /// the way.
   template <typename Callable>
-  void dfs(Callable& fn) {
+  void dfs(const Callable& fn) const {
     for (auto& e : edges) {
       fn(e);
       e.dst()->dfs(fn);

@@ -1,10 +1,15 @@
 cmake_minimum_required(VERSION 3.8)
 project(RamFuzz.ValGen)
+
+find_package(Torch REQUIRED)
+
 set(CMAKE_CXX_STANDARD 11)
-add_library(RamFuzz.ValgenLib valgen.hpp valgen.cpp exetree.hpp exetree.cpp)
+add_library(RamFuzz.ValgenLib 
+  valgen.hpp valgen.cpp exetree.hpp exetree.cpp dataset.hpp dataset.cpp)
+target_link_libraries(RamFuzz.ValgenLib ${TORCH_LIBRARIES} zmqpp zmq)
 
 add_executable(valgen main.cpp)
-target_link_libraries(valgen RamFuzz.ValgenLib zmqpp zmq)
+target_link_libraries(valgen RamFuzz.ValgenLib)
 
 add_executable(driver driver.cpp)
 target_link_libraries(driver zmqpp zmq)
@@ -19,7 +24,8 @@ else()
   set(gtest_main gtest_main)
 endif()
 
-add_executable(utests utest_main.cpp valgen_test.cpp exetree_test.cpp)
+add_executable(utests utest_main.cpp
+  valgen_test.cpp exetree_test.cpp dataset_test.cpp)
 target_link_libraries(utests ${gtest} RamFuzz.ValgenLib zmqpp zmq)
 
 enable_testing()

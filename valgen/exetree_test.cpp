@@ -26,12 +26,9 @@ using edge_vector = vector<const edge*>;
 
 /// Invokes n.dfs(), recording all edges visited, in order.
 edge_vector dfs_result(node& n) {
-  struct {
-    void operator()(const edge& e) { visited.push_back(&e); }
-    edge_vector visited;
-  } h;
-  n.dfs(h);
-  return h.visited;
+  edge_vector visited;
+  n.dfs([&visited](const edge& e) { visited.push_back(&e); });
+  return visited;
 }
 
 TEST(DFS, SingleNode) {
