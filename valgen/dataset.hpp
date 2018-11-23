@@ -24,7 +24,8 @@
 namespace ramfuzz {
 namespace exetree {
 
-/// Turns an execution tree into a torch dataset.
+/// Makes a torch dataset from an execution tree.  Memory-efficient, but it must
+/// be used with a SequentialSampler.
 class ExeTreeDataset : public torch::data::datasets::Dataset<ExeTreeDataset> {
  public:
   explicit ExeTreeDataset(const node& root);
