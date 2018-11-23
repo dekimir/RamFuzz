@@ -24,43 +24,44 @@ namespace {
 
 using edge_vector = vector<const edge*>;
 
-/// Invokes n.dfs(), recording all edges visited, in order.
-edge_vector dfs_result(node& n) {
-  edge_vector visited;
-  n.dfs([&visited](const edge& e) { visited.push_back(&e); });
-  return visited;
-}
-
-TEST(DFS, SingleNode) {
-  node n;
-  EXPECT_TRUE(dfs_result(n).empty());
-}
+TEST(DFS, SingleNode) { EXPECT_FALSE(dfs_cursor(node())); }
 
 TEST(DFS, SingleEdge) {
   node root;
   root.find_or_add_edge(321);
-  auto& e1 = *root.cbegin();
-  EXPECT_EQ(edge_vector{&e1}, dfs_result(root));
+  auto cur = dfs_cursor(root);
+  EXPECT_EQ(*root.cbegin(), *cur);
+  EXPECT_TRUE(cur);
+  EXPECT_FALSE(++cur);
 }
 
 TEST(DFS, MultipleEdges) {
   node root;
-  root.find_or_add_edge(1);
-  root.find_or_add_edge(2);
-  root.find_or_add_edge(3);
+  root.find_or_add_edge(1.);
+  root.find_or_add_edge(2.);
+  root.find_or_add_edge(3.);
   auto it = root.cbegin();
-  auto &e1 = *it++, &e2 = *it++, &e3 = *it;
-  EXPECT_EQ((edge_vector{&e1, &e2, &e3}), dfs_result(root));
+  auto cur = dfs_cursor(root);
+  EXPECT_TRUE(cur);
+  EXPECT_EQ(3., *cur++);
+  EXPECT_TRUE(cur);
+  EXPECT_EQ(2., *cur++);
+  EXPECT_TRUE(cur);
+  EXPECT_EQ(1., *cur++);
+  EXPECT_FALSE(cur);
 }
 
 TEST(DFS, Deep) {
   node root;
-  auto n1 = root.find_or_add_edge(1);
-  auto n2 = n1->find_or_add_edge(2);
-  auto n3 = n2->find_or_add_edge(3);
-  EXPECT_EQ((edge_vector{n1->incoming_edge(), n2->incoming_edge(),
-                         n3->incoming_edge()}),
-            dfs_result(root));
+  root.find_or_add_edge(1.)->find_or_add_edge(2.)->find_or_add_edge(3.);
+  auto cur = dfs_cursor(root);
+  EXPECT_TRUE(cur);
+  EXPECT_EQ(1., *cur++);
+  EXPECT_TRUE(cur);
+  EXPECT_EQ(2., *cur++);
+  EXPECT_TRUE(cur);
+  EXPECT_EQ(3., *cur++);
+  EXPECT_FALSE(cur);
 }
 
 TEST(DFS, Branch) {
@@ -68,15 +69,20 @@ TEST(DFS, Branch) {
   //           > n4
   //      > n5
   node root;
-  auto n1 = root.find_or_add_edge(1);
-  auto n2 = n1->find_or_add_edge(2);
-  auto n3 = n2->find_or_add_edge(3);
-  auto n4 = n1->find_or_add_edge(4);
-  auto n5 = root.find_or_add_edge(5);
-  EXPECT_EQ((edge_vector{n1->incoming_edge(), n2->incoming_edge(),
-                         n3->incoming_edge(), n4->incoming_edge(),
-                         n5->incoming_edge()}),
-            dfs_result(root));
+  root.find_or_add_edge(1.)->find_or_add_edge(2.)->find_or_add_edge(3.);
+  root.find_or_add_edge(5.);
+  root.cbegin()->dst()->find_or_add_edge(4.);
+  auto cur = dfs_cursor(root);
+  EXPECT_TRUE(cur);
+  EXPECT_EQ(5., *cur++);
+  EXPECT_TRUE(cur);
+  EXPECT_EQ(1., *cur++);
+  EXPECT_TRUE(cur);
+  EXPECT_EQ(4., *cur++);
+  EXPECT_TRUE(cur);
+  EXPECT_EQ(2., *cur++);
+  EXPECT_TRUE(cur);
+  EXPECT_EQ(3., *cur++);
 }
 
 TEST(LongestPath, One) { EXPECT_EQ(1, longest_path(node())); }

@@ -14,6 +14,7 @@
 
 #include "exetree.hpp"
 
+#include <cassert>
 #include <memory>
 #include <utility>
 #include <vector>
@@ -49,6 +50,25 @@ size_t longest_path(const node& root) {
       next_level.reset(new nvec);
     }
   }
+}
+
+dfs_cursor::dfs_cursor(const node& n) {
+  for (auto e = n.cbegin(); e != n.cend(); ++e) worklist.push_back(&*e);
+}
+
+dfs_cursor dfs_cursor::operator++(int) {
+  auto original = *this;
+  ++(*this);
+  return original;
+}
+
+dfs_cursor& dfs_cursor::operator++() {
+  assert(*this);
+  const auto child = worklist.back()->dst();
+  worklist.pop_back();
+  for (auto e = child->cbegin(); e != child->cend(); ++e)
+    worklist.push_back(&*e);
+  return *this;
 }
 
 }  // namespace exetree

@@ -29,12 +29,12 @@ class ExeTreeDataset : public torch::data::datasets::Dataset<ExeTreeDataset> {
  public:
   explicit ExeTreeDataset(const node& root);
   torch::data::Example<> get(size_t index) override;
-  torch::optional<size_t> size() const override;
+  torch::optional<size_t> size() const override { return _size; };
 
  private:
-  const node& _root;
+  dfs_cursor current;
   size_t last_index;  ///< Records get() argument at last invocation.
-  std::vector<const edge*> edges;
+  size_t _size;
 };
 
 std::unique_ptr<torch::data::DataLoader<

@@ -22,20 +22,20 @@ using namespace torch::data;
 namespace ramfuzz {
 namespace exetree {
 
-ExeTreeDataset::ExeTreeDataset(const node& root) : _root(root), last_index(0) {
-  root.dfs([this](const edge& e) { edges.push_back(&e); });
+ExeTreeDataset::ExeTreeDataset(const node& root)
+    : current(root), last_index(0), _size(0) {
+  for (auto c = dfs_cursor(root); c; ++c) ++_size;
 }
 
 Example<> ExeTreeDataset::get(size_t index) {
   assert(index == last_index + 1 || (index == 0 && last_index == 0));
   last_index = index;
   // PyTorch doesn't seem to support uint64_t as tensor element.
-  int64_t id = edges[index]->src()->get_valueid();
-  return Example<>(torch::tensor({id}),
-                   torch::tensor(edges[index]->dst()->maywin()));
+  int64_t id = current->src()->get_valueid();
+  bool label = current->dst()->maywin();
+  ++current;
+  return Example<>(torch::tensor({id}), torch::tensor(label));
 }
-
-torch::optional<size_t> ExeTreeDataset::size() const { return edges.size(); }
 
 unique_ptr<DataLoader<ExeTreeDataset, samplers::SequentialSampler>>
 make_data_loader(const node& n, size_t batch_size) {

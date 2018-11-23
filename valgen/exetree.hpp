@@ -16,11 +16,12 @@
 
 #include <memory>
 #include <set>
+#include <vector>
 
 namespace ramfuzz {
 namespace exetree {
 
-struct node;
+class node;
 
 class edge {
  public:
@@ -73,16 +74,6 @@ class node {
 
   const edge* incoming_edge() const { return _incoming_edge; }
 
-  /// Traverses n in depth-first-search preorder, invoking fn on each edge along
-  /// the way.
-  template <typename Callable>
-  void dfs(const Callable& fn) const {
-    for (auto& e : edges) {
-      fn(e);
-      e.dst()->dfs(fn);
-    }
-  }
-
  private:
   uint64_t valueid;
   bool has_valueid;
@@ -95,6 +86,20 @@ class node {
 /// The number of nodes in the longest path starting at root (ie, the tree
 /// height).
 size_t longest_path(const node& root);
+
+/// Traverses an execution tree in depth-first-search preorder.
+class dfs_cursor {
+ public:
+  dfs_cursor(const node& root);
+  dfs_cursor& operator++();
+  dfs_cursor operator++(int);
+  const edge& operator*() const { return *worklist.back(); }
+  const edge* operator->() const { return worklist.back(); }
+  operator bool() const { return !worklist.empty(); }
+
+ private:
+  std::vector<const edge*> worklist;
+};
 
 }  // namespace exetree
 }  // namespace ramfuzz
