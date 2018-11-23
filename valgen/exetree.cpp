@@ -52,9 +52,8 @@ size_t longest_path(const node& root) {
   }
 }
 
-dfs_cursor::dfs_cursor(const node& n) {
-  for (auto e = n.cbegin(); e != n.cend(); ++e) worklist.push_back(&*e);
-}
+dfs_cursor::dfs_cursor(const node& n)
+    : curedge(n.cbegin()), past_last_edge(n.cend()) {}
 
 dfs_cursor dfs_cursor::operator++(int) {
   auto original = *this;
@@ -64,10 +63,19 @@ dfs_cursor dfs_cursor::operator++(int) {
 
 dfs_cursor& dfs_cursor::operator++() {
   assert(*this);
-  const auto child = worklist.back()->dst();
-  worklist.pop_back();
-  for (auto e = child->cbegin(); e != child->cend(); ++e)
-    worklist.push_back(&*e);
+  auto child = curedge->dst();
+  if (!child->empty()) {
+    curedge = child->cbegin();
+    return *this;
+  }
+  auto parent = curedge->src();
+  if (++curedge != parent->cend()) return *this;
+  while (const auto up = parent->incoming_edge()) {
+    parent = up->src();
+    curedge = parent->find(*up);
+    if (++curedge != parent->cend()) return *this;
+  }
+  assert(curedge == past_last_edge);
   return *this;
 }
 

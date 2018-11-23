@@ -43,11 +43,11 @@ TEST(DFS, MultipleEdges) {
   auto it = root.cbegin();
   auto cur = dfs_cursor(root);
   EXPECT_TRUE(cur);
-  EXPECT_EQ(3., *cur++);
+  EXPECT_EQ(1., *cur++);
   EXPECT_TRUE(cur);
   EXPECT_EQ(2., *cur++);
   EXPECT_TRUE(cur);
-  EXPECT_EQ(1., *cur++);
+  EXPECT_EQ(3., *cur++);
   EXPECT_FALSE(cur);
 }
 
@@ -74,15 +74,15 @@ TEST(DFS, Branch) {
   root.cbegin()->dst()->find_or_add_edge(4.);
   auto cur = dfs_cursor(root);
   EXPECT_TRUE(cur);
-  EXPECT_EQ(5., *cur++);
-  EXPECT_TRUE(cur);
   EXPECT_EQ(1., *cur++);
-  EXPECT_TRUE(cur);
-  EXPECT_EQ(4., *cur++);
   EXPECT_TRUE(cur);
   EXPECT_EQ(2., *cur++);
   EXPECT_TRUE(cur);
   EXPECT_EQ(3., *cur++);
+  EXPECT_TRUE(cur);
+  EXPECT_EQ(4., *cur++);
+  EXPECT_TRUE(cur);
+  EXPECT_EQ(5., *cur++);
 }
 
 TEST(LongestPath, One) { EXPECT_EQ(1, longest_path(node())); }

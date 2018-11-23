@@ -65,6 +65,10 @@ class node {
 
   std::set<edge>::const_iterator cbegin() const { return edges.cbegin(); }
   std::set<edge>::const_iterator cend() const { return edges.cend(); }
+  bool empty() const { return edges.empty(); }
+  std::set<edge>::const_iterator find(const edge& e) const {
+    return edges.find(e);
+  }
 
   TerminalStatus terminal() const { return _terminal; }
   void terminal(TerminalStatus t) { _terminal = t; }
@@ -93,12 +97,12 @@ class dfs_cursor {
   dfs_cursor(const node& root);
   dfs_cursor& operator++();
   dfs_cursor operator++(int);
-  const edge& operator*() const { return *worklist.back(); }
-  const edge* operator->() const { return worklist.back(); }
-  operator bool() const { return !worklist.empty(); }
+  const edge& operator*() const { return *curedge; }
+  const edge* operator->() const { return &*curedge; }
+  operator bool() const { return curedge != past_last_edge; }
 
  private:
-  std::vector<const edge*> worklist;
+  std::set<edge>::const_iterator curedge, past_last_edge;
 };
 
 }  // namespace exetree
