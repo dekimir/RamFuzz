@@ -15,7 +15,7 @@ add_executable(driver driver.cpp)
 target_link_libraries(driver zmqpp zmq)
 
 find_package(GTest)
-if(GTEST_LIBRARY)
+if(GTEST_LIBRARY AND GTEST_INCLUDE_DIR AND GTEST_MAIN_LIBRARY)
   set(gtest GTest::GTest)
   set(gtest_main GTest::Main)
 else()
