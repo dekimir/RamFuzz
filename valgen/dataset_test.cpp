@@ -58,14 +58,12 @@ TEST(DataLoader, Order) {
 
 TEST(Dataset, SingleNode) {
   exetree::node n;
-  constexpr int64_t id = 123;
-  n.set_valueid(id);
-  n.find_or_add_edge(1)->maywin(true);
+  n.find_or_add_edge(123.)->maywin(true);
   const auto loader = exetree::make_data_loader(n);
   auto i = 0u;
   for (auto batch : *loader)
     for (auto ex : batch) {
-      EXPECT_TRUE(torch::equal(torch::tensor({id}), ex.data))
+      EXPECT_TRUE(torch::equal(torch::tensor({123.}), ex.data))
           << i << ' ' << ex.data;
       EXPECT_TRUE(torch::equal(torch::tensor({1}), ex.target))
           << i << ' ' << ex.target;

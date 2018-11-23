@@ -30,11 +30,10 @@ ExeTreeDataset::ExeTreeDataset(const node& root)
 Example<> ExeTreeDataset::get(size_t index) {
   assert(index == last_index + 1 || (index == 0 && last_index == 0));
   last_index = index;
-  // PyTorch doesn't seem to support uint64_t as tensor element.
-  int64_t id = current->src()->get_valueid();
+  double value = *current;
   bool label = current->dst()->maywin();
   ++current;
-  return Example<>(torch::tensor({id}), torch::tensor(label));
+  return Example<>(torch::tensor({value}), torch::tensor(label));
 }
 
 unique_ptr<DataLoader<ExeTreeDataset, samplers::SequentialSampler>>
