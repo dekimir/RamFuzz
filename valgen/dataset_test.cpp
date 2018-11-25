@@ -58,14 +58,19 @@ TEST(DataLoader, Order) {
 
 class DatasetTest : public ::testing::Test {
  protected:
+  /// Run exetree data loader on root and record the result.
   void load() {
     const auto loader = exetree::make_data_loader(root);
     for (auto batch : *loader)
       for (auto ex : batch) result.push_back(ex);
   }
+
+  /// Zeros tensor in the shape of expected result data.
   torch::Tensor zeros() const { return torch::zeros(10, at::kDouble); }
+
   exetree::node root;
-  vector<torch::data::Example<>> result;
+
+  vector<torch::data::Example<>> result;  ///< Holds load() result.
 };
 
 #define EXPECT_RESULT(i, expdata, exptarget)                                \
