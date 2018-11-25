@@ -47,17 +47,18 @@ class node {
         _maywin(false) {}
 
   bool check_valueid(uint64_t expected) const {
-    return !has_valueid || valueid == expected;
+    return !has_valueid || _valueid == expected;
   }
 
-  bool valueid_is(uint64_t v) const { return has_valueid && valueid == v; }
+  uint64_t valueid() const {
+    assert(has_valueid);
+    return _valueid;
+  }
 
-  void set_valueid(uint64_t v) {
-    valueid = v;
+  void valueid(uint64_t v) {
+    _valueid = v;
     has_valueid = true;
   }
-
-  uint64_t get_valueid() const { return valueid; }
 
   /// Finds the outgoing edge matching v (or creates one, if none existed) and
   /// returns that edge's destination node.
@@ -79,7 +80,7 @@ class node {
   const edge* incoming_edge() const { return _incoming_edge; }
 
  private:
-  uint64_t valueid;
+  uint64_t _valueid;
   bool has_valueid;
   edge* _incoming_edge;
   std::set<edge> edges;

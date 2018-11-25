@@ -297,7 +297,7 @@ const node& descend(const node& from, size_t howmany = 1) {
 
 TEST_F(ExeTreeTest, OneValue) {
   const double v = check_random_bounds<u64>(3344);
-  EXPECT_TRUE(root.valueid_is(3344));
+  EXPECT_EQ(3344, root.valueid());
   EXPECT_EQ(1, get_children(root, {v}).size());
 }
 
@@ -311,7 +311,7 @@ TEST_F(ExeTreeTest, NValues) {
   }
   for (auto i = 0; i < n; ++i) {
     const node& n = descend(root, i);
-    EXPECT_TRUE(n.valueid_is(valueids[i])) << i;
+    EXPECT_EQ(valueids[i], n.valueid()) << i;
     EXPECT_EQ(1, get_children(n, {values[i]}).size()) << i;
   }
   EXPECT_EQ(0, edgemap(descend(root, n)).size());
@@ -321,7 +321,7 @@ TEST_F(ExeTreeTest, ForkAtRoot) {
   const double v1 = check_random_bounds<double>(1122);
   reset_cursor();
   const double v2 = fork(v1, 1122);
-  EXPECT_TRUE(root.valueid_is(1122));
+  EXPECT_EQ(1122, root.valueid());
   const auto root_children = get_children(root, {v1, v2});
   EXPECT_EQ(2, root_children.size());
   get_children(*root_children[0], {});
@@ -345,7 +345,7 @@ TEST_F(ExeTreeTest, MultipleForks) {
   reset_cursor();
   const double v12 = fork(v11, 10), v23 = check_random_bounds<i64>(11),
                v33 = check_random_bounds<double>(12);
-  EXPECT_TRUE(root.valueid_is(10));
+  EXPECT_EQ(10, root.valueid());
   // Root should have (only) v11 and v12.
   const auto root_children = get_children(root, {v11, v12});
   EXPECT_EQ(2, root_children.size());
