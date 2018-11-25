@@ -56,54 +56,47 @@ TEST(DataLoader, Order) {
     }
 }
 
-TEST(Dataset, SingleEdge) {
-  exetree::node n;
-  n.find_or_add_edge(123.)->maywin(true);
-  const auto loader = exetree::make_data_loader(n);
-  auto i = 0u;
-  torch::data::Example<> expected(torch::zeros(10, at::kDouble),
-                                  torch::tensor({1}));
-  expected.data[0] = 123.;
-  for (auto batch : *loader)
-    for (auto sample : batch) {
-      EXPECT_TRUE(torch::equal(expected.data, sample.data))
-          << i << ' ' << sample.data;
-      EXPECT_TRUE(torch::equal(expected.target, sample.target))
-          << i << ' ' << sample.target;
-      i++;
-    }
-  EXPECT_EQ(1, i);
+class DatasetTest : public ::testing::Test {
+ protected:
+  void load() {
+    const auto loader = exetree::make_data_loader(root);
+    for (auto batch : *loader)
+      for (auto ex : batch) result.push_back(ex);
+  }
+  torch::Tensor zeros() const { return torch::zeros(10, at::kDouble); }
+  exetree::node root;
+  vector<torch::data::Example<>> result;
+};
+
+#define EXPECT_RESULT(i, expdata, exptarget)                 \
+  {                                                          \
+    EXPECT_TRUE(torch::equal((expdata), result[i].data))     \
+        << "data[" << (i) << "]: " << result[i].data;        \
+    EXPECT_TRUE(torch::equal((exptarget), result[i].target)) \
+        << "target[" << (i) << "]: " << result[i].target;    \
+  }
+
+TEST_F(DatasetTest, SingleEdge) {
+  root.find_or_add_edge(123.)->maywin(true);
+  load();
+  auto exp = zeros();
+  exp[0] = 123.;
+  EXPECT_RESULT(0, exp, torch::tensor({1}));
+  EXPECT_EQ(1, result.size());
 }
 
-TEST(Dataset, DeepLinear) {
-  exetree::node root;
-  const auto n1 = root.find_or_add_edge(1.), n2 = n1->find_or_add_edge(2.),
-             n3 = n2->find_or_add_edge(3.), n4 = n3->find_or_add_edge(4.);
-  const auto loader = exetree::make_data_loader(root);
-  vector<torch::Tensor> data, labels;
-  for (auto batch : *loader)
-    for (auto ex : batch) {
-      data.push_back(ex.data);
-      labels.push_back(ex.target);
-    }
-  EXPECT_EQ(4, data.size());
-  EXPECT_EQ(4, labels.size());
-  EXPECT_TRUE(torch::equal(
-      torch::tensor({1., 0., 0., 0., 0., 0., 0., 0., 0., 0.}), data[0]))
-      << data[0];
-  EXPECT_TRUE(torch::equal(torch::tensor({0}), labels[0])) << labels[0];
-  EXPECT_TRUE(torch::equal(
-      torch::tensor({1., 2., 0., 0., 0., 0., 0., 0., 0., 0.}), data[1]))
-      << data[1];
-  EXPECT_TRUE(torch::equal(torch::tensor({0}), labels[0])) << labels[1];
-  EXPECT_TRUE(torch::equal(
-      torch::tensor({1., 2., 3., 0., 0., 0., 0., 0., 0., 0.}), data[2]))
-      << data[2];
-  EXPECT_TRUE(torch::equal(torch::tensor({0}), labels[0])) << labels[2];
-  EXPECT_TRUE(torch::equal(
-      torch::tensor({1., 2., 3., 4., 0., 0., 0., 0., 0., 0.}), data[3]))
-      << data[3];
-  EXPECT_TRUE(torch::equal(torch::tensor({0}), labels[0])) << labels[3];
+TEST_F(DatasetTest, ShortLinear) {
+  root.find_or_add_edge(1.)
+      ->find_or_add_edge(2.)
+      ->find_or_add_edge(3.)
+      ->find_or_add_edge(4.);
+  load();
+  EXPECT_EQ(4, result.size());
+  auto exp = torch::zeros(10, at::kDouble);
+  for (int i = 0; i < 4; ++i) {
+    for (int j = 0; j <= i; ++j) exp[j] = double(j + 1);
+    EXPECT_RESULT(i, exp, torch::tensor({0}));
+  }
 }
 
 }  // namespace
