@@ -68,12 +68,12 @@ class DatasetTest : public ::testing::Test {
   vector<torch::data::Example<>> result;
 };
 
-#define EXPECT_RESULT(i, expdata, exptarget)                 \
-  {                                                          \
-    EXPECT_TRUE(torch::equal((expdata), result[i].data))     \
-        << "data[" << (i) << "]: " << result[i].data;        \
-    EXPECT_TRUE(torch::equal((exptarget), result[i].target)) \
-        << "target[" << (i) << "]: " << result[i].target;    \
+#define EXPECT_RESULT(i, expdata, exptarget)                                \
+  {                                                                         \
+    EXPECT_TRUE(torch::equal((expdata), result[i].data))                    \
+        << "data[" << (i) << "]: " << result[i].data;                       \
+    EXPECT_TRUE(torch::equal(torch::tensor({exptarget}), result[i].target)) \
+        << "target[" << (i) << "]: " << result[i].target;                   \
   }
 
 TEST_F(DatasetTest, SingleEdge) {
@@ -81,7 +81,7 @@ TEST_F(DatasetTest, SingleEdge) {
   load();
   auto exp = zeros();
   exp[0] = 123.;
-  EXPECT_RESULT(0, exp, torch::tensor({1}));
+  EXPECT_RESULT(0, exp, 1);
   EXPECT_EQ(1, result.size());
 }
 
@@ -95,7 +95,7 @@ TEST_F(DatasetTest, ShortLinear) {
   auto exp = torch::zeros(10, at::kDouble);
   for (int i = 0; i < 4; ++i) {
     for (int j = 0; j <= i; ++j) exp[j] = double(j + 1);
-    EXPECT_RESULT(i, exp, torch::tensor({0}));
+    EXPECT_RESULT(i, exp, 0);
   }
 }
 
