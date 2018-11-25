@@ -19,6 +19,7 @@
 #include <torch/data/datasets.h>
 #include <torch/data/samplers.h>
 #include <algorithm>
+#include <cassert>
 #include <memory>
 #include <vector>
 
@@ -69,6 +70,14 @@ class DatasetTest : public ::testing::Test {
   /// Zeros tensor in the shape of expected result data.
   torch::Tensor zeros() const { return torch::zeros(10, at::kDouble); }
 
+  /// Tensor beginning in v, followed by zeros until matching result shape.
+  torch::Tensor pad_right(const vector<double>& v) {
+    assert(v.size() <= 10);
+    auto wider = zeros();
+    for (size_t i = 0; i < v.size(); ++i) wider[i] = v[i];
+    return wider;
+  }
+
   exetree::node root;
 
   vector<torch::data::Example<>> result;  ///< Holds load() result.
@@ -85,9 +94,7 @@ class DatasetTest : public ::testing::Test {
 TEST_F(DatasetTest, SingleEdge) {
   root.find_or_add_edge(123.)->maywin(true);
   load();
-  auto exp = zeros();
-  exp[0] = 123.;
-  EXPECT_RESULT(0, exp, 1);
+  EXPECT_RESULT(0, pad_right({123.}), 1);
   EXPECT_EQ(1, result.size());
 }
 
@@ -126,6 +133,26 @@ TEST_F(DatasetTest, LongLinear) {
     for (int j = 0; j < min(i + 1, 10); ++j) exp[j] = j + 1 + max(0, i - 9);
     EXPECT_RESULT(i, exp, 0);
   }
+}
+
+TEST_F(DatasetTest, Bushy) {
+  // root > n1 > n2
+  //      > n3 > n4
+  //           > n5 > n6
+  root.find_or_add_edge(1.)->find_or_add_edge(2.);
+  const auto n3 = root.find_or_add_edge(3.);
+  n3->find_or_add_edge(4.)->maywin(true);
+  n3->maywin(true);
+  root.maywin(true);
+  n3->find_or_add_edge(5.)->find_or_add_edge(6.);
+  load();
+  EXPECT_EQ(6, result.size());
+  EXPECT_RESULT(0, pad_right({1.}), 0);          // n1
+  EXPECT_RESULT(1, pad_right({1., 2.}), 0);      // n2
+  EXPECT_RESULT(2, pad_right({3.}), 1);          // n3
+  EXPECT_RESULT(3, pad_right({3., 4.}), 1);      // n4
+  EXPECT_RESULT(4, pad_right({3., 5.}), 0);      // n5
+  EXPECT_RESULT(5, pad_right({3., 5., 6.}), 0);  // n6
 }
 
 }  // namespace
