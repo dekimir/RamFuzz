@@ -18,6 +18,7 @@
 #include <torch/data/dataloader.h>
 #include <torch/data/datasets.h>
 #include <torch/data/samplers.h>
+#include <algorithm>
 #include <memory>
 #include <vector>
 
@@ -97,9 +98,32 @@ TEST_F(DatasetTest, ShortLinear) {
       ->find_or_add_edge(4.);
   load();
   EXPECT_EQ(4, result.size());
-  auto exp = torch::zeros(10, at::kDouble);
+  auto exp = zeros();
   for (int i = 0; i < 4; ++i) {
-    for (int j = 0; j <= i; ++j) exp[j] = double(j + 1);
+    for (int j = 0; j <= i; ++j) exp[j] = j + 1;
+    EXPECT_RESULT(i, exp, 0);
+  }
+}
+
+TEST_F(DatasetTest, LongLinear) {
+  root.find_or_add_edge(1.)
+      ->find_or_add_edge(2.)
+      ->find_or_add_edge(3.)
+      ->find_or_add_edge(4.)
+      ->find_or_add_edge(5.)
+      ->find_or_add_edge(6.)
+      ->find_or_add_edge(7.)
+      ->find_or_add_edge(8.)
+      ->find_or_add_edge(9.)
+      ->find_or_add_edge(10.)
+      ->find_or_add_edge(11.)
+      ->find_or_add_edge(12.)
+      ->find_or_add_edge(13.);
+  load();
+  EXPECT_EQ(13, result.size());
+  auto exp = zeros();
+  for (int i = 0; i < 13; ++i) {
+    for (int j = 0; j < min(i + 1, 10); ++j) exp[j] = j + 1 + max(0, i - 9);
     EXPECT_RESULT(i, exp, 0);
   }
 }
