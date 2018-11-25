@@ -56,20 +56,54 @@ TEST(DataLoader, Order) {
     }
 }
 
-TEST(Dataset, SingleNode) {
+TEST(Dataset, SingleEdge) {
   exetree::node n;
   n.find_or_add_edge(123.)->maywin(true);
   const auto loader = exetree::make_data_loader(n);
   auto i = 0u;
+  torch::data::Example<> expected(torch::zeros(10, at::kDouble),
+                                  torch::tensor({1}));
+  expected.data[0] = 123.;
   for (auto batch : *loader)
-    for (auto ex : batch) {
-      EXPECT_TRUE(torch::equal(torch::tensor({123.}), ex.data))
-          << i << ' ' << ex.data;
-      EXPECT_TRUE(torch::equal(torch::tensor({1}), ex.target))
-          << i << ' ' << ex.target;
+    for (auto sample : batch) {
+      EXPECT_TRUE(torch::equal(expected.data, sample.data))
+          << i << ' ' << sample.data;
+      EXPECT_TRUE(torch::equal(expected.target, sample.target))
+          << i << ' ' << sample.target;
       i++;
     }
   EXPECT_EQ(1, i);
+}
+
+TEST(Dataset, DeepLinear) {
+  exetree::node root;
+  const auto n1 = root.find_or_add_edge(1.), n2 = n1->find_or_add_edge(2.),
+             n3 = n2->find_or_add_edge(3.), n4 = n3->find_or_add_edge(4.);
+  const auto loader = exetree::make_data_loader(root);
+  vector<torch::Tensor> data, labels;
+  for (auto batch : *loader)
+    for (auto ex : batch) {
+      data.push_back(ex.data);
+      labels.push_back(ex.target);
+    }
+  EXPECT_EQ(4, data.size());
+  EXPECT_EQ(4, labels.size());
+  EXPECT_TRUE(torch::equal(
+      torch::tensor({1., 0., 0., 0., 0., 0., 0., 0., 0., 0.}), data[0]))
+      << data[0];
+  EXPECT_TRUE(torch::equal(torch::tensor({0}), labels[0])) << labels[0];
+  EXPECT_TRUE(torch::equal(
+      torch::tensor({1., 2., 0., 0., 0., 0., 0., 0., 0., 0.}), data[1]))
+      << data[1];
+  EXPECT_TRUE(torch::equal(torch::tensor({0}), labels[0])) << labels[1];
+  EXPECT_TRUE(torch::equal(
+      torch::tensor({1., 2., 3., 0., 0., 0., 0., 0., 0., 0.}), data[2]))
+      << data[2];
+  EXPECT_TRUE(torch::equal(torch::tensor({0}), labels[0])) << labels[2];
+  EXPECT_TRUE(torch::equal(
+      torch::tensor({1., 2., 3., 4., 0., 0., 0., 0., 0., 0.}), data[3]))
+      << data[3];
+  EXPECT_TRUE(torch::equal(torch::tensor({0}), labels[0])) << labels[3];
 }
 
 }  // namespace

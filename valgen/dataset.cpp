@@ -19,6 +19,28 @@
 using namespace std;
 using namespace torch::data;
 
+namespace {
+
+using namespace ramfuzz::exetree;
+
+/// Returns a tensor of the n-edge path ending in e.  If there are fewer than n
+/// edges between root and e, pads the tensor with zeros.
+torch::Tensor last_n(const edge* e, size_t n) {
+  auto values = torch::zeros(n, at::kDouble);
+  auto edge_ptr = e;
+  auto i = n;
+  while (i > 0 && edge_ptr) {
+    --i;
+    values[i] = double(*edge_ptr);
+    edge_ptr = edge_ptr->src()->incoming_edge();
+  }
+  if (i == 0) return values;
+  const auto spl = values.split_with_sizes({int64_t(i), int64_t(n - i)});
+  return torch::cat({spl[1], spl[0]});
+}
+
+}  // namespace
+
 namespace ramfuzz {
 namespace exetree {
 
@@ -30,10 +52,10 @@ ExeTreeDataset::ExeTreeDataset(const node& root)
 Example<> ExeTreeDataset::get(size_t index) {
   assert(index == last_index + 1 || (index == 0 && last_index == 0));
   last_index = index;
-  double value = *current;
+  auto values = last_n(&*current, 10);
   bool label = current->dst()->maywin();
   ++current;
-  return Example<>(torch::tensor({value}), torch::tensor(label));
+  return Example<>(values, torch::tensor(label));
 }
 
 unique_ptr<DataLoader<ExeTreeDataset, samplers::SequentialSampler>>
