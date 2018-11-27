@@ -14,20 +14,11 @@
 
 #pragma once
 
+#include <torch/script.h>
 #include <random>
 #include <zmqpp/socket.hpp>
 
 #include "exetree.hpp"
-
-// Don't want to #include <torch/script.h>, because driver.cpp includes this
-// header (for ResponseStatus), and driver really shouldn't depend on LibTorch.
-namespace torch {
-namespace jit {
-namespace script {
-class Module;
-}  // namespace script
-}  // namespace jit
-}  // namespace torch
 
 namespace ramfuzz {
 
@@ -39,20 +30,6 @@ class valgen {
   void process_request(zmqpp::socket& sock);
 
   const exetree::node& exetree() const { return root; }
-
-  struct ResponseStatus {
-    static constexpr uint8_t
-        OK_TERMINAL = 10,  ///< Successfully processed termination notification.
-        OK_VALUE = 11,  //< Successfully processed request for a random value.
-        ERR_FEW_PARTS = 20,  ///< Every request must have at least two parts.
-        ERR_TERM_TAKES_2 =
-            21,  ///< Termination notification must have exactly 2 parts.
-        ERR_VALUE_TAKES_5 =
-            22,  ///< Request for random value must have exactly 5 parts.
-        ERR_WRONG_VALUEID = 23,  ///< The last time a value was requested here,
-                                 ///< it had another valueid.
-        END_MARKER_DO_NOT_USE = 255;
-  };
 
  private:
   std::ranlux24 rn_eng = std::ranlux24();

@@ -46,7 +46,7 @@
 #include <zmqpp/socket.hpp>
 
 #include "../runtime/ramfuzz-rt.hpp"
-#include "valgen.hpp"
+#include "valgen_response.hpp"
 
 using namespace ramfuzz;
 using namespace std;
@@ -78,7 +78,7 @@ int main(int argc, const char** argv) {
       exit(22);
     }
     const auto status = m.get<uint8_t>(0);
-    if (status != valgen::ResponseStatus::OK_TERMINAL) {
+    if (status != OK_TERMINAL) {
       cerr << "Received unexpected status in valgen's response: " << status
            << endl;
       exit(33);
