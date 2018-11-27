@@ -19,11 +19,21 @@
 
 #include "exetree.hpp"
 
+// Don't want to #include <torch/script.h>, because driver.cpp includes this
+// header (for ResponseStatus), and driver really shouldn't depend on LibTorch.
+namespace torch {
+namespace jit {
+namespace script {
+class Module;
+}  // namespace script
+}  // namespace jit
+}  // namespace torch
+
 namespace ramfuzz {
 
 class valgen {
  public:
-  valgen(int seed) : rn_eng(seed) {}
+  valgen(int seed, torch::jit::script::Module&) : rn_eng(seed) {}
 
   /// Receives one request from sock and sends back a response.
   void process_request(zmqpp::socket& sock);

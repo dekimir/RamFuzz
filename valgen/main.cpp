@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <torch/script.h>
 #include <cstdlib>
 #include <zmqpp/context.hpp>
 #include <zmqpp/socket.hpp>
@@ -19,6 +20,7 @@
 #include "../runtime/ramfuzz-rt.hpp"
 #include "valgen.hpp"
 
+using namespace std;
 using namespace ramfuzz;
 using namespace zmqpp;
 
@@ -32,7 +34,12 @@ int main(int argc, char* argv[]) {
   //    [http://zguide.zeromq.org/page:all#ROUTER-Broker-and-REQ-Workers] shows
   //    identity, allows multi-threaded generation, FWIW
   socket s(ctx, socket_type::reply);
-  s.bind(argc > 1 ? argv[1] : runtime::default_valgen_endpoint);
-  valgen vg(argc > 2 ? atoi(argv[2]) : 0);
+  if (argc < 2) {
+    cerr << "usage: " << argv[0] << " model_file [endpoint] [seed]\n";
+    exit(11);
+  }
+  auto net = torch::jit::load(argv[1]);
+  s.bind(argc > 2 ? argv[2] : runtime::default_valgen_endpoint);
+  valgen vg(argc > 3 ? atoi(argv[3]) : 0, *net);
   for (;;) vg.process_request(s);
 }
