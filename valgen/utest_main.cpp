@@ -44,8 +44,7 @@ int main(int argc, char **argv) {
   }
   cout << "Using seed " << test_seed << " for valgen and randomized tests."
        << endl;
-  torch::jit::script::Module net;
-  global_valgen.reset(new valgen(test_seed, net));
+  global_valgen.reset(new valgen(test_seed));
   global_testrng.reset(new mt19937(test_seed));
   return RUN_ALL_TESTS();
 }

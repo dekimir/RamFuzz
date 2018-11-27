@@ -38,8 +38,8 @@ int main(int argc, char* argv[]) {
     cerr << "usage: " << argv[0] << " model_file [endpoint] [seed]\n";
     exit(11);
   }
-  auto net = torch::jit::load(argv[1]);
+  auto nnet = torch::jit::load(argv[1]);
   s.bind(argc > 2 ? argv[2] : runtime::default_valgen_endpoint);
-  valgen vg(argc > 3 ? atoi(argv[3]) : 0, *net);
+  valgen vg(argc > 3 ? atoi(argv[3]) : 0, nnet.get());
   for (;;) vg.process_request(s);
 }

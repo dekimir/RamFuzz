@@ -240,8 +240,6 @@ TEST_F(RuntimeTest, NullRngULL) { check_rgen_null_range<unsigned long long>(); }
 TEST_F(RuntimeTest, NullRangeFloat) { check_rgen_null_range<float>(); }
 TEST_F(RuntimeTest, NullRangeDouble) { check_rgen_null_range<double>(); }
 
-torch::jit::script::Module net;
-
 /// Test fixture for valgen's exetree tracking.  Makes a fresh valgen object for
 /// every test, to avoid cross-pollution.
 class ExeTreeTest : public ValgenTest {
@@ -249,7 +247,7 @@ class ExeTreeTest : public ValgenTest {
   valgen member_valgen;
   const node& root;
   ExeTreeTest()
-      : member_valgen(test_seed, net),
+      : member_valgen(test_seed),
         ValgenTest(member_valgen),
         root(member_valgen.exetree()) {}
   void reset_cursor(uint8_t success = IS_SUCCESS) {

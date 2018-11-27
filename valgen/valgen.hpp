@@ -24,7 +24,8 @@ namespace ramfuzz {
 
 class valgen {
  public:
-  valgen(int seed, torch::jit::script::Module&) : rn_eng(seed) {}
+  valgen(int seed, torch::jit::script::Module* nnet = nullptr)
+      : rn_eng(seed), nnet(nnet) {}
 
   /// Receives one request from sock and sends back a response.
   void process_request(zmqpp::socket& sock);
@@ -35,6 +36,7 @@ class valgen {
   std::ranlux24 rn_eng = std::ranlux24();
   exetree::node root;
   exetree::node* cursor = &root;
+  torch::jit::script::Module* nnet;
 };
 
 }  // namespace ramfuzz
