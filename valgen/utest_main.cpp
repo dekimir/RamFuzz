@@ -13,7 +13,6 @@
 // limitations under the License.
 
 #include <gtest/gtest.h>
-#include <torch/script.h>
 #include <cstdlib>
 #include <iostream>
 #include <memory>
