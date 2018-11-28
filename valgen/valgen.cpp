@@ -90,6 +90,8 @@ void response(socket& sock, Args&&... args) {
 
 namespace ramfuzz {
 
+valgen::valgen(int seed) : rn_eng(seed), nnet(nullptr) {}
+
 void valgen::process_request(socket& sock) {
   message msg;
   sock.receive(msg);

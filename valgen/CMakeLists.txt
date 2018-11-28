@@ -5,7 +5,7 @@ find_package(Torch REQUIRED)
 
 set(CMAKE_CXX_STANDARD 11)
 add_library(RamFuzz.ValgenLib
-  valgen.hpp valgen.cpp exetree.hpp exetree.cpp dataset.hpp dataset.cpp)
+  valgen.hpp valgen.cpp exetree.hpp exetree.cpp dataset.hpp dataset.cpp nnet.hpp)
 target_link_libraries(RamFuzz.ValgenLib ${TORCH_LIBRARIES} zmqpp zmq)
 
 add_executable(valgen main.cpp)

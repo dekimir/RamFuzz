@@ -21,9 +21,11 @@
 
 namespace ramfuzz {
 
+class valgen_nnet;
+
 class valgen {
  public:
-  valgen(int seed) : rn_eng(seed) {}
+  valgen(int seed);
 
   /// Receives one request from sock and sends back a response.
   void process_request(zmqpp::socket& sock);
@@ -48,6 +50,7 @@ class valgen {
   std::ranlux24 rn_eng = std::ranlux24();
   exetree::node root;
   exetree::node* cursor = &root;
+  valgen_nnet* nnet;
 };
 
 }  // namespace ramfuzz
