@@ -15,9 +15,13 @@
 #pragma once
 
 #include <torch/nn.h>
+#include <memory>
 
 namespace ramfuzz {
 
 class valgen_nnet : public torch::nn::Module {};
+
+/// Creates a neural net for the valgen object to use.
+std::unique_ptr<valgen_nnet> make_nnet();
 
 }  // namespace ramfuzz

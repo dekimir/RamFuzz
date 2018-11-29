@@ -14,30 +14,19 @@
 
 #pragma once
 
-#include <torch/nn.h>
-#include <memory>
-#include <random>
-#include <zmqpp/socket.hpp>
-
-#include "exetree.hpp"
-#include "nnet.hpp"
-
 namespace ramfuzz {
 
-class valgen {
- public:
-  valgen(int seed);
-
-  /// Receives one request from sock and sends back a response.
-  void process_request(zmqpp::socket& sock);
-
-  const exetree::node& exetree() const { return root; }
-
- private:
-  std::ranlux24 rn_eng = std::ranlux24();
-  exetree::node root;
-  exetree::node* cursor = &root;
-  std::unique_ptr<valgen_nnet> nnet;
+enum ResponseStatus {
+  OK_TERMINAL = 10,    ///< Successfully processed termination notification.
+  OK_VALUE,            //< Successfully processed request for a random value.
+  ERR_FEW_PARTS = 20,  ///< Every request must have at least two parts.
+  ERR_TERM_TAKES_2,    ///< Termination notification must have exactly 2 parts.
+  ERR_VALUE_TAKES_5,   ///< Request for random value must have exactly 5 parts.
+  ERR_WRONG_VALUEID,   ///< The last time a value was requested here,
+                       ///< it had another valueid.
+  END_MARKER_DO_NOT_USE
 };
+
+inline uint8_t status(ResponseStatus s) { return s; }
 
 }  // namespace ramfuzz

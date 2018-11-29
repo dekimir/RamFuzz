@@ -5,13 +5,22 @@ find_package(Torch REQUIRED)
 
 set(CMAKE_CXX_STANDARD 11)
 add_library(RamFuzz.ValgenLib
-  valgen.hpp valgen.cpp exetree.hpp exetree.cpp dataset.hpp dataset.cpp nnet.hpp)
+  dataset.cpp
+  dataset.hpp
+  exetree.cpp
+  exetree.hpp
+  nnet.cpp
+  nnet.hpp
+  status.hpp
+  valgen.cpp
+  valgen.hpp
+  )
 target_link_libraries(RamFuzz.ValgenLib ${TORCH_LIBRARIES} zmqpp zmq)
 
 add_executable(valgen main.cpp)
 target_link_libraries(valgen RamFuzz.ValgenLib)
 
-add_executable(driver driver.cpp)
+add_executable(driver driver.cpp status.hpp)
 target_link_libraries(driver zmqpp zmq)
 
 find_package(GTest)

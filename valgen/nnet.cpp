@@ -12,32 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#pragma once
-
-#include <torch/nn.h>
-#include <memory>
-#include <random>
-#include <zmqpp/socket.hpp>
-
-#include "exetree.hpp"
 #include "nnet.hpp"
+
+using namespace std;
+using namespace ramfuzz;
+
+namespace {
+
+class samplenet3 : public valgen_nnet {};
+
+}
 
 namespace ramfuzz {
 
-class valgen {
- public:
-  valgen(int seed);
-
-  /// Receives one request from sock and sends back a response.
-  void process_request(zmqpp::socket& sock);
-
-  const exetree::node& exetree() const { return root; }
-
- private:
-  std::ranlux24 rn_eng = std::ranlux24();
-  exetree::node root;
-  exetree::node* cursor = &root;
-  std::unique_ptr<valgen_nnet> nnet;
-};
+unique_ptr<valgen_nnet> make_nnet() { return torch::make_unique<samplenet3>(); }
 
 }  // namespace ramfuzz
