@@ -44,7 +44,7 @@ static constexpr size_t batch_size = 10;
 /// Ensures the torch DataLoader behaves the way we expect and depend on.
 TEST(DataLoader, Order) {
   TestDataset ds;
-  auto loader = torch::data::make_data_loader(
+  const auto loader = torch::data::make_data_loader(
       ds, batch_size, torch::data::samplers::SequentialSampler(100));
   int i = 0;
   for (auto batch : *loader)
