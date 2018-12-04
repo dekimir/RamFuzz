@@ -28,43 +28,13 @@ namespace {
 using namespace std;
 using namespace ramfuzz;
 
-class TestDataset : public torch::data::datasets::Dataset<TestDataset> {
- public:
-  TestDataset() : iseen(new vector<size_t>) {}
-  ExampleType get(size_t index) override {
-    iseen->push_back(index);
-    return {torch::tensor({12, int(index)}), torch::tensor({34, int(index)})};
-  }
-  torch::optional<size_t> size() const override { return 100; }
-  shared_ptr<vector<size_t>> iseen;
-};
-
-static constexpr size_t batch_size = 10;
-
-/// Ensures the torch DataLoader behaves the way we expect and depend on.
-TEST(DataLoader, Order) {
-  TestDataset ds;
-  const auto loader = torch::data::make_data_loader(
-      ds, batch_size, torch::data::samplers::SequentialSampler(100));
-  int i = 0;
-  for (auto batch : *loader)
-    for (auto ex : batch) {
-      EXPECT_TRUE(torch::equal(torch::tensor({12, i}), ex.data))
-          << i << ' ' << ex.data;
-      EXPECT_TRUE(torch::equal(torch::tensor({34, i}), ex.target))
-          << i << ' ' << ex.target;
-      EXPECT_EQ(i, ds.iseen->at(i));
-      i++;
-    }
-}
-
 class DatasetTest : public ::testing::Test {
  protected:
-  /// Run exetree data loader on root and record the result.
+  /// Load exetree data into result.
   void load() {
-    const auto loader = exetree::make_data_loader(root);
-    for (auto batch : *loader)
-      for (auto ex : batch) result.push_back(ex);
+    for (exetree::dfs_cursor current(root); current; ++current)
+      result.emplace_back(last_n(&*current, 10),
+                          torch::tensor(current->dst()->maywin()));
   }
 
   /// Zeros tensor in the shape of expected result data.

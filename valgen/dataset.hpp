@@ -24,23 +24,9 @@
 namespace ramfuzz {
 namespace exetree {
 
-/// Makes a torch dataset from an execution tree.  Memory-efficient, but it must
-/// be used with a SequentialSampler.
-class ExeTreeDataset : public torch::data::datasets::Dataset<ExeTreeDataset> {
- public:
-  explicit ExeTreeDataset(const node& root);
-  torch::data::Example<> get(size_t index) override;
-  torch::optional<size_t> size() const override { return _size; };
-
- private:
-  dfs_cursor current;
-  size_t last_index;  ///< Records get() argument at last invocation.
-  size_t _size;
-};
-
-std::unique_ptr<torch::data::DataLoader<
-    ExeTreeDataset, torch::data::samplers::SequentialSampler>>
-make_data_loader(const node& n, size_t batch_size = 64);
+/// Returns a tensor of the n-edge path ending in e.  If there are fewer than n
+/// edges between root and e, pads the tensor with zeros on the right.
+torch::Tensor last_n(const edge* e, size_t n);
 
 }  // namespace exetree
 }  // namespace ramfuzz
