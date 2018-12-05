@@ -96,7 +96,7 @@ size_t longest_path(const node& root);
 /// Traverses an execution tree in depth-first-search preorder.
 class dfs_cursor {
  public:
-  dfs_cursor(const node& root);
+  explicit dfs_cursor(const node& root);
   dfs_cursor& operator++();
   dfs_cursor operator++(int);
   const edge& operator*() const { return *curedge; }
