@@ -24,16 +24,30 @@ namespace {
 using namespace ramfuzz;
 using namespace exetree;
 
-/// Tests that valgen_nnet can learn a simple "negative values fail" case.
-TEST(NNet, EasySplit) {
-  node root;
-  for (int i = -1000; i <= 1000; ++i) root.find_or_add_edge(i)->maywin(i >= 0);
+class NNetTest : public testing::Test {
+ protected:
+  torch::Tensor pred(const torch::Tensor& input) {
+    const auto dummy_locs = torch::tensor({1.});  // Currently ignored.
+    return nn.forward(input, dummy_locs);
+  }
   valgen_nnet nn;
+  node root;
+  const torch::Tensor success = torch::tensor({1., 0.});
+  const torch::Tensor failure = torch::tensor({0., 1.});
+};
+
+#define EXPECT_PREDICTION(target, input)                          \
+  {                                                               \
+    const auto output = pred(input);                              \
+    EXPECT_TRUE(torch::allclose((target), (output))) << (output); \
+  }
+
+/// Tests that valgen_nnet can learn a simple "negative values fail" case.
+TEST_F(NNetTest, EasySplit) {
+  for (int i = -1000; i <= 1000; ++i) root.find_or_add_edge(i)->maywin(i >= 0);
   for (int i = 0; i < 10; ++i) nn.train_more(root);
-  const auto pred =
-      nn.forward(torch::tensor({100., 0., 0., 0., 0., 0., 0., 0., 0., 0.}),
-                 torch::tensor({1.}));
-  EXPECT_TRUE(torch::allclose(torch::tensor({1., 0.}), pred)) << pred;
+  EXPECT_PREDICTION(success,
+                    torch::tensor({100., 0., 0., 0., 0., 0., 0., 0., 0., 0.}));
 }
 
 }  // namespace
