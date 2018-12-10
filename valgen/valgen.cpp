@@ -93,7 +93,7 @@ void response(socket& sock, Args&&... args) {
 
 namespace ramfuzz {
 
-valgen::valgen(int seed) : rn_eng(seed), nnet(make_nnet()) {}
+valgen::valgen(int seed) : rn_eng(seed) {}
 
 void valgen::process_request(socket& sock) {
   message msg;

@@ -14,17 +14,54 @@
 
 #include "nnet.hpp"
 
+#include <torch/torch.h>
+
+#include "dataset.hpp"
+
 using namespace std;
 using namespace ramfuzz;
 
-namespace {
-
-class samplenet3 : public valgen_nnet {};
-
-}
-
 namespace ramfuzz {
 
-unique_ptr<valgen_nnet> make_nnet() { return torch::make_unique<samplenet3>(); }
+valgen_nnet::valgen_nnet() : Module("ValgenNet"), lin(nullptr) {
+  // Register all parameters:
+  // batchnorm
+  // embedding
+  // all conv1d
+  // both linear
+  lin = register_module("lin1", torch::nn::Linear(10, 2));
+
+  // Need as large a range as possible for input values, which come from
+  // arbitrary C++ programs:
+  to(at::kDouble);
+}
+
+torch::Tensor valgen_nnet::forward(torch::Tensor vals, torch::Tensor locs) {
+  // values > batchnorm
+  // ids > embedding
+  // concat
+  // dropout
+  // for each filtsz:
+  //   flatten(maxpooling(conv1d))
+  // linear(linear(dropout(concat(conv_list))))
+  return torch::softmax(lin->forward(vals), 0);
+}
+
+void valgen_nnet::train_more(const exetree::node& root) {
+  train();
+  // Batch gradient descent implementation based on this suggestion:
+  // https://discuss.pytorch.org/t/how-to-process-large-batches-of-data/6740/4
+  auto opt = torch::optim::Adagrad(parameters(), 0.1);
+  opt.zero_grad();
+  for (exetree::dfs_cursor current(root); current; ++current) {
+    const auto values = last_n(&*current, 10);
+    const bool wins = current->dst()->maywin();
+    const auto pred = forward(values, torch::zeros(1));
+    const auto target = torch::tensor({wins, !wins}, at::kDouble);
+    auto loss = torch::soft_margin_loss(pred, target);
+    loss.backward();
+  }
+  opt.step();
+}
 
 }  // namespace ramfuzz

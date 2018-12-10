@@ -17,11 +17,22 @@
 #include <torch/nn.h>
 #include <memory>
 
+#include "exetree.hpp"
+
 namespace ramfuzz {
 
-class valgen_nnet : public torch::nn::Module {};
+class valgen_nnet : public torch::nn::Module {
+ public:
+  valgen_nnet();
 
-/// Creates a neural net for the valgen object to use.
-std::unique_ptr<valgen_nnet> make_nnet();
+  /// Incrementally trains *this with the root corpus.
+  void train_more(const exetree::node& root);
+
+  /// Returns the neural network's output on vals, locs.
+  torch::Tensor forward(torch::Tensor vals, torch::Tensor locs);
+
+ private:
+  torch::nn::Linear lin;
+};
 
 }  // namespace ramfuzz

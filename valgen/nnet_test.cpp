@@ -12,30 +12,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#pragma once
-
-#include <memory>
-#include <random>
-#include <zmqpp/socket.hpp>
-
-#include "exetree.hpp"
 #include "nnet.hpp"
 
-namespace ramfuzz {
+#include <gtest/gtest.h>
+#include <torch/torch.h>
 
-class valgen {
- public:
-  valgen(int seed);
+#include "dataset.hpp"
 
-  /// Receives one request from sock and sends back a response.
-  void process_request(zmqpp::socket& sock);
+namespace {
 
-  const exetree::node& exetree() const { return root; }
+using namespace ramfuzz;
+using namespace exetree;
 
- private:
-  std::ranlux24 rn_eng = std::ranlux24();
-  exetree::node root;
-  exetree::node* cursor = &root;
-};
+/// Tests that valgen_nnet can learn a simple "negative values fail" case.
+TEST(NNet, EasySplit) {
+  node root;
+  for (int i = -1000; i <= 1000; ++i) root.find_or_add_edge(i)->maywin(i >= 0);
+  valgen_nnet nn;
+  for (int i = 0; i < 10; ++i) nn.train_more(root);
+  const auto pred =
+      nn.forward(torch::tensor({100., 0., 0., 0., 0., 0., 0., 0., 0., 0.}),
+                 torch::tensor({1.}));
+  EXPECT_TRUE(torch::allclose(torch::tensor({1., 0.}), pred)) << pred;
+}
 
-}  // namespace ramfuzz
+}  // namespace
