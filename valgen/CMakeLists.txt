@@ -33,8 +33,15 @@ else()
   set(gtest_main gtest_main)
 endif()
 
-add_executable(utests utest_main.cpp
-  valgen_test.cpp exetree_test.cpp dataset_test.cpp nnet_test.cpp util.hpp util.cpp)
+add_executable(utests
+  dataset_test.cpp
+  exetree_test.cpp
+  nnet_test.cpp
+  utest_main.cpp
+  util.cpp
+  util.hpp
+  valgen_test.cpp
+  )
 target_link_libraries(utests ${gtest} RamFuzz.ValgenLib)
 
 enable_testing()
