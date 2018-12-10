@@ -55,11 +55,10 @@ void valgen_nnet::train_more(const exetree::node& root) {
   opt.zero_grad();
   for (exetree::dfs_cursor current(root); current; ++current) {
     const auto values = last_n(&*current, 10);
-    const bool wins = current->dst()->maywin();
     const auto pred = forward(values, torch::zeros(1));
+    const bool wins = current->dst()->maywin();
     const auto target = torch::tensor({wins, !wins}, at::kDouble);
-    auto loss = torch::soft_margin_loss(pred, target);
-    loss.backward();
+    torch::soft_margin_loss(pred, target).backward();
   }
   opt.step();
 }
