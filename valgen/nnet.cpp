@@ -21,7 +21,6 @@
 #include "dataset.hpp"
 
 using namespace std;
-using namespace ramfuzz;
 
 namespace ramfuzz {
 
