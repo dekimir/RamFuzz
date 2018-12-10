@@ -23,6 +23,8 @@
 #include <memory>
 #include <vector>
 
+#include "util.hpp"
+
 namespace {
 
 using namespace std;
@@ -39,14 +41,6 @@ class DatasetTest : public ::testing::Test {
 
   /// Zeros tensor in the shape of expected result data.
   torch::Tensor zeros() const { return torch::zeros(10, at::kDouble); }
-
-  /// Tensor beginning in v, followed by zeros until matching result shape.
-  torch::Tensor pad_right(const vector<double>& v) {
-    assert(v.size() <= 10);
-    auto wider = zeros();
-    for (size_t i = 0; i < v.size(); ++i) wider[i] = v[i];
-    return wider;
-  }
 
   exetree::node root;
 
