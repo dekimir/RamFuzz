@@ -18,6 +18,7 @@
 #include <torch/torch.h>
 
 #include "dataset.hpp"
+#include "util.hpp"
 
 namespace {
 
@@ -46,8 +47,7 @@ class NNetTest : public testing::Test {
 TEST_F(NNetTest, EasySplit) {
   for (int i = -1000; i <= 1000; ++i) root.find_or_add_edge(i)->maywin(i >= 0);
   for (int i = 0; i < 10; ++i) nn.train_more(root);
-  EXPECT_PREDICTION(success,
-                    torch::tensor({100., 0., 0., 0., 0., 0., 0., 0., 0., 0.}));
+  EXPECT_PREDICTION(success, pad_right({100.}));
 }
 
 }  // namespace
