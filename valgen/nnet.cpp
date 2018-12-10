@@ -15,6 +15,8 @@
 #include "nnet.hpp"
 
 #include <torch/torch.h>
+#include <unistd.h>
+#include <iostream>
 
 #include "dataset.hpp"
 
@@ -53,13 +55,19 @@ void valgen_nnet::train_more(const exetree::node& root) {
   // https://discuss.pytorch.org/t/how-to-process-large-batches-of-data/6740/4
   auto opt = torch::optim::Adagrad(parameters(), 0.1);
   opt.zero_grad();
+  size_t data_count = 0, success_count = 0;
   for (exetree::dfs_cursor current(root); current; ++current) {
     const auto values = last_n(&*current, 10);
     const auto pred = forward(values, torch::zeros(1));
     const bool wins = current->dst()->maywin();
     const auto target = torch::tensor({wins, !wins}, at::kDouble);
     torch::soft_margin_loss(pred, target).backward();
+    if (torch::allclose(pred, target)) ++success_count;
+    ++data_count;
   }
+  static const char line_reset = isatty(STDOUT_FILENO) ? '\r' : '\n';
+  cout << "valgen_nnet accuracy: " << fixed << setprecision(4)
+       << float(success_count) / data_count << line_reset << flush;
   opt.step();
 }
 
