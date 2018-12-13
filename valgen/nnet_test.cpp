@@ -15,9 +15,11 @@
 #include "nnet.hpp"
 
 #include <gtest/gtest.h>
+#include <torch/script.h>
 #include <torch/torch.h>
 #include <limits>
 #include <random>
+#include <vector>
 
 #include "dataset.hpp"
 #include "util.hpp"
@@ -56,6 +58,53 @@ TEST_F(NNetTest, EasySplit) {
   EXPECT_PREDICTION(failure, pad_right({-100.}));
   EXPECT_PREDICTION(failure, pad_right({-1000.}));
   EXPECT_PREDICTION(failure, pad_right({-10000.}));
+}
+
+void extract_parameters(const torch::jit::script::Module& mod,
+                        vector<torch::Tensor>& v) {
+  for (const auto& p : mod.get_parameters()) v.push_back(*p.value().slot());
+  for (const auto& m : mod.get_modules())
+    extract_parameters(*m.value().module, v);
+}
+
+vector<torch::Tensor> extract_parameters(
+    const torch::jit::script::Module& mod) {
+  vector<torch::Tensor> params;
+  extract_parameters(mod, params);
+  return params;
+}
+
+vector<c10::IValue> last_n2(const edge* e, size_t n) {
+  vector<c10::IValue> values(n);
+  auto edge_ptr = e;
+  auto i = n;
+  while (i > 0 && edge_ptr) {
+    --i;
+    values[i] = double(*edge_ptr);
+    edge_ptr = edge_ptr->src()->incoming_edge();
+  }
+  if (i == 0) return values;
+  vector<c10::IValue> shifted(values.cbegin() + i, values.cend());
+  while (i > 0) shifted.push_back(0.);
+  return shifted;
+}
+
+void tmor(torch::jit::script::Module& net, const node& root) {
+  auto opt = torch::optim::Adagrad(extract_parameters(net), 0.04);
+  for (exetree::dfs_cursor current(root); current; ++current) {
+    const auto pred = net.forward(last_n2(&*current, 10));
+    const auto target = net.bool_as_prediction(current->dst()->maywin());
+    torch::soft_margin_loss(pred, target).backward();
+  }
+}
+
+TEST(ScriptModule, One) {
+  auto m = torch::jit::load("delete_me.pt");
+  node root;
+  for (int i = -1000; i <= 1000; ++i) {
+    root.find_or_add_edge(i)->maywin(i >= 0);
+    if (!i % 20) tmor(*m, root);
+  }
 }
 
 }  // namespace

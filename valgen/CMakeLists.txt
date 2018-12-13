@@ -33,6 +33,9 @@ else()
   set(gtest_main gtest_main)
 endif()
 
+add_custom_target(SaveAModel ALL
+  ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/save-test-model.py)
+
 add_executable(utests
   dataset_test.cpp
   exetree_test.cpp
