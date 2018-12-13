@@ -16,37 +16,38 @@
 
 #include <gtest/gtest.h>
 #include <torch/torch.h>
+#include <limits>
+#include <random>
 
 #include "dataset.hpp"
 #include "util.hpp"
 
 namespace {
 
+using namespace std;
 using namespace ramfuzz;
 using namespace exetree;
 
 class NNetTest : public testing::Test {
  protected:
-  torch::Tensor pred(const torch::Tensor& input) {
-    const auto dummy_locs = torch::tensor({1.});  // Currently ignored.
-    return nn.forward(input, dummy_locs);
-  }
   valgen_nnet nn;
   node root;
-  const torch::Tensor success = torch::tensor({1., 0.});
-  const torch::Tensor failure = torch::tensor({0., 1.});
 };
 
-#define EXPECT_PREDICTION(target, input)                          \
-  {                                                               \
-    const auto output = pred(input);                              \
-    EXPECT_TRUE(torch::allclose((target), (output))) << (output); \
+constexpr bool success = true, failure = false;
+
+#define EXPECT_PREDICTION(expected, input)                \
+  {                                                       \
+    const auto p = nn.forward(input);                     \
+    EXPECT_EQ((expected), nn.prediction_as_bool(p)) << p; \
   }
 
 /// Tests that valgen_nnet can learn a simple "negative values fail" case.
 TEST_F(NNetTest, EasySplit) {
-  for (int i = -1000; i <= 1000; ++i) root.find_or_add_edge(i)->maywin(i >= 0);
-  for (int i = 0; i < 10; ++i) nn.train_more(root);
+  for (int i = -1000; i <= 1000; ++i) {
+    root.find_or_add_edge(i)->maywin(i >= 0);
+    if (!i % 20) nn.train_more(root);
+  }
 
   EXPECT_PREDICTION(success, pad_right({100.}));
   EXPECT_PREDICTION(success, pad_right({1000.}));

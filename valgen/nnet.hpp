@@ -28,8 +28,23 @@ class valgen_nnet : public torch::nn::Module {
   /// Incrementally trains *this with the root corpus.
   void train_more(const exetree::node& root);
 
-  /// Returns the neural network's output on vals, locs.
-  torch::Tensor forward(torch::Tensor vals, torch::Tensor locs);
+  /// Returns the neural network's output on vals.
+  torch::Tensor forward(torch::Tensor vals);
+
+  /// Translates a valgen_nnet output into a simple bool: true iff prediction
+  /// means the input node may reach successful termination.
+  static bool prediction_as_bool(const torch::Tensor& prediction) {
+    return prediction[0].item<double>() > prediction[1].item<double>();
+  }
+
+  /// Opposite of prediction_as_bool.
+  static torch::Tensor bool_as_prediction(bool maywin) {
+    return torch::tensor({maywin, !maywin}, at::kDouble);
+  }
+
+  bool predict(const torch::Tensor& in) {
+    return prediction_as_bool(forward(in));
+  }
 
  private:
   torch::nn::Linear lin;

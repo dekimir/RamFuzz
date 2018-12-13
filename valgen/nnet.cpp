@@ -37,7 +37,7 @@ valgen_nnet::valgen_nnet() : Module("ValgenNet"), lin(nullptr) {
   to(at::kDouble);
 }
 
-torch::Tensor valgen_nnet::forward(torch::Tensor vals, torch::Tensor locs) {
+torch::Tensor valgen_nnet::forward(torch::Tensor vals) {
   // values > batchnorm
   // ids > embedding
   // concat
@@ -57,11 +57,11 @@ void valgen_nnet::train_more(const exetree::node& root) {
   size_t data_count = 0, success_count = 0;
   for (exetree::dfs_cursor current(root); current; ++current) {
     const auto values = last_n(&*current, 10);
-    const auto pred = forward(values, torch::zeros(1));
-    const bool wins = current->dst()->maywin();
-    const auto target = torch::tensor({wins, !wins}, at::kDouble);
+    const auto pred = forward(values);
+    const bool mw = current->dst()->maywin();
+    const auto target = bool_as_prediction(mw);
     torch::soft_margin_loss(pred, target).backward();
-    if (torch::allclose(pred, target)) ++success_count;
+    if (prediction_as_bool(pred) == mw) ++success_count;
     ++data_count;
   }
   static const char line_reset = isatty(STDOUT_FILENO) ? '\r' : '\n';
