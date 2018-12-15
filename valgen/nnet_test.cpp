@@ -46,7 +46,7 @@ constexpr bool success = true, failure = false;
 TEST_F(NNetTest, EasySplit) {
   for (int i = -1000; i <= 1000; ++i) {
     root.find_or_add_edge(i)->maywin(i >= 0);
-    if (!i % 20) nn.train_more(root);
+    if (i % 20 == 0) nn.train_more(root);
   }
 
   EXPECT_PREDICTION(success, pad_right({100.}));
