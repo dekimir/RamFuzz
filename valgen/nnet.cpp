@@ -24,6 +24,9 @@ using namespace std;
 
 namespace {
 
+/// Logistic function designed to squish input values from their C++ range
+/// (typically maximal type range from std::numeric_limits) to a much smaller
+/// range suitable for valgen_nnet layers to process.
 torch::Tensor squish(const torch::Tensor& x) {
   const auto k = .2, L = 10.;
   return (torch::ones_like(x) + (-k * x).exp()).reciprocal() * L;
