@@ -22,14 +22,18 @@
 
 using namespace std;
 
+namespace {
+
+torch::Tensor squish(const torch::Tensor& x) {
+  const auto k = .2, L = 10.;
+  return (torch::ones_like(x) + (-k * x).exp()).reciprocal() * L;
+}
+
+}  // namespace
+
 namespace ramfuzz {
 
 valgen_nnet::valgen_nnet() : Module("ValgenNet"), lin(nullptr) {
-  // Register all parameters:
-  // batchnorm
-  // embedding
-  // all conv1d
-  // both linear
   lin = register_module("lin1", torch::nn::Linear(10, 2));
 
   // Need as large a range as possible for input values, which come from
@@ -37,15 +41,8 @@ valgen_nnet::valgen_nnet() : Module("ValgenNet"), lin(nullptr) {
   to(at::kDouble);
 }
 
-torch::Tensor valgen_nnet::forward(torch::Tensor vals) {
-  // values > batchnorm
-  // ids > embedding
-  // concat
-  // dropout
-  // for each filtsz:
-  //   flatten(maxpooling(conv1d))
-  // linear(linear(dropout(concat(conv_list))))
-  return torch::softmax(lin->forward(vals), 0);
+torch::Tensor valgen_nnet::forward(const torch::Tensor& vals) {
+  return torch::softmax(lin->forward(squish(vals)), 0);
 }
 
 void valgen_nnet::train_more(const exetree::node& root) {
@@ -68,6 +65,7 @@ void valgen_nnet::train_more(const exetree::node& root) {
   cout << "valgen_nnet accuracy: " << fixed << setprecision(4)
        << float(success_count) / data_count << line_reset << flush;
   opt.step();
+  eval();
 }
 
 }  // namespace ramfuzz

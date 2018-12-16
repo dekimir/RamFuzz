@@ -42,20 +42,49 @@ constexpr bool success = true, failure = false;
     EXPECT_EQ((expected), nn.prediction_as_bool(p)) << p; \
   }
 
-/// Tests that valgen_nnet can learn a simple "negative values fail" case.
+/// Tests that valgen_nnet can learn a simple case of "all values above this
+/// threshold fail".
 TEST_F(NNetTest, EasySplit) {
-  for (int i = -1000; i <= 1000; ++i) {
-    root.find_or_add_edge(i)->maywin(i >= 0);
-    if (i % 20 == 0) nn.train_more(root);
+  mt19937 rneng;
+  uniform_int_distribution<int> dist(numeric_limits<int>::min(),
+                                     numeric_limits<int>::max());
+  // Explicitly add some values, to ensure the net trains on them.  This is
+  // realistic: it tests valgen will not make repeated mistakes, even if it
+  // misclassifies a value the first time it's generated.
+  root.find_or_add_edge(100)->maywin(true);
+  root.find_or_add_edge(300)->maywin(true);
+  for (int i = 0; i <= 4000; ++i) {
+    const auto v = dist(rneng);
+    root.find_or_add_edge(v)->maywin(v < 1000);
+    if (i % 40 == 0) nn.train_more(root);
   }
-
+  EXPECT_PREDICTION(success, pad_right({-10000.}));
+  EXPECT_PREDICTION(success, pad_right({-1000.}));
+  EXPECT_PREDICTION(success, pad_right({-100.}));
   EXPECT_PREDICTION(success, pad_right({100.}));
-  EXPECT_PREDICTION(success, pad_right({1000.}));
-  EXPECT_PREDICTION(success, pad_right({10000.}));
+  EXPECT_PREDICTION(success, pad_right({300.}));
+  EXPECT_PREDICTION(failure, pad_right({1000.}));
+  EXPECT_PREDICTION(failure, pad_right({2000.}));
+  EXPECT_PREDICTION(failure, pad_right({5000.}));
+  EXPECT_PREDICTION(failure, pad_right({10000.}));
+}
 
-  EXPECT_PREDICTION(failure, pad_right({-100.}));
-  EXPECT_PREDICTION(failure, pad_right({-1000.}));
-  EXPECT_PREDICTION(failure, pad_right({-10000.}));
+TEST_F(NNetTest, NoFailuresEver) {
+  mt19937 eng;
+  uniform_int_distribution<int> dist(numeric_limits<int>::min(),
+                                     numeric_limits<int>::max());
+  auto* cur = &root;
+  for (int i = 0; i < 1000; ++i) {
+    cur->maywin(true);
+    cur = cur->find_or_add_edge(dist(eng));
+    if (i % 40 == 0) nn.train_more(root);
+  }
+  cur->terminal(node::SUCCESS);
+  cur->maywin(true);
+  size_t succ_count = 0;
+  for (dfs_cursor iter(root); iter; ++iter)
+    succ_count += (nn.predict(last_n(&*iter, 10)) == iter->dst()->maywin());
+  EXPECT_GE(succ_count, 850);
 }
 
 }  // namespace

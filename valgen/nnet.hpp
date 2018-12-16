@@ -29,7 +29,7 @@ class valgen_nnet : public torch::nn::Module {
   void train_more(const exetree::node& root);
 
   /// Returns the neural network's output on vals.
-  torch::Tensor forward(torch::Tensor vals);
+  torch::Tensor forward(const torch::Tensor& vals);
 
   /// Translates a valgen_nnet output into a simple bool: true iff prediction
   /// means the input node may reach successful termination.
