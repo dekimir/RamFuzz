@@ -18,10 +18,7 @@
 #include <string>
 
 class A {
-  int t = 8421;
-
 public:
-  int get() const { return t; }
   void f(std::ostream &os, int i, float f, unsigned char c,
          const std::string &str) {
     os << i << f << c << str << c << i;

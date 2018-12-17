@@ -70,22 +70,16 @@ for case in glob(path.join(scriptdir, '*.hpp')):
     temp = tempfile.mkdtemp()
     shutil.copy(path.join(scriptdir, hfile), temp)
     shutil.copy(path.join(scriptdir, cfile), temp)
-    shutil.copy(path.join(rtdir, 'ramfuzz-rt.cpp'), temp)
-    # Also copy ramfuzz-rt.hpp, but with lower depthlimit so tests don't take
-    # forever:
-    with open(path.join(rtdir, 'ramfuzz-rt.hpp')) as fsrc:
-        newcontent = fsrc.read().replace('depthlimit = 20', 'depthlimit = 4')
-        with open(path.join(temp, 'ramfuzz-rt.hpp'), 'w') as fdst:
-            fdst.write(newcontent)
+    shutil.copy(path.join(rtdir, 'ramfuzz-rt.hpp'), temp)
     try:
         chdir(temp)
         check_call([path.join(bindir, 'ramfuzz'), hfile, '--', '-std=c++11'])
         build_cmd = [
             path.join(bindir, 'clang++'), '-std=c++11', '-or', '-g', cfile,
-            'fuzz.cpp', 'ramfuzz-rt.cpp'
+            'fuzz.cpp', '-lzmqpp', '-lzmq'
         ]
         check_call(build_cmd)
-        check_call(path.join(temp, 'r'))
+        # TODO: run ./r if cfile has non-trivial main().
         chdir(bindir)  # Just a precaution to guarantee rmtree success.
         shutil.rmtree(path.realpath(temp))
     except CalledProcessError:

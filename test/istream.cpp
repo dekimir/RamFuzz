@@ -14,23 +14,8 @@
 
 #include "fuzz.hpp"
 
-using namespace ramfuzz::runtime;
-using namespace std;
+std::string run() { return ramfuzz::runtime::gen().make<A>(101)->content; }
 
-string run(gen &g) {
-  auto rf1 = g.make<A>(101);
-  return rf1 ? rf1->content : string();
-}
-
-int main() {
-  string r1, r2;
-  {
-    gen g1("fuzzlog1");
-    r1 = run(g1);
-  }
-  gen g2("fuzzlog1", "fuzzlog2");
-  r2 = run(g2);
-  return r1 != r2;
-}
+int main() {}
 
 unsigned ::ramfuzz::runtime::spinlimit = 3;

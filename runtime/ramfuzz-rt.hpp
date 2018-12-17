@@ -91,6 +91,7 @@ template <typename T> struct widetype;
 
 WIDETYPE(bool, int64_t);
 WIDETYPE(char, int64_t);
+WIDETYPE(unsigned char, int64_t);
 WIDETYPE(short, int64_t);
 WIDETYPE(unsigned short, uint64_t);
 WIDETYPE(int, int64_t);
@@ -136,7 +137,7 @@ class gen {
 
 public:
   /// Connects to a valgen process at endpoint.
-  gen(const std::string &endpoint)
+  gen(const std::string &endpoint = default_valgen_endpoint)
       : valgen_socket(ctx, zmqpp::socket_type::request) {
     valgen_socket.connect(endpoint);
   }
@@ -324,7 +325,7 @@ private:
 /// limit, infinite recursion is possible for certain code under test (eg,
 /// ClassA::method1(B b) and ClassB::method2(A a)).  The user can modify this
 /// value or the depthlimit member of any RamFuzz class.
-constexpr unsigned depthlimit = 20;
+constexpr unsigned depthlimit = 4;
 
 } // namespace runtime
 
