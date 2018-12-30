@@ -163,13 +163,12 @@ public:
     using W = typename widetype<T>::type;
     zmqpp::message request(VALUE_REQUEST, uint64_t{valueid}, typetag<W>(),
                            W{lo}, W{hi});
-    if (!valgen_socket.send(request))
-      throw std::runtime_error("valgen_socket.send() returned false");
+    auto status = valgen_socket.send(request);
+    assert(status);
     zmqpp::message response;
-    if (!valgen_socket.receive(response))
-      throw std::runtime_error("valgen_socket.receive() returned false");
-    if (response.get<uint8_t>(0) != 11)
-      throw std::runtime_error("valgen returned error status");
+    status = valgen_socket.receive(response);
+    assert(status);
+    assert(response.get<uint8_t>(0) == 11);
     return static_cast<T>(response.get<W>(1));
   }
 
