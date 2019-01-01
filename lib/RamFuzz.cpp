@@ -655,7 +655,7 @@ void RamFuzz::gen_method(const Twine &hname, const CXXMethodDecl *M,
 
 void RamFuzz::run(const MatchFinder::MatchResult &Result) {
   if (const auto *C = Result.Nodes.getNodeAs<CXXRecordDecl>("class")) {
-    if (!globally_visible(C) || isa<ClassTemplateSpecializationDecl>(C))
+    if (!globally_visible(C))
       return;
     string stemp;
     outt.reset(new raw_string_ostream(stemp));
@@ -795,7 +795,7 @@ void RamFuzz::tackOnto(MatchFinder &MF) {
   static const auto matcher =
       cxxRecordDecl(isExpansionInMainFile(), isDefinition(),
                     unless(hasAncestor(namespaceDecl(isAnonymous()))),
-                    unless(isImplicit()))
+                    unless(isImplicit()), unless(isTemplateInstantiation()))
           .bind("class");
   MF.addMatcher(matcher, this);
 }
