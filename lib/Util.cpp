@@ -112,7 +112,19 @@ ClassDetails::ClassDetails(const clang::CXXRecordDecl &decl, NameGetter &ng)
       suffix_(parameters(decl.getDescribedClassTemplate(), ng)),
       is_template_(isa<ClassTemplateSpecializationDecl>(decl) ||
                    decl.getDescribedClassTemplate()),
-      is_visible_(globally_visible(&decl)) {}
+      is_visible_(globally_visible(&decl)) {
+  if (const auto spec = dyn_cast<ClassTemplateSpecializationDecl>(&decl)) {
+    const auto ppol = RFPP();
+    string temp("< ");
+    raw_string_ostream rs(temp);
+    size_t idx = 0;
+    for (const auto arg : spec->getTemplateInstantiationArgs().asArray())
+      arg.print(ppol, rs << (idx++ ? ", " : ""));
+    rs << '>';
+    name_ += rs.str();
+    qname_ += rs.str();
+  }
+}
 
 PrintingPolicy RFPP() {
   PrintingPolicy rfpp((LangOptions()));
