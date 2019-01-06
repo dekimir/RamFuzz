@@ -97,6 +97,17 @@ string sub_canonical_param_types(string s,
   return s;
 }
 
+/// Invokes fun on a DeclPrinter set up over a string stream.  Returns the
+/// stream's string after the invocation.
+template <typename Callable>
+string WithDeclPrinter(const ASTContext &ctx, const Callable &fun) {
+  string temp;
+  raw_string_ostream rs(temp);
+  DeclPrinter p(rs, RFPP(), ctx);
+  fun(p);
+  return rs.str();
+}
+
 } // anonymous namespace
 
 bool globally_visible(const CXXRecordDecl *C) {
@@ -131,29 +142,27 @@ ClassDetails::ClassDetails(const clang::CXXRecordDecl &decl, NameGetter &ng)
       is_visible_(globally_visible(&decl)) {
   if (const auto partial =
           dyn_cast<ClassTemplatePartialSpecializationDecl>(&decl)) {
-    string temp;
-    raw_string_ostream rs(temp);
-    DeclPrinter(rs, RFPP(), decl.getASTContext())
-        .printTemplateParameters(partial->getTemplateParameters());
-    prefix_ = rs.str();
-    string temp2;
-    raw_string_ostream rs2(temp2);
-    DeclPrinter(rs2, RFPP(), decl.getASTContext())
-        .printTemplateArguments(partial->getTemplateArgs(),
-                                partial->getTemplateParameters());
-    const auto sub =
-        sub_canonical_param_types(rs2.str(), *partial->getTemplateParameters());
+    prefix_ = WithDeclPrinter(decl.getASTContext(), [partial](DeclPrinter &p) {
+      p.printTemplateParameters(partial->getTemplateParameters());
+    });
+    const auto sub = sub_canonical_param_types(
+        WithDeclPrinter(decl.getASTContext(),
+                        [partial](DeclPrinter &p) {
+                          p.printTemplateArguments(
+                              partial->getTemplateArgs(),
+                              partial->getTemplateParameters());
+                        }),
+        *partial->getTemplateParameters());
     name_ += sub;
     qname_ += sub;
   } else if (const auto spec =
                  dyn_cast<ClassTemplateSpecializationDecl>(&decl)) {
-    const auto ppol = RFPP();
-    string temp("");
-    raw_string_ostream rs(temp);
-    DeclPrinter(rs, RFPP(), decl.getASTContext())
-        .printTemplateArguments(spec->getTemplateInstantiationArgs());
-    name_ += rs.str();
-    qname_ += rs.str();
+    const auto args =
+        WithDeclPrinter(decl.getASTContext(), [spec](DeclPrinter &p) {
+          p.printTemplateArguments(spec->getTemplateInstantiationArgs());
+        });
+    name_ += args;
+    qname_ += args;
   }
 }
 
