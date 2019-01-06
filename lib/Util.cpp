@@ -148,12 +148,10 @@ ClassDetails::ClassDetails(const clang::CXXRecordDecl &decl, NameGetter &ng)
   } else if (const auto spec =
                  dyn_cast<ClassTemplateSpecializationDecl>(&decl)) {
     const auto ppol = RFPP();
-    string temp("< ");
+    string temp("");
     raw_string_ostream rs(temp);
-    size_t idx = 0;
-    for (const auto arg : spec->getTemplateInstantiationArgs().asArray())
-      arg.print(ppol, rs << (idx++ ? ", " : ""));
-    rs << '>';
+    DeclPrinter(rs, RFPP(), decl.getASTContext())
+        .printTemplateArguments(spec->getTemplateInstantiationArgs());
     name_ += rs.str();
     qname_ += rs.str();
   }
