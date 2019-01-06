@@ -14,10 +14,13 @@
 
 #include "Util.hpp"
 
+#include <regex>
 #include <utility>
 
 #include "clang/AST/DeclTemplate.h"
 #include "llvm/Support/raw_ostream.h"
+// Until there's a better way to reuse this code:
+#include "clang/../../lib/AST/DeclPrinter.cpp"
 
 using namespace clang;
 using namespace llvm;
@@ -81,6 +84,19 @@ string template_preamble(const clang::ClassTemplateDecl *templ,
   return rs.str();
 }
 
+string sub_canonical_param_types(string s,
+                                 const TemplateParameterList &params) {
+  const auto ppol = RFPP();
+  for (const auto ram : params)
+    if (const auto pd = dyn_cast<TemplateTypeParmDecl>(ram)) {
+      const auto ty = cast<TemplateTypeParmType>(pd->getTypeForDecl());
+      const auto real = pd->getNameAsString();
+      const auto canon = ty->getCanonicalTypeInternal().getAsString(ppol);
+      s = regex_replace(s, regex(canon), real);
+    }
+  return s;
+}
+
 } // anonymous namespace
 
 bool globally_visible(const CXXRecordDecl *C) {
@@ -113,7 +129,24 @@ ClassDetails::ClassDetails(const clang::CXXRecordDecl &decl, NameGetter &ng)
       is_template_(isa<ClassTemplateSpecializationDecl>(decl) ||
                    decl.getDescribedClassTemplate()),
       is_visible_(globally_visible(&decl)) {
-  if (const auto spec = dyn_cast<ClassTemplateSpecializationDecl>(&decl)) {
+  if (const auto partial =
+          dyn_cast<ClassTemplatePartialSpecializationDecl>(&decl)) {
+    string temp;
+    raw_string_ostream rs(temp);
+    DeclPrinter(rs, RFPP(), decl.getASTContext())
+        .printTemplateParameters(partial->getTemplateParameters());
+    prefix_ = rs.str();
+    string temp2;
+    raw_string_ostream rs2(temp2);
+    DeclPrinter(rs2, RFPP(), decl.getASTContext())
+        .printTemplateArguments(partial->getTemplateArgs(),
+                                partial->getTemplateParameters());
+    const auto sub =
+        sub_canonical_param_types(rs2.str(), *partial->getTemplateParameters());
+    name_ += sub;
+    qname_ += sub;
+  } else if (const auto spec =
+                 dyn_cast<ClassTemplateSpecializationDecl>(&decl)) {
     const auto ppol = RFPP();
     string temp("< ");
     raw_string_ostream rs(temp);

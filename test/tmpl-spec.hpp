@@ -15,4 +15,8 @@
 /// Tests harness generation for template specializations.
 
 template <typename T> class A;
+
 template <> class A<int> {};
+
+template <typename Fun, typename Arg>
+class A<Fun(Arg)> {};
