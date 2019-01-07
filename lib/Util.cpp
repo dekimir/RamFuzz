@@ -37,17 +37,23 @@ AccessSpecifier getAccess(const CXXRecordDecl *C) {
     return C->getAccess();
 }
 
-/// Returns tmpl's parameters formatted as <T1, T2, T3>.  If tmpl is null,
-/// returns an empty string.
-string parameters(const ClassTemplateDecl *tmpl, NameGetter &ng) {
+/// Returns template parameters formatted as <T1, T2, T3> if decl is a template
+/// or a template specialization.  If not, returns "".
+string tparameters(const CXXRecordDecl &decl, NameGetter &ng) {
   string s;
   raw_string_ostream strm(s);
-  if (tmpl) {
+  if (auto tmpl = decl.getDescribedClassTemplate()) {
     strm << '<';
     size_t i = 0;
     for (const auto par : *tmpl->getTemplateParameters())
       strm << (i++ ? ", " : "") << ng.get(par);
     strm << '>';
+  } else if (auto spec = dyn_cast<ClassTemplateSpecializationDecl>(&decl)) {
+    DeclPrinter(strm, RFPP(), decl.getASTContext())
+        .printTemplateArguments(spec->getTemplateInstantiationArgs());
+    if (auto partial = dyn_cast<ClassTemplatePartialSpecializationDecl>(spec))
+      return sub_canonical_param_types(strm.str(),
+                                       *partial->getTemplateParameters());
   }
   return strm.str();
 }
@@ -133,10 +139,10 @@ string sub_canonical_param_types(string s,
   return s;
 }
 
-ClassDetails::ClassDetails(const clang::CXXRecordDecl &decl, NameGetter &ng)
+ClassDetails::ClassDetails(const CXXRecordDecl &decl, NameGetter &ng)
     : name_(decl.getNameAsString()), qname_(decl.getQualifiedNameAsString()),
       prefix_(template_preamble(decl.getDescribedClassTemplate(), ng)),
-      suffix_(parameters(decl.getDescribedClassTemplate(), ng)),
+      suffix_(tparameters(decl, ng)),
       is_template_(isa<ClassTemplateSpecializationDecl>(decl) ||
                    decl.getDescribedClassTemplate()),
       is_visible_(globally_visible(&decl)) {
@@ -153,16 +159,12 @@ ClassDetails::ClassDetails(const clang::CXXRecordDecl &decl, NameGetter &ng)
                               partial->getTemplateParameters());
                         }),
         *partial->getTemplateParameters());
-    name_ += sub;
-    qname_ += sub;
   } else if (const auto spec =
                  dyn_cast<ClassTemplateSpecializationDecl>(&decl)) {
     const auto args =
         WithDeclPrinter(decl.getASTContext(), [spec](DeclPrinter &p) {
           p.printTemplateArguments(spec->getTemplateInstantiationArgs());
         });
-    name_ += args;
-    qname_ += args;
   }
 }
 
