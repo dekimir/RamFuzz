@@ -147,25 +147,10 @@ ClassDetails::ClassDetails(const CXXRecordDecl &decl, NameGetter &ng)
                    decl.getDescribedClassTemplate()),
       is_visible_(globally_visible(&decl)) {
   if (const auto partial =
-          dyn_cast<ClassTemplatePartialSpecializationDecl>(&decl)) {
+          dyn_cast<ClassTemplatePartialSpecializationDecl>(&decl))
     prefix_ = WithDeclPrinter(decl.getASTContext(), [partial](DeclPrinter &p) {
       p.printTemplateParameters(partial->getTemplateParameters());
     });
-    const auto sub = sub_canonical_param_types(
-        WithDeclPrinter(decl.getASTContext(),
-                        [partial](DeclPrinter &p) {
-                          p.printTemplateArguments(
-                              partial->getTemplateArgs(),
-                              partial->getTemplateParameters());
-                        }),
-        *partial->getTemplateParameters());
-  } else if (const auto spec =
-                 dyn_cast<ClassTemplateSpecializationDecl>(&decl)) {
-    const auto args =
-        WithDeclPrinter(decl.getASTContext(), [spec](DeclPrinter &p) {
-          p.printTemplateArguments(spec->getTemplateInstantiationArgs());
-        });
-  }
 }
 
 PrintingPolicy RFPP() {
