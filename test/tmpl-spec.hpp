@@ -18,5 +18,10 @@ template <typename T> class A;
 
 template <> class A<int> {};
 
-template <typename Fun, typename Arg>
-class A<Fun(Arg)> {};
+template <typename Ret, typename Arg> class A<Ret(Arg)> {};
+
+// Inspired by Chrome's base::OnceCallback.
+template <typename Ret, typename... Args> class A<Ret(Args...)> {
+public:
+  void f(A &) {}
+};

@@ -103,4 +103,10 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
 /// Default template parameter name.
 constexpr char default_typename[] = "ramfuzz_typename_placeholder";
 
+/// For each param, substitutes its real name for its (useless) canonical name
+/// in \p s.
+std::string
+sub_canonical_param_types(std::string s,
+                          const clang::TemplateParameterList &params);
+
 } // namespace ramfuzz

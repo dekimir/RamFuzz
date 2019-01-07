@@ -96,6 +96,14 @@ public:
   type_streamer(const QualType &ty, const PrintingPolicy &prtpol)
       : ty(ty), prtpol(prtpol) {}
 
+  /// Streams ty into a string and returns it.
+  static string to_string(const QualType &ty, const PrintingPolicy &prtpol) {
+    string temp;
+    raw_string_ostream rs(temp);
+    rs << type_streamer(ty, prtpol);
+    return rs.str();
+  }
+
   /// Prints the constructor's argument \p ty out to \p os.
   void print(raw_ostream &os) const override {
     if (auto el = ty->getAs<ElaboratedType>()) {
@@ -126,7 +134,13 @@ public:
       } else
         os << type_streamer(ptee, prtpol) << '*';
     } else if (auto inj = ty->getAs<InjectedClassNameType>()) {
-      os << type_streamer(inj->getInjectedSpecializationType(), prtpol);
+      const auto s = type_streamer::to_string(
+          inj->getInjectedSpecializationType(), prtpol);
+      if (auto partial =
+              dyn_cast<ClassTemplatePartialSpecializationDecl>(inj->getDecl()))
+        os << sub_canonical_param_types(s, *partial->getTemplateParameters());
+      else
+        os << s;
     } else if (auto dep = ty->getAs<DependentNameType>()) {
       os << "typename ";
       print(os, *dep->getQualifier());
@@ -638,7 +652,8 @@ void RamFuzz::gen_method(const Twine &hname, const CXXMethodDecl *M,
     *outt << "*g.make<" << type_streamer(strty, prtpol);
     reg(*strty);
     *outt << ">(" << valueid_watermark++
-          << (ptrcnt || ram->getType()->isReferenceType() ? ", true" : "") << ")";
+          << (ptrcnt || ram->getType()->isReferenceType() ? ", true" : "")
+          << ")";
     if (is_rvalue_ref)
       *outt << ")";
     if (ptrcnt > 1)

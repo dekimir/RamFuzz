@@ -84,19 +84,6 @@ string template_preamble(const clang::ClassTemplateDecl *templ,
   return rs.str();
 }
 
-string sub_canonical_param_types(string s,
-                                 const TemplateParameterList &params) {
-  const auto ppol = RFPP();
-  for (const auto ram : params)
-    if (const auto pd = dyn_cast<TemplateTypeParmDecl>(ram)) {
-      const auto ty = cast<TemplateTypeParmType>(pd->getTypeForDecl());
-      const auto real = pd->getNameAsString();
-      const auto canon = ty->getCanonicalTypeInternal().getAsString(ppol);
-      s = regex_replace(s, regex(canon), real);
-    }
-  return s;
-}
-
 /// Invokes fun on a DeclPrinter set up over a string stream.  Returns the
 /// stream's string after the invocation.
 template <typename Callable>
@@ -132,6 +119,19 @@ bool globally_visible(const CXXRecordDecl *C) {
 }
 
 namespace ramfuzz {
+
+string sub_canonical_param_types(string s,
+                                 const TemplateParameterList &params) {
+  const auto ppol = RFPP();
+  for (const auto ram : params)
+    if (const auto pd = dyn_cast<TemplateTypeParmDecl>(ram)) {
+      const auto ty = cast<TemplateTypeParmType>(pd->getTypeForDecl());
+      const auto real = pd->getNameAsString();
+      const auto canon = ty->getCanonicalTypeInternal().getAsString(ppol);
+      s = regex_replace(s, regex(canon), real);
+    }
+  return s;
+}
 
 ClassDetails::ClassDetails(const clang::CXXRecordDecl &decl, NameGetter &ng)
     : name_(decl.getNameAsString()), qname_(decl.getQualifiedNameAsString()),
