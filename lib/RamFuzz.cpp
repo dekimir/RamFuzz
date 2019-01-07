@@ -833,7 +833,6 @@ namespace ramfuzz {
             "required classes \nwere not processed:\n";
     for (const auto cls : missing)
       errs << cls << '\n';
-    return 2;
   }
   return 0;
 }
