@@ -407,6 +407,24 @@ string class_under_test(const CXXRecordDecl *C, NameGetter &ng) {
   return strm.str();
 }
 
+bool can_pass_by_value(const QualType ty) {
+  if (ty->isRValueReferenceType())
+    return false;
+  if (auto d = ty->getAsCXXRecordDecl()) {
+    if (!d->hasDefinition())
+      return true; // Most likely a pointer/reference parameter.
+    if (d->needsImplicitCopyConstructor())
+      return !d->defaultedCopyConstructorIsDeleted();
+    // Need at least one public, non-deleted copy constructor.
+    for (auto ctr : d->ctors())
+      if (ctr->isCopyConstructor() && !ctr->isDeleted() &&
+          ctr->getAccess() == AS_public)
+        return true;
+    return false;
+  }
+  return true;
+}
+
 } // anonymous namespace
 
 vector<string> RamFuzz::missingClasses() {
@@ -635,8 +653,8 @@ void RamFuzz::gen_method(const Twine &hname, const CXXMethodDecl *M,
     if (ptrcnt > 1)
       // Avoid deep const mismatch: can't pass int** for const int** parameter.
       *outt << "const_cast<" << ram->getType().stream(prtpol) << ">(";
-    const bool is_rvalue_ref = ram->getType()->isRValueReferenceType();
-    if (is_rvalue_ref)
+    const bool must_move = !can_pass_by_value(ram->getType());
+    if (must_move)
       // This will leave a stored object in an unspecified (though not illegal)
       // state.  It should be possible to subsequently call some of its methods
       // -- eg, this is legal:
@@ -654,7 +672,7 @@ void RamFuzz::gen_method(const Twine &hname, const CXXMethodDecl *M,
     *outt << ">(" << valueid_watermark++
           << (ptrcnt || ram->getType()->isReferenceType() ? ", true" : "")
           << ")";
-    if (is_rvalue_ref)
+    if (must_move)
       *outt << ")";
     if (ptrcnt > 1)
       *outt << ")";
