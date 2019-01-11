@@ -330,7 +330,7 @@ private:
   /// generated method have already been output.
   void gen_method(
       const Twine &hname, ///< Harness method name.
-      const CXXMethodDecl *M, const ASTContext &ctx,
+      const CXXMethodDecl *M, const ASTContext &ctx, const ClassDetails &cls,
       bool may_recurse ///< True iff generated body may recursively call itself.
   );
 
@@ -389,22 +389,6 @@ tuple<QualType, unsigned> ultimate_pointee(QualType ty, const ASTContext &ctx) {
     ++indir_cnt;
   }
   return make_tuple(ty, indir_cnt);
-}
-
-/// Returns C's qualified name, followed by C's template parameters if C is a
-/// template class.  It's equivalent to constructing ClassDetails(*C) and
-/// concatenating its qname() and suffix().
-string class_under_test(const CXXRecordDecl *C, NameGetter &ng) {
-  string name = C->getQualifiedNameAsString();
-  raw_string_ostream strm(name);
-  if (const auto tmpl = C->getDescribedClassTemplate()) {
-    strm << '<';
-    size_t i = 0;
-    for (const auto par : *tmpl->getTemplateParameters())
-      strm << (i++ ? ", " : "") << ng.get(par);
-    strm << '>';
-  }
-  return strm.str();
 }
 
 bool can_pass_by_value(const QualType ty) {
@@ -620,7 +604,8 @@ bool RamFuzz::harness_may_recurse(const CXXMethodDecl *M,
 }
 
 void RamFuzz::gen_method(const Twine &hname, const CXXMethodDecl *M,
-                         const ASTContext &ctx, bool may_recurse) {
+                         const ASTContext &ctx, const ClassDetails &cls,
+                         bool may_recurse) {
   *outt << hname << "() {\n";
   if (isa<CXXConstructorDecl>(M)) {
     if (may_recurse) {
@@ -634,7 +619,7 @@ void RamFuzz::gen_method(const Twine &hname, const CXXMethodDecl *M,
     if (parent->isAbstract())
       *outt << "concrete_impl(g" << (M->param_empty() ? "" : ", ");
     else
-      *outt << class_under_test(parent, tparam_names) << "(";
+      *outt << cls << "(";
   } else {
     if (may_recurse) {
       *outt << "  if (++calldepth >= depthlimit) {\n";
@@ -743,7 +728,7 @@ void RamFuzz::run(const MatchFinder::MatchResult &Result) {
       outh << name << namecount[name] << "();\n";
       const bool may_recurse = harness_may_recurse(M, *Result.Context);
       *outt << "harness<" << cls << ">::";
-      gen_method(Twine(name) + Twine(namecount[name]), M, *Result.Context,
+      gen_method(Twine(name) + Twine(namecount[name]), M, *Result.Context, cls,
                  may_recurse);
       if (safectr.empty() && !may_recurse && isa<CXXConstructorDecl>(M))
         safectr = name + to_string(namecount[name]);

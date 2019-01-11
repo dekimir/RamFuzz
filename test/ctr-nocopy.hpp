@@ -18,3 +18,18 @@ public:
   B(B &&) = default;
   void f(B) {}
 };
+
+// Inspired by Chrome's base::OnceCallback.
+template <typename T> class A;
+
+template <typename Ret, typename... Args> class A<Ret(Args...)> {
+public:
+  A(const A &) = delete;
+  A(A &&) = default;
+};
+
+class C {
+public:
+  void f1(A<void(int)> &) {}
+  // void f2(A<void(int)>) {} TODO: uncomment.
+};
