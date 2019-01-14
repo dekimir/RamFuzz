@@ -252,7 +252,7 @@ public:
   void tackOnto(MatchFinder &MF);
 
   /// Captures CI to access info (eg, Sema) from it during run().
-  bool handleBeginSource(CompilerInstance &CI) {
+  bool handleBeginSource(CompilerInstance &CI) override {
     compi = &CI;
     return true;
   }
