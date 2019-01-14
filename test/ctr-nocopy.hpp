@@ -31,5 +31,5 @@ public:
 class C {
 public:
   void f1(A<void(int)> &) {}
-  // void f2(A<void(int)>) {} TODO: uncomment.
+  void f2(A<void(int)>);
 };

@@ -16,4 +16,6 @@
 
 int main() {}
 
+void C::f2(A<void(int)>) {}
+
 unsigned ramfuzz::runtime::spinlimit = 3;

@@ -26,6 +26,8 @@
 #include "Util.hpp"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/Frontend/CompilerInstance.h"
+#include "clang/Sema/Sema.h"
 #include "clang/Tooling/Tooling.h"
 
 using namespace ramfuzz;
@@ -232,9 +234,10 @@ private:
 };
 
 /// Generates RamFuzz code into an ostream.  The user can tack a RamFuzz
-/// instance onto a MatchFinder for running it via a frontend action.  After the
-/// frontend action completes, the user must call finish().
-class RamFuzz : public MatchFinder::MatchCallback {
+/// instance onto a MatchFinder for running it via a frontend action.  The user
+/// must also give RamFuzz to FrontEndAction as a callback.  After the frontend
+/// action completes, the user must call finish().
+class RamFuzz : public MatchFinder::MatchCallback, public SourceFileCallbacks {
 public:
   /// Prepares for emitting RamFuzz code into outh and outc.
   RamFuzz(raw_ostream &outh, raw_ostream &outc)
@@ -247,6 +250,12 @@ public:
 
   /// Adds to MF a matcher that will generate RamFuzz code (capturing *this).
   void tackOnto(MatchFinder &MF);
+
+  /// Captures CI to access info (eg, Sema) from it during run().
+  bool handleBeginSource(CompilerInstance &CI) {
+    compi = &CI;
+    return true;
+  }
 
   /// Calculates which classes under test need their harness specialization but
   /// don't have it yet.  This happens when a harness class is referenced in
@@ -360,6 +369,8 @@ private:
   NameGetter tparam_names; ///< Gets template-parameter names.
 
   size_t valueid_watermark = 100; ///< For generating unique valueid parameters.
+
+  CompilerInstance *compi; ///< Points to instance that parses input source.
 };
 
 /// Valid identifier from a CXXMethodDecl name.
@@ -391,10 +402,16 @@ tuple<QualType, unsigned> ultimate_pointee(QualType ty, const ASTContext &ctx) {
   return make_tuple(ty, indir_cnt);
 }
 
-bool can_pass_by_value(const QualType ty) {
+bool can_pass_by_value(const QualType ty, Sema &sema) {
   if (ty->isRValueReferenceType())
     return false;
   if (auto d = ty->getAsCXXRecordDecl()) {
+    // Get complete type info for template specializations.
+    if (auto *spec = dyn_cast<ClassTemplateSpecializationDecl>(d))
+      if (spec->getSpecializationKind() == TSK_Undeclared)
+        sema.InstantiateClassTemplateSpecialization(d->getLocation(), spec,
+                                                    TSK_ImplicitInstantiation,
+                                                    /*Complain=*/false);
     if (!d->hasDefinition())
       return true; // Most likely a pointer/reference parameter.
     if (d->needsImplicitCopyConstructor())
@@ -638,7 +655,7 @@ void RamFuzz::gen_method(const Twine &hname, const CXXMethodDecl *M,
     if (ptrcnt > 1)
       // Avoid deep const mismatch: can't pass int** for const int** parameter.
       *outt << "const_cast<" << ram->getType().stream(prtpol) << ">(";
-    const bool must_move = !can_pass_by_value(ram->getType());
+    const bool must_move = !can_pass_by_value(ram->getType(), compi->getSema());
     if (must_move)
       // This will leave a stored object in an unspecified (though not illegal)
       // state.  It should be possible to subsequently call some of its methods
@@ -839,7 +856,7 @@ namespace ramfuzz {
   rf.tackOnto(mf);
   InheritanceBuilder inh;
   inh.tackOnto(mf);
-  const int run_error = tool.run(newFrontendActionFactory(&mf).get());
+  const int run_error = tool.run(newFrontendActionFactory(&mf, &rf).get());
   rf.finish(inh.getInheritance());
   outc << "} // namespace ramfuzz\n";
   outh << "} // namespace ramfuzz\n";
